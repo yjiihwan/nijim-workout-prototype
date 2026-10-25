@@ -94,12 +94,30 @@ function placeholderSrc(lv) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><path d="M${w*0.1} ${h} Q0 ${h*0.4} ${w/2} 0 Q${w} ${h*0.4} ${w*0.9} ${h} Z" fill="#9AA3B5"/><text x="50%" y="62%" font-size="${Math.max(12,h/7)}" text-anchor="middle" fill="#fff" font-family="sans-serif">${stageIdx(lv)+1}단계</text></svg>`;
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 }
-/* 크기 규칙(README_for_dev 2절): 한 캐릭터의 11컷은 같은 배율 — scale = 칸 높이 ÷ 그 캐릭터 Lv.99 높이 를 한 번 구해 모든 컷에 곱한다(컷마다 fit 하면 성장이 사라짐).
-   same=true 는 캐릭터끼리 나란히 둘 때(선택 화면, Lv.1만): 정본 배율(원본 px) 그대로 → 머리 크기가 맞는다. 기준 = 12종 중 가장 큰 Lv.1 원본 높이 */
+/* 크기 규칙(README_for_dev 2절): 한 캐릭터 안에서 레벨이 오를수록 커진다(성장).
+   v1.9 크기 통일: 치이카와풍 9종은 같은 레벨 컷이면 «몸 높이»(머리 윗면~발끝, 안테나·머리털·귀 끝 같은 가는 장식 제외)가 같게 그린다.
+   정본은 컷마다 여백 없이 잘려 있어 그림 높이로 맞추면 장식이 작고 몸이 큰 밤톨·뚝비·영차가 커 보였다(v1.8 선택 화면).
+   BODY = scripts/measure_v19.py 로 잰 컷별 몸 높이(웹 px, 컷 순서 01·10…90·99) · BODY_G = 레벨별 몸 높이/칸 높이(9종 중앙값 → 성장 곡선).
+   납작한 3종(뭉치·도트·섀도)은 v1.8 규칙 그대로 */
+const CUTS = ['01','10','20','30','40','50','60','70','80','90','99'];
+const BODY = {"rilla":[282,298,313,326,331,334,388,396,402,415,417],"ttukbi":[293,313,342,346,359,349,393,394,397,403,402],"youngcha":[278,283,299,314,323,328,350,356,368,391,384],"saetbyeol":[307,333,350,357,366,353,381,398,402,408,408],"imu":[305,321,360,359,373,370,382,384,396,405,405],"koa":[283,299,306,317,329,348,382,390,403,410,396],"ppiyak":[279,315,342,362,370,355,402,404,409,414,395],"capy":[301,332,338,369,379,372,403,405,413,422,407],"bamtol":[319,338,355,371,372,376,416,415,417,426,403]};
+const BODY_G = [0.6976, 0.75, 0.8143, 0.85, 0.8714, 0.8405, 0.9238, 0.9429, 0.9571, 0.9762, 0.9595];
 const MAX01 = Math.max(...Object.values(CHARS).map(c => c.dims['01'][1] / c.k));
+const SEL_BODY = 615 / MAX01;   // 선택 화면 Lv.1 몸 높이 = 칸 높이 × 이 비율 (v1.8 9종 표시 크기 중앙값)
+/* 칸 비율마다 한 번: 9종×11컷이 전부 칸(높이, 폭×골드 링 1.1배) 안에 들도록 성장 곡선 전체를 같은 비율로 줄인다 */
+const fitMemo = {};
+function bodyFit(boxH, boxW, ringW) {
+  const key = `${boxW / boxH}|${ringW}`;
+  return fitMemo[key] ??= Math.min(1, ...Object.entries(BODY).flatMap(([t, b]) => CUTS.map((c, i) => { const [w, h] = CHARS[t].dims[c]; return Math.min(b[i] / (BODY_G[i] * h), b[i] * boxW / (BODY_G[i] * boxH * ringW * w)); })));
+}
+function scaleOf(t, lv, boxH, same, boxW, ringW = 1.1) {
+  const C = CHARS[t], b = BODY[t], i = CUTS.indexOf(cutOf(lv));
+  if (same) return b ? boxH * SEL_BODY / b[0] : boxH / (MAX01 * C.k);
+  return b ? boxH * bodyFit(boxH, boxW, ringW) * BODY_G[i] / b[i] : Math.min(boxH / C.dims['99'][1], boxW / (ringW * C.dims['99'][0]));
+}
 function charImg(t, lv, boxH, same = false, boxW = boxH) {
   if (S.placeholder) { const h = PH_H[stageIdx(lv)]; return { src: placeholderSrc(lv), w: h * 0.9 * boxH / 360, h: h * boxH / 360 }; }
-  const C = CHARS[t], [w, h] = C.dims[cutOf(lv)], k = same ? boxH / (MAX01 * C.k) : Math.min(boxH / C.dims['99'][1], boxW / (1.1 * C.dims['99'][0]));   // 폭도 칸 안(골드 링 폭 1.1배 포함)
+  const [w, h] = CHARS[t].dims[cutOf(lv)], k = scaleOf(t, lv, boxH, same, boxW);   // 폭도 칸 안(골드 링 폭 1.1배 포함)
   return { src: `assets/c/${t}/lv${cutOf(lv)}.png`, w: w * k, h: h * k };
 }
 /* Lv.99 골드 링(README_for_dev 1절): 타원 선 #E5B158 · 폭 ≈ 캐릭터 폭×1.1 · 높이 ≈ 폭×0.24 · 바닥선에 중심. 그 아래 단계는 기존 티어 링 */
@@ -115,8 +133,14 @@ function charHTML(t, lv, boxH, withRing = true, expr = null, same = false, boxW 
 /* 작은 칸(홈 축소 카드·코치·랭킹): 같은 배율 규칙으로 Lv.99 가 box 높이에 맞게 → 레벨이 낮으면 작게 보인다 */
 function charFit(t, lv, box, expr = null) {
   if (S.placeholder) return `<img src="${placeholderSrc(lv)}" style="max-width:${box}px;max-height:${box}px" alt="">`;
-  const C = CHARS[t], [w99, h99] = C.dims['99'], k = Math.min(box / h99, box / w99), [w, h] = C.dims[cutOf(lv)], dw = Math.round(w*k), dh = Math.round(h*k);
+  const k = scaleOf(t, lv, box, false, box, 1), [w, h] = CHARS[t].dims[cutOf(lv)], dw = Math.round(w*k), dh = Math.round(h*k);
   return `<span class="cimg" style="width:${dw}px;height:${dh}px"><img src="assets/c/${t}/lv${cutOf(lv)}.png" style="width:${dw}px;height:${dh}px" alt="">${faceLayer(t, lv, expr)}</span>`;
+}
+/* 랭킹 아바타(40px 아이콘): 레벨마다 칸을 채우되(v1.8과 같음) 치이카와풍 9종은 같은 컷끼리 몸 높이를 맞춘다 */
+function charAvatar(t, lv, box) {
+  const c = cutOf(lv), i = CUTS.indexOf(c), [w, h] = CHARS[t].dims[c], b = BODY[t];
+  const k = b ? box * Math.min(...Object.entries(BODY).map(([u, bb]) => { const [ww, hh] = CHARS[u].dims[c]; return bb[i] / Math.max(ww, hh); })) / b[i] : box / Math.max(w, h);
+  return `<img src="assets/c/${t}/lv${c}.png" style="width:${Math.round(w*k)}px;height:${Math.round(h*k)}px" alt="">`;
 }
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2400); }
 
@@ -331,7 +355,7 @@ function vFriends() {
   const list = rankList();
   return `${subHead('랭킹 · 친구')}<div class="sec"><div class="seg"><button class="${S.fTab==='week'?'on':''}" data-act="ftab" data-v="week">이번 주</button><button class="${S.fTab==='level'?'on':''}" data-act="ftab" data-v="level">레벨</button></div>
   ${S.fTab==='level'?`<div class="row" style="padding-top:0"><span class="muted">운동만 보기 (💰 유료 경험치 빼고)</span><button class="sw ${S.pureOnly?'on':''}" data-act="pure"></button></div>`:''}
-  <div class="card">${list.map((f, i) => `<div class="rank ${f.me?'me':''}"><div class="no">${i+1}</div><div class="av"><img src="${charImg(f.t, f.lv, 40).src}" alt=""></div>
+  <div class="card">${list.map((f, i) => `<div class="rank ${f.me?'me':''}"><div class="no">${i+1}</div><div class="av">${S.placeholder ? `<img src="${placeholderSrc(f.lv)}" alt="">` : charAvatar(f.t, f.lv, 40)}</div>
   <div><b>${esc(f.n)}</b> ${f.paid?'<span title="유료 사용">💰</span>':''}<div class="muted">${esc(CH[f.t].name)} · ${stageName(f.t, f.lv)}</div></div>
   <div class="val">${S.fTab==='week'?`${f.rate}%<small>${f.week.toLocaleString()} XP</small>`:`Lv.${S.pureOnly?(f.pure??f.lv):f.lv}<small>${f.paid&&!S.pureOnly?`운동만 Lv.${f.pure}`:TIER_NAME[tierOf(f.lv)]}</small>`}</div></div>`).join('')}</div>
   <button class="btn ghost" data-act="invite">친구 초대</button>

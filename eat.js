@@ -238,8 +238,6 @@ async function eatNext() {
     const [C, img] = await Promise.all([eatCell(S.type, cut), foodImg(f.fid)]);
     EAT.cur.C = C; EAT.cur.food = { fid: f.fid, img };
   } catch (e) { console.error(e); EAT.cur = null; return eatFinish(ev); }
-  const card = document.querySelector('.eatcard'), cr = card && card.getBoundingClientRect();   // 카드 머리(이름·Lv)까지 보이게 · 이미 다 보이면 그대로
-  if (cr && (cr.top < 60 || cr.bottom > innerHeight - 90)) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
   if (S.sound) { tone(520, 0, .08, 'triangle', .06); tone(660, .8, .08, 'triangle', .05); tone(780, 1.6, .08, 'triangle', .05); }
   EAT.cur.t0 = performance.now(); tick();
 }
@@ -267,7 +265,8 @@ function eatFinish(ev) {
   if (E && E.f.eff.cond) toast(`${E.f.name} — 오늘 컨디션 쌩쌩 유지!`);
   else if (E && !E.f.eff.xp) toast(`${E.f.name} — ${E.label} 적용 · 다음 운동 기록 때 들어가요`);
   EAT.cur = null;
-  if (ev) return play(ev, { onDone: () => { go('workout', 'shop'); setTimeout(eatNext, 60); } });
+  const y = window.scrollY;   // 진화 뒤에도 보던 위치로(연달아 먹기)
+  if (ev) return play(ev, { onDone: () => { go('workout', 'shop'); window.scrollTo(0, y); setTimeout(eatNext, 60); } });
   if (EAT.q.length) { render(); return eatNext(); }
   render();
 }
@@ -283,9 +282,14 @@ function vEatTab() {
       <img src="assets/food/card/${f.fid}.png" alt=""><b>${esc(f.name)}</b><small>${esc(f.desc)}</small><em style="color:${R.col}">${f.rarity}${f.rule === 'recent7d_workout' ? ' · 최근 7일 운동' : ''}</em>
       <div class="fp">${f.price.toLocaleString()}P</div>
       ${n ? `<div class="fbtn"><button class="btn ghost" data-act="buyFood" data-id="${f.id}">구매</button><button class="btn" data-act="eatUse" data-id="${f.id}">사용</button></div>` : `<button class="btn" data-act="buyFood" data-id="${f.id}">구매</button>`}</div>`; };
-  return `<div class="eatcard"><div class="eathead"><b>${esc(CH[S.type].name)}</b><span class="pill lvpill">Lv.${lv}</span>${bm ? `<span class="pill bmpill">다음 운동 ${boostLabel()}</span>` : ''}</div>
-    <div class="eatstage" id="eatStage"></div>
-    <div class="eatbar"><span id="eatXpTxt">${lv >= 99 ? 'MAX' : `${xp.toLocaleString()} / ${n0.toLocaleString()} XP`}</span><div class="trk"><i id="eatFill" style="width:${pct.toFixed(1)}%"></i></div></div></div>
+  /* 먹는 중엔 같은 카드를 보던 자리 위 창(오버레이)으로 띄움 — 목록 자리엔 같은 높이 빈칸이 남아 스크롤이 안 튐 */
+  const head = `<div class="eathead"><b>${esc(CH[S.type].name)}</b><span class="pill lvpill">Lv.${lv}</span>${bm ? `<span class="pill bmpill">다음 운동 ${boostLabel()}</span>` : ''}</div>`;
+  const bar = `<div class="eatbar"><span id="eatXpTxt">${lv >= 99 ? 'MAX' : `${xp.toLocaleString()} / ${n0.toLocaleString()} XP`}</span><div class="trk"><i id="eatFill" style="width:${pct.toFixed(1)}%"></i></div></div>`;
+  const left = E ? S.inv[E.id] || 0 : 0;
+  return (E ? `<div class="eatcard rest" aria-hidden="true">${head}<div class="eatstage"></div><div class="eatbar"><span>&nbsp;</span><div class="trk"></div></div></div>
+    <div class="eatov" role="dialog" aria-label="${esc(E.f.name)} 먹는 중"><div class="eatov-bg"></div><div class="eatcard ov">${head}<div class="eatstage" id="eatStage"></div>${bar}
+      <div class="eatmore">${EAT.q.length ? `<span>대기 ${EAT.q.length}개</span>` : '<span>화면 탭하면 건너뛰기</span>'}<button class="btn ghost" data-act="eatUse" data-id="${E.id}" ${left ? '' : 'disabled'}>${esc(E.f.name)} 하나 더 (${left}개)</button></div></div></div>`
+    : `<div class="eatcard">${head}<div class="eatstage" id="eatStage"></div>${bar}</div>`) + `
   <div class="chips">${[['all', '전체'], ['food', '먹는 거'], ['drink', '마시는 거']].map(([k, l]) => `<button class="${cat === k ? 'on' : ''}" data-act="eatCat" data-v="${k}">${l}</button>`).join('')}</div>
   <div class="fhead"><b>먹고 마시는 아이템</b><span>쓰면 바로 효과</span></div>
   <div class="fgrid">${list.map(card).join('')}</div>

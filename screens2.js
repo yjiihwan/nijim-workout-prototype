@@ -46,7 +46,7 @@ function manySessions() {   // 시연용 «데이터 많음» — 20주 · 주 3
       const lesson = g % 3 === 0 && k === 0;
       if (lesson) items.unshift({ ex: 'lesson_pt', min: 50 });
       const xp = lesson ? 400 : Math.round(items.reduce((a, it) => a + itemBaseXP(it, itemVolume(it)), 0) + 70);
-      out.push({ id: id--, date, place: rnd() > .85 ? '니짐 봉천점' : rnd() > .9 ? '집' : '니짐 신림점', placeKind: 'center', v: lesson ? 'lesson' : rnd() > .7 ? 'selfie' : 'auto', items, ro: true,
+      out.push({ id: id--, date, place: rnd() > .85 ? '니짐 봉천점' : rnd() > .9 ? '집' : '니짐 신림점', placeKind: 'center', v: lesson ? 'lesson' : 'auto', selfieXP: !lesson && rnd() > .7 ? 20 : 0, items, ro: true,
         hour: rnd() > .85 ? 5 : rnd() > .85 ? 22 : 19, summary: summaryOf(items), xp, photo: k === 1 && g % 3 === 1 ? 'demo' : null });
     });
   }
@@ -268,7 +268,7 @@ function achieveList(all = false) {
   const parts5 = Math.max(0, ...Object.values(weeks).map(w => { const p = partSets(w); return PARTS.filter(x => x !== '유산소' && p[x]).length; }));
   const allParts4w = (() => { const p = partSets(inRange(rs, addD(TODAY, -27), TODAY)); return PARTS.filter(x => p[x]).length; })();
   const streak = streakVal(), friends = friendsAll().length;
-  const photo = rs.some(r => r.photo || r.v === 'selfie');
+  const photo = rs.some(r => r.photo || r.selfieXP > 0 || r.v === 'selfie');
   const A = (cat, icon, name, cond, cur, goal0, item, extra) => { const o = CFG.ACH[name] || {}, goal = o.goal || goal0;
     return { cat, icon, name, cond: goal === goal0 ? cond : cond.replace(String(goal0), String(goal)), cur: Math.min(cur, goal), goal, goal0, done: cur >= goal, item, extra, off: !!o.off }; };
   return [

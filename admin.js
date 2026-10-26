@@ -192,10 +192,11 @@ function vH2() {
       ${sec('경험치 단위 (PLAN §2-3)', [['XP.weight', '웨이트·머신 1세트'], ['XP.body', '맨몸 1세트'], ['XP.cardio', '유산소 1분'], ['XP.lesson', '레슨 1회'], ['XP.firstSet', '첫 세트 보너스'], ['XP.complete', '세션 완료 보너스'], ['XP.newPart', '이번 주 새 부위'], ['XP.pr', 'PR 1개'], ['XP.weekGoal', '주간 목표 달성']].map(([p, l]) => fr(l, numIn(p), 'XP')).join(''))}
       ${sec('한도 (결정 32·33)', fr('하루 운동 경험치', numIn('DAY_CAP'), 'XP') + fr('하루 · 전부 자가 기록이면', numIn('DAY_CAP_V0'), 'XP') + fr('주 운동 경험치', numIn('WEEK_CAP', { w: 90 }), 'XP')
         + fr('월 포인트 적립 상한', numIn('POINT.monthCap', { w: 90 }), 'P') + fr('자가 기록 레벨업 포인트', numIn('POINT.v0Rate', { mul: 100 }), '%') + note('하루·주 한도는 <b>운동 경험치에만</b> 걸려요. 아이템 경험치 한도는 «부스터·물약» 탭.'))}
-      ${sec('검증 배율·연속 배율', [['VERIFY.V0', '자가 기록 V0'], ['VERIFY.V1', '입점센터 입장 V1'], ['VERIFY.V1b', '위치 확인 V1b'], ['VERIFY.V2', '셀카 V2'], ['VERIFY.V3', '레슨 확정 V3']].map(([p, l]) => fr(l, numIn(p, { step: '0.05' }), '×')).join('')
+      ${sec('검증 배율·연속 배율', [['VERIFY.V0', '자가 기록 V0 (집·야외·입점 안 된 헬스장)'], ['VERIFY.V1', '입점센터 입장 V1'], ['VERIFY.V3', '레슨 확정 V3']].map(([p, l]) => fr(l, numIn(p, { step: '0.05' }), '×')).join('')
         + `<div class="afr"><span>연속 주 0·1·2·3·4·5·6+</span></div><div class="astreak">${CFG_DEFAULT.STREAK.map((_, i) => numIn('STREAK.' + i, { step: '0.05', w: 66 })).join('')}</div>`
         + fr('복귀 기준(쉰 날)', numIn('COMEBACK_DAYS'), '일') + fr('복귀 첫 세션 배율', numIn('COMEBACK_MUL', { step: '0.05' }), '×')
-        + fr('입점센터 보너스(기본 경험치의)', numIn('CENTER_BONUS.pct'), '%') + fr('입점 보너스 주 한도', numIn('CENTER_BONUS.weekCap', { w: 90 }), 'XP') + note('결정 36 · 입점 보너스는 운동 하루·주 한도와 <b>따로</b> 세요. 운동량 ×1.2 전 기본 경험치 기준 · 아이템 배율 안 붙음.'))}</div>`,
+        + fr('입점센터 보너스(기본 경험치의)', numIn('CENTER_BONUS.pct'), '%') + fr('입점 보너스 주 한도', numIn('CENTER_BONUS.weekCap', { w: 90 }), 'XP') + note('결정 36 · 입점 보너스는 운동 하루·주 한도와 <b>따로</b> 세요. 운동량 ×1.2 전 기본 경험치 기준 · 아이템 배율 안 붙음.')
+        + fr('오운완 셀카 보너스(기본 경험치의)', numIn('SELFIE_BONUS.pct'), '%') + fr('셀카 보너스 하루 횟수', numIn('SELFIE_BONUS.perDay'), '회') + note('결정 37 · 장소 무관 · 인증·연속·×1.2 안 곱한 고정값 · 운동 하루·주 한도 <b>안</b>(잘릴 땐 셀카 몫부터) · 앱 안 카메라만.'))}</div>`,
     mood: () => `<div class="agrid3">${sec('표정 판정 (결정 21 · 경험치와 무관)', fr('«아쉬운» — 평소 대비 미만', numIn('MOOD.low', { mul: 100 }), '%') + fr('«신남» — 평소 대비 이상', numIn('MOOD.high', { mul: 100 }), '%')
         + fr('«평소» = 최근 몇 회 중앙값', numIn('MOOD.baseN'), '회') + fr('«평소» 기간', numIn('MOOD.baseDays', { mul: 1 / 7 }), '주') + fr('판정에 필요한 최소 기록', numIn('MOOD.minBase'), '회')
         + fr('«아쉬운» 몇 번 연속이면 표정 대신 한마디', numIn('MOOD.quietAfter'), '번'))}
@@ -288,7 +289,7 @@ function vH5() {
   return `<div class="ahead"><div><h2>지표 대시보드</h2><p>운동기록 기능을 켠 계정 기준 · 최근 8주. 센터별은 읽기만.</p></div></div>
   <div class="akrow">${kpi('기록률', '41%', '앱 활성 중 주 1회 이상 기록')}${kpi('주간 목표 달성률', '57%', '목표 주 3회가 가장 많음')}${kpi('D7 재방문', ret[7].d7.toFixed(0) + '%')}${kpi('D30 재방문', ret[7].d30.toFixed(0) + '%')}${kpi('셀카 사용률', '18%', '세션 중 셀카 첨부')}${kpi('친구 보유율', '27%', '친구 1명 이상')}</div>
   <div class="agrid2">${sec('레벨 분포 (진화 단계별 계정 수)', vbars(lvDist, ['Lv1~9', '10~19', '20~29', '30~39', '40~49', '50~59', '60~69', '70~79', '80~89', '90~99'], { unit: '명', h: 200 }))}
-    ${sec('검증 등급 비율 (세션)', stack([['V0 자가', 22, V_SEQ.V0], ['V1 입장·위치', 55, V_SEQ.V1], ['V2 셀카', 15, V_SEQ.V2], ['V3 레슨', 8, V_SEQ.V3]]) + note('검증 등급은 순서가 있는 값이라 한 색의 진하기로 구분(진할수록 확인이 강함).'))}</div>
+    ${sec('검증 등급 비율 (세션)', stack([['V0 자가(집·야외·비입점)', 30, V_SEQ.V0], ['V1 입점센터 입장', 62, V_SEQ.V1], ['V3 레슨', 8, V_SEQ.V3]]) + note('검증 등급은 순서가 있는 값이라 한 색의 진하기로 구분(진할수록 확인이 강함).'))}</div>
   <div class="agrid2">${sec('D7 재방문 (가입 주별)', vbars(ret.map(x => x.d7), ret.map((_, i) => i === 7 ? '이번 주' : `${7 - i}주 전`), { unit: '%', h: 170, fmt: v => v.toFixed(0) }))}
     ${sec('D30 재방문 (가입 주별)', vbars(ret.map(x => x.d30), ret.map((_, i) => i === 7 ? '이번 주' : `${7 - i}주 전`), { unit: '%', h: 170, fmt: v => v.toFixed(0) }))}</div>
   ${sec('센터별 (읽기 전용)', tbl(['센터', '회원', '활성(4주)', '기록률', '세션(4주)', '레슨 연계', 'V1 이상 비율'], CENTERS.map(c => { const s = centerStats(c);

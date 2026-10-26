@@ -491,3 +491,8 @@ select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--g2)
 .nbtags{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 4px}.nbtags span{font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;background:var(--g1);color:var(--g5)}
 .nbtags .cbbadge{background:#FFE3EE;color:var(--rose);font-weight:800}
 .nbt small{display:block;font-size:12px;color:var(--g5)}
+/* v1.18 결정 37 — 오운완 셀카 보너스 */
+.sfnote{text-align:center;margin-top:8px;word-break:keep-all}
+.sfdone{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1.5px solid #FFE3EE;background:#FFF9FB}
+.sfdone>div{flex:1;min-width:0}.sfdone b{font-size:15px;display:block;color:var(--rose)}.sfdone small{display:block;color:var(--g5);font-size:12px;margin-top:2px;word-break:keep-all}
+.xrow.sf span{word-break:keep-all}

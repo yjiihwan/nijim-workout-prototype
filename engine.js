@@ -8,7 +8,7 @@ const CFG = {
   WEEK_CAP: 1800,                          // 결정 32
   XP: { weight: 10, body: 8, cardio: 2, lesson: 150, firstSet: 20, complete: 50, newPart: 15, pr: 30, weekGoal: 200 },
   LIM: { weightSets: 30, bodySets: 30, cardioMin: 60, newPartsWeek: 6, prDay: 3, exPerSession: 25, cardioMaxMin: 180 },
-  VERIFY: { V0: 0.4, V1: 1.0, V1b: 0.7, V2: 1.0, V3: 2.0 },   // 결정 36 ①: 입점센터 입장 V1 0.8 → 1.0
+  VERIFY: { V0: 0.4, V1: 1.0, V3: 2.0 },   // 결정 36 ①: 입점센터 입장 V1 0.8 → 1.0 · 결정 37 ②: 비입점 위치 V1b(0.7)·셀카 V2(1.0) 폐지 → 입점 안 된 헬스장 = V0
   STREAK: [1.0, 1.0, 1.05, 1.10, 1.20, 1.20, 1.30],   // 연속 주 0~6+ (6주 이상 1.30)
   COMEBACK_DAYS: 7, COMEBACK_MUL: 1.5,                // 7일+ 쉬고 첫 세션 — 연속 배율 대신
   MOOD: { low: 0.6, high: 1.3, baseN: 10, baseDays: 56, minBase: 5, newShare: 0.5, quietAfter: 3 },
@@ -31,6 +31,9 @@ const CFG = {
   /* 결정 36(SPEC §3-2a): 입점센터 입장(V1) 세션 = 기본 경험치(운동량 ×1.2 전·첫 세트·완료·레슨 포함) × pct% 를 «입점 보너스 장부»에.
      이 장부는 주 weekCap 만 본다 — 하루 600·주 1,800 과 무관, 아이템 배율·부스터도 안 붙는다 */
   CENTER_BONUS: { pct: 50, weekCap: 900 },
+  /* 결정 37(SPEC §3-2b): 오운완 셀카 = round(기본 경험치 × pct%) 고정 가산 — 인증·연속·×1.2 안 곱함 · 장소 무관 · 하루 perDay회 ·
+     앱 안 카메라만 · 운동 장부(하루 600·V0 200·주 1,800 안, 잘릴 땐 셀카 몫부터) · 입점 보너스와 서로 안 곱함 */
+  SELFIE_BONUS: { pct: 20, perDay: 1 },
 };
 /* ----- 운영자 설정(H2·H1) — 본사가 바꾼 값은 전부 여기로만 들어온다. 화면은 CFG·need·lvPoint 를 통해서만 읽는다 ----- */
 const CFG_DEFAULT = JSON.parse(JSON.stringify(CFG));
@@ -41,7 +44,7 @@ function applyConfig({ cfg = {}, levels = {} } = {}) {
   Object.keys(CFG).forEach(k => delete CFG[k]); merge(CFG, JSON.parse(JSON.stringify(CFG_DEFAULT))); merge(CFG, cfg);
   Object.keys(LV_OVR).forEach(k => delete LV_OVR[k]); Object.assign(LV_OVR, levels);
 }
-const VERIFY_LABEL = { V0: '자가 기록', V1: '센터 확인 ✓', V1b: '센터 확인 ✓', V2: '오운완 📸', V3: '선생님 확인 ★ 2배' };
+const VERIFY_LABEL = { V0: '자가 기록', V1: '입점센터 입장 ✓', V3: '선생님 확인 ★ 2배' };
 
 /* ----- 레벨 곡선·포인트 ----- */
 const needBase = n => Math.round(CFG.CURVE.a + CFG.CURVE.b * n + CFG.CURVE.c * n * n);
@@ -103,8 +106,8 @@ function capGain(r, L, isV0) {
   const dayLeft = Math.max(0, dayCap - L.dayUsed), weekLeft = Math.max(0, CFG.WEEK_CAP - weekUsedOf(L));
   const exRaw = r.raw - (r.boostPart || 0), exGained = Math.max(0, Math.min(exRaw, dayLeft, weekLeft));
   const boostGained = Math.max(0, Math.min(r.boostPart || 0, itemLeftOf(L)));
-  const cut = exRaw - exGained;
-  return { gained: exGained + boostGained, exGained, boostGained, cut, reason: cut > 0 ? (weekLeft <= dayLeft ? 'week' : 'day') : null, dayLeft, weekLeft };
+  const cut = exRaw - exGained, selfieGained = Math.max(0, (r.selfieXP || 0) - cut);   // 결정 37: 잘린 양은 셀카 몫부터
+  return { gained: exGained + boostGained, exGained, boostGained, selfieGained, cut, reason: cut > 0 ? (weekLeft <= dayLeft ? 'week' : 'day') : null, dayLeft, weekLeft };
 }
 /* 물약 1병 — 유료 경험치(💰) · 아이템 장부 · 하루 개수 제한 없음 */
 function potionGain(L) {
@@ -114,10 +117,22 @@ function potionGain(L) {
 
 /* ----- 세션 경험치 (PLAN §2-3 · 결정 35 = XP_ENGINE_SPEC v1.10 §3-1) -----
    세션 XP = (Σ 운동별 기본 × 평소 대비(1.0|1.2) + 첫 세트 20 + 완료 50) × 검증 × 연속(복귀면 ×1.5) [× 부스터] + 고정(새 부위·PR·주간 목표)
-   s = { verify:'V0'|'V1'|'V1b'|'V3', selfie, items:[{ ex, sets:[{w,r,s,done,pr}], min }], prCount }
-   c = { firstToday, weekParts[], streakWeeks, lastDays, prToday, goal, weekCountBefore, todayCounted, boost,
+   s = { verify:'V0'|'V1'|'V3', selfie: null | { src:'camera'|'gallery', dup, ai:'ok'|'reject', past }, items:[{ ex, sets:[{w,r,s,done,pr}], min }], prCount }
+   c = { firstToday, weekParts[], streakWeeks, lastDays, prToday, goal, weekCountBefore, todayCounted, boost, selfieToday(그날 셀카 보너스 이미 받음),
          xpBase:{ex: 평소 양|null}, todayQ:{ex: 오늘 앞 세션 대상 양}, todayPrev:[{ex, cnt, bonus, mul}] } */
-const effVerify = s => s.selfie && s.verify === 'V1b' ? 'V2' : s.verify;   // 결정 36 ①: 입점센터(V1)는 입장만으로 100% — 셀카 단계 없음. 비입점 위치 확인(V1b)만 셀카로 100%
+/* 결정 37 ②·SPEC 단위 32: 옛 V1b·V2(또는 모르는 값)는 V0 로 — 0.7·1.0 배율은 어디서도 안 씀. 셀카는 등급을 바꾸지 않는다 */
+const effVerify = s => CFG.VERIFY[s.verify] != null ? s.verify : 'V0';
+/* 오운완 셀카 보너스 (SPEC §3-2b) — 반환 { sf, why } · why = 안 준 이유(화면 안내용) */
+function selfieBonus(s, c, baseXP, any) {
+  const p = s.selfie; if (!p) return { sf: 0, why: null };
+  if (!any || !(baseXP > 0)) return { sf: 0, why: 'norecord' };   // 5회 미만 세트를 뺀 뒤 대상 기록 0 → 셀카만으론 0
+  if (p.src !== 'camera') return { sf: 0, why: 'gallery' };
+  if (p.ai && p.ai !== 'ok') return { sf: 0, why: 'ai' };
+  if (p.dup) return { sf: 0, why: 'dup' };
+  if (p.past) return { sf: 0, why: 'past' };
+  if ((c.selfieToday || 0) >= CFG.SELFIE_BONUS.perDay) return { sf: 0, why: 'today' };
+  return { sf: Math.round(baseXP * CFG.SELFIE_BONUS.pct / 100), why: null };
+}
 /* 경험치 대상 세트 = 완료 + (시간형이거나 MIN_REPS회 이상). 5회 미만도 기록·PR·표정·코칭엔 그대로 쓴다 */
 const xpEligible = (e, st) => !!st.done && (e.mode !== 'wr' && e.mode !== 'r' ? true : (st.r || 0) >= CFG.MIN_REPS);
 /* 운동 1개의 «경험치 양» — 웨이트·맨몸 = 대상 세트 수 · 유산소 = 분 · 레슨 = 1 */
@@ -163,7 +178,9 @@ function sessionXP(s, c) {
   const first = c.firstToday && any ? X.firstSet : 0, complete = c.firstToday && any ? X.complete : 0;
   const v = effVerify(s), vm = CFG.VERIFY[v];
   const comeback = c.lastDays >= CFG.COMEBACK_DAYS, sm = comeback ? CFG.COMEBACK_MUL : streakMul(c.streakWeeks);
-  const mult = Math.round((base + first + complete) * vm * sm), bm = c.boost === true ? CFG.BOOST.mul : (c.boost || 0), boostPart = bm && any ? Math.round(mult * (bm - 1)) : 0;   // c.boost = 배율(숫자) · true 는 예전 2배 부스터
+  const baseXP = plainSum + l * X.lesson + first + complete;   // SPEC ④-b: 입점 보너스·셀카 기준 = 운동량 ×1.2 전 · 검증·연속·고정 전
+  const { sf: selfieXP, why: selfieWhy } = selfieBonus(s, c, baseXP, any);
+  const mult = Math.round((base + first + complete) * vm * sm), bm = c.boost === true ? CFG.BOOST.mul : (c.boost || 0), boostPart = bm && any ? Math.round((mult + selfieXP) * (bm - 1)) : 0;   // c.boost = 배율(숫자) · true 는 예전 2배 부스터 · 셀카 몫에도 배율(PLAN ⑧-2 A)
   /* 같은 날 나눠 저장: 앞 세션에서 ×1.0이던 종목이 그날 합계로 ×1.2가 되면 앞 세션 몫 차액을 이번 세션에 더한다(앞 원장은 안 고침) */
   const nowOn = new Set(per.filter(x => x.bonus).map(x => x.ex));
   const catchUp = Math.round((c.todayPrev || []).filter(p => !p.bonus && nowOn.has(p.ex)).reduce((a, p) => a + UNIT[EX[p.ex].xpk] * p.cnt * (CFG.VOL_BONUS.mult - 1) * p.mul, 0));
@@ -174,9 +191,8 @@ function sessionXP(s, c) {
   const prN = Math.min(s.prCount || 0, Math.max(0, CFG.LIM.prDay - (c.prToday || 0)));
   const goal = any && !c.todayCounted && c.weekCountBefore + 1 === c.goal ? X.weekGoal : 0;
   const fixed = newN * X.newPart + prN * X.pr + goal;
-  const baseXP = plainSum + l * X.lesson + first + complete;   // SPEC ④-b: 입점 보너스 기준 = 운동량 ×1.2 전 · 검증·연속·고정 전
-  return { lines, base, baseXP, bonusXP, bonusRows, noBase, short, per, catchUp, first, complete, v, vm, sm, comeback, mult, boostPart, bm, newParts: fresh.slice(0, newN), newXP: newN * X.newPart,
-    prN, prXP: prN * X.pr, goal, fixed, raw: mult + catchUp + boostPart + fixed, any };
+  return { lines, base, baseXP, selfieXP, selfieWhy, bonusXP, bonusRows, noBase, short, per, catchUp, first, complete, v, vm, sm, comeback, mult, boostPart, bm, newParts: fresh.slice(0, newN), newXP: newN * X.newPart,
+    prN, prXP: prN * X.pr, goal, fixed, raw: mult + catchUp + boostPart + fixed + selfieXP, any };
 }
 
 /* ----- 입점 보너스 (결정 36 · SPEC §3-2a) — 세 번째 장부. 운동 장부 반영(capGain) 결과와 무관하게 baseXP 에서 바로 -----
@@ -188,10 +204,10 @@ function centerBonus(r, L, held = false) {
   return { cb, cbRaw, cut: cbRaw - cb, weekLeft };
 }
 /* «입점센터였다면 +○○» — 같은 운동을 입점센터 입장(V1)으로 했을 때와의 차이(한도·주 900 미적용 «이번 운동만» 값).
-   V1·레슨(V3)이면 null, 0 이하면 화면에서 숨김. 부스터 몫은 양쪽에서 빼고 비교 */
+   V1·레슨(V3)이면 null, 0 이하면 화면에서 숨김. 부스터 몫은 양쪽에서 빼고 비교 · 셀카 몫은 양쪽에 같이 들어가 차이에 영향 없음 */
 function centerIf(s, c, r = sessionXP(s, c)) {
   if (r.v === 'V1' || r.v === 'V3') return null;
-  const r1 = sessionXP({ ...s, verify: 'V1', selfie: false }, c);
+  const r1 = sessionXP({ ...s, verify: 'V1' }, c);
   const d = (r1.raw - r1.boostPart) + Math.round(r1.baseXP * CFG.CENTER_BONUS.pct / 100) - (r.raw - r.boostPart);
   return d > 0 ? d : null;
 }

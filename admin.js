@@ -173,15 +173,15 @@ function h2Preview() {   // 바꾼 값(초안)과 지금 값(저장됨)을 같�
   const calc = () => { const r = sessionXP(s, c), L0 = { dayUsed: 0, weekEx: 0, dayItem: 0, weekItem: 0, weekPaid: 0, allV0Today: false }, g = capGain(r, L0, false);
     const per = Math.round(sessionXP(s, { ...c, goal: 9, prToday: 9 }).raw);
     const lv = n => { let t = 0; for (let k = 1; k < n; k++) t += need(k); return t; };
-    const w99 = weeksToLv99({ level: 1, xp: 0, perWeek: 3, per: r.raw }), pts = Array.from({ length: 98 }, (_, i) => lvPoint(i + 2) + evoBonus(i + 2)).reduce((a, b) => a + b, 0);
-    return { sess: g.gained, raw: r.raw, day: CFG.DAY_CAP, week: CFG.WEEK_CAP, per, lv10: lv(10), lv99: lv(99), w99: w99.weeks, pts, low: Math.round(CFG.MOOD.low * 100), high: Math.round(CFG.MOOD.high * 100), boost: CFG.BOOST.mul, pot: CFG.POTION.xp }; };
+    const w99 = weeksToLv99({ level: 1, xp: 0, perWeek: 3, per: r.raw });
+    return { sess: g.gained, raw: r.raw, day: CFG.DAY_CAP, week: CFG.WEEK_CAP, per, lv10: lv(10), lv99: lv(99), w99: w99.weeks, low: Math.round(CFG.MOOD.low * 100), high: Math.round(CFG.MOOD.high * 100), boost: CFG.BOOST.mul, pot: CFG.POTION.xp }; };
   const a = withCfg(ADM, calc), b = withCfg(D, calc);
   const row = (k, l, f = nf) => `<tr class="${a[k] !== b[k] ? 'chg' : ''}"><td>${l}</td><td class="num">${f(a[k])}</td><td class="num"><b>${f(b[k])}</b></td></tr>`;
   return `<div class="aprev" id="h2prev"><h4>바꾼 값으로 미리 계산 <span class="amut">engine.js 같은 함수</span></h4>${tbl(['예시', '지금', '바꾸면'], [
     row('raw', '예시 세션 경험치 ①'),
     row('sess', '① 한도 적용 뒤'), row('day', '하루 운동 한도'), row('week', '주 운동 한도'),
     row('lv10', 'Lv.10 누적 경험치'), row('lv99', 'Lv.99 누적 경험치'), row('w99', 'Lv.99까지(① 주 3회)', v => v === Infinity ? '—' : `${nf(v)}주 ≈ ${(v / 52).toFixed(1)}년`),
-    row('pts', 'Lv.1→99 포인트 합계', v => nf(v) + 'P'), row('low', '표정 «아쉬운» 미만', v => v + '%'), row('high', '표정 «신남» 이상', v => v + '%'),
+    row('low', '표정 «아쉬운» 미만', v => v + '%'), row('high', '표정 «신남» 이상', v => v + '%'),
     row('boost', '부스터 배수', v => '×' + v), row('pot', '물약 1병', v => '+' + v)], 'prev')}<div class="amut" style="margin-top:8px;line-height:1.5">① 벤치·랫풀다운 4세트씩 + 트레드밀 20분 · 센터 입장 확인 · 연속 2주 · 오늘 첫 운동 · PR 1 · 주간 목표 달성 · 새 부위 3</div></div>`;
 }
 const H2TABS = [['xp', '경험치·한도'], ['mood', '표정'], ['lv', '레벨표 99행'], ['ach', '업적 24'], ['reward', '보상 종류'], ['shop', '상점'], ['item', '부스터·물약']];
@@ -191,7 +191,7 @@ function vH2() {
     xp: () => `<div class="agrid3">
       ${sec('경험치 단위 (PLAN §2-3)', [['XP.weight', '웨이트·머신 1세트'], ['XP.body', '맨몸 1세트'], ['XP.cardio', '유산소 1분'], ['XP.lesson', '레슨 1회'], ['XP.firstSet', '첫 세트 보너스'], ['XP.complete', '세션 완료 보너스'], ['XP.newPart', '이번 주 새 부위'], ['XP.pr', 'PR 1개'], ['XP.weekGoal', '주간 목표 달성']].map(([p, l]) => fr(l, numIn(p), 'XP')).join(''))}
       ${sec('한도 (결정 32·33)', fr('하루 운동 경험치', numIn('DAY_CAP'), 'XP') + fr('하루 · 전부 자가 기록이면', numIn('DAY_CAP_V0'), 'XP') + fr('주 운동 경험치', numIn('WEEK_CAP', { w: 90 }), 'XP')
-        + fr('월 포인트 적립 상한', numIn('POINT.monthCap', { w: 90 }), 'P') + fr('자가 기록 레벨업 포인트', numIn('POINT.v0Rate', { mul: 100 }), '%') + note('하루·주 한도는 <b>운동 경험치에만</b> 걸려요. 아이템 경험치 한도는 «부스터·물약» 탭.'))}
+        + note('하루·주 한도는 <b>운동 경험치에만</b> 걸려요. 아이템 경험치 한도는 «부스터·물약» 탭.'))}
       ${sec('검증 배율·연속 배율', [['VERIFY.V0', '자가 기록 V0 (집·야외·입점 안 된 헬스장)'], ['VERIFY.V1', '입점센터 입장 V1'], ['VERIFY.V3', '레슨 확정 V3']].map(([p, l]) => fr(l, numIn(p, { step: '0.05' }), '×')).join('')
         + `<div class="afr"><span>연속 주 0·1·2·3·4·5·6+</span></div><div class="astreak">${CFG_DEFAULT.STREAK.map((_, i) => numIn('STREAK.' + i, { step: '0.05', w: 66 })).join('')}</div>`
         + fr('복귀 기준(쉰 날)', numIn('COMEBACK_DAYS'), '일') + fr('복귀 첫 세션 배율', numIn('COMEBACK_MUL', { step: '0.05' }), '×')
@@ -207,10 +207,10 @@ function vH2() {
         return `<tr class="${o.off ? 'aoff' : ''}"><td><button class="asw ${o.off ? '' : 'on'}" data-aact="achOff" data-v="${esc(a.name)}"></button></td><td>${a.cat}</td><td><b>${a.name}</b>${a.extra ? ' <span class="atag sm gray">보충안</span>' : ''}</td><td>${esc(a.cond)}</td>
         <td><input class="ain num ${o.goal ? 'chg' : ''}" style="width:70px" type="number" min="1" data-ach="${esc(a.name)}" value="${o.goal || a.goal0}" title="기본 ${a.goal0}"></td><td>${a.item}</td></tr>`; })),
         '<span class="amut">목표를 바꾸면 회원 앱 업적 진행 막대·달성 여부가 바뀌어요 · 끄면 목록에서 빠져요</span>'); },
-    reward: () => { const T = [['cosmetic', '꾸미기(외형)', 1, true], ['title', '칭호', 1, true], ['effect', '효과(이펙트)', 1, true], ['point', '니짐 포인트', 1, true], ['coupon_norder', 'N오더 쿠폰', 2, false], ['center_benefit', '센터 혜택', 2, false], ['membership_discount', '멤버십 할인', 2, false], ['external', '외부 제휴', 2, false]];
+    reward: () => { const T = [['cosmetic', '꾸미기(외형)', 1, true], ['title', '칭호', 1, true], ['effect', '효과(이펙트)', 1, true], ['point', '니짐 포인트', 1, false], ['coupon_norder', 'N오더 쿠폰', 2, false], ['center_benefit', '센터 혜택', 2, false], ['membership_discount', '멤버십 할인', 2, false], ['external', '외부 제휴', 2, false]];
       return sec('보상 종류 (rewards.type · reward_rules)', tbl(['켜기', '종류', '단계', '설명'], T.map(([k, l, ph, def]) => { const on = D.rewards[k] ?? def;
         return `<tr class="${on ? '' : 'aoff'}"><td><button class="asw ${on ? 'on' : ''}" data-aact="rwOn" data-v="${k}"></button></td><td><b>${l}</b> <span class="amut mono">${k}</span></td><td>${ph}차</td><td>${ph === 1 ? '앱 안에서 끝나는 보상' : '조건(센터·금액·월 상한)이 붙는 보상 — 2차에 켜기'}</td></tr>`; })))
-        + note('보상은 «조건(reward_rules)»과 «보상(rewards)»이 따로라서 쿠폰 추가 = 행 1개. 이 스위치는 시연용 저장만 되고 회원 앱 화면엔 아직 연결 안 함(1차 4종 그대로).'); },
+        + note('결정 38: 업적·레벨업 «니짐 포인트» 보상은 끔(자리만 남김 — 별도 기획 후 켬). 보상은 «조건(reward_rules)»과 «보상(rewards)»이 따로라서 쿠폰 추가 = 행 1개. 이 스위치는 시연용 저장만 되고 회원 앱 화면엔 아직 연결 안 함(1차 4종 그대로).'); },
     shop: () => vShopAdm(),
     item: () => `<div class="agrid3">${sec('부스터·물약 (결정 33)', fr('부스터 배수', numIn('BOOST.mul', { step: '0.5' }), '배') + fr('물약 1병 경험치', numIn('POTION.xp'), 'XP')
         + fr('아이템 경험치 하루 한도', numIn('ITEM_CAP.day', { nullable: true }), '빈칸 = 없음') + fr('아이템 경험치 주 한도', numIn('ITEM_CAP.week', { nullable: true }), '빈칸 = 없음'))}
@@ -224,13 +224,13 @@ function vH2() {
 }
 function vLevels() {
   const from = AV.lvFrom, rows = [], C0 = CFG.CURVE;
-  const base = withCfg(D, () => { const out = []; let cum = 0; for (let n = 1; n <= 99; n++) { out.push({ n, need: n < 99 ? need(n) : null, cum, pt: n > 1 ? lvPoint(n) : 0, evo: evoBonus(n), title: stageName(null, n), tier: TIER_NAME[tierOf(n)] }); if (n < 99) cum += need(n); } return out; });
+  const base = withCfg(D, () => { const out = []; let cum = 0; for (let n = 1; n <= 99; n++) { out.push({ n, need: n < 99 ? need(n) : null, cum, title: stageName(null, n), tier: TIER_NAME[tierOf(n)] }); if (n < 99) cum += need(n); } return out; });
   base.forEach(r => { const o = D.levels[r.n] || {}, inp = (f, v, w, ph = '') => `<input class="ain ${f === 'title' ? '' : 'num'} ${o[f] != null && o[f] !== '' ? 'chg' : ''}" style="width:${w}px" ${f === 'title' ? 'type="text"' : 'type="number"'} data-lv="${r.n}" data-f="${f}" value="${esc(o[f] ?? v ?? '')}" placeholder="${ph}">`;
     rows.push(`<tr class="${r.n % 10 === 0 || r.n === 99 ? 'aevo' : ''}"><td class="num"><b>Lv.${r.n}</b></td><td class="num">${r.n < 99 ? inp('xp', r.need, 76) : '<span class="amut">만렙</span>'}</td><td class="num">${nf(r.cum)}</td>
-      <td>${inp('title', o.title ?? '', 104, r.title)}</td><td>${r.tier}</td><td>${r.n > 1 ? inp('pt', r.pt, 68) : '—'}</td><td>${inp('evo', r.evo || '', 68, '0')}</td></tr>`); });
+      <td>${inp('title', o.title ?? '', 104, r.title)}</td><td>${r.tier}</td></tr>`); });
   return `<div class="agrid3 lvtop">${sec('곡선 계수 (레벨 n→n+1 = a + b·n + c·n²)', fr('a', numIn('CURVE.a')) + fr('b', numIn('CURVE.b', { step: '0.5' })) + fr('c', numIn('CURVE.c', { step: '0.05' })) + `<button class="abtn ghost sm" data-aact="lvReset">레벨표 기본값으로</button>`)}
     ${sec('읽는 법', note('계수를 바꾸면 99행이 한꺼번에 다시 계산돼요. 특정 행만 바꾸려면 그 행 칸에 직접 넣어요(그 행이 계수보다 우선). 칭호를 비워 두면 기본(«n단계»)이 쓰여요. 굵은 줄 = 10레벨 진화.') + `<div class="amut">지금 a ${C0.a} · b ${C0.b} · c ${C0.c}</div>`)}</div>
-  ${sec('레벨표 99행 (level_curve)', `<div class="atw tall">${tbl(['레벨', '다음 레벨까지 XP', '누적 XP', '칭호', '아우라', '레벨업 포인트', '진화 보너스'], rows, 'lvt').replace(/^<div class="atw">|<\/div>$/g, '')}</div>`, '<span class="amut">표 안에서 스크롤 · 머리줄 고정</span>')}`;
+  ${sec('레벨표 99행 (level_curve)', `<div class="atw tall">${tbl(['레벨', '다음 레벨까지 XP', '누적 XP', '칭호', '아우라'], rows, 'lvt').replace(/^<div class="atw">|<\/div>$/g, '')}</div>`, '<span class="amut">표 안에서 스크롤 · 머리줄 고정</span>')}`;
 }
 const RAR = { 일반: 'r0', 희귀: 'r1', 영웅: 'r2', 전설: 'r3' };
 function vShopAdm() {
@@ -306,7 +306,7 @@ function vH6() {
   <div class="agrid2">${sec('지금 단계', `<div class="aroll">${steps.map(s => `<button class="${p === s ? 'on' : ''} ${s < p ? 'past' : ''}" data-aact="roll" data-v="${s}"><b>${s}%</b><span>${nf(total * s / 100)}명</span></button>`).join('<i>→</i>')}</div>`
       + `<div class="akrow" style="margin-top:14px">${kpi('지금 보이는 계정', nf(total * p / 100) + '명', `앱 사용자 ${nf(total)}명 중`)}${kpi('예상 코칭 비용', '$' + nf(total * p / 100 * .41 * .14) + '/월', '기록률 41% × 유저당 $0.14')}</div>`
       + note('시연: 단계 버튼은 이 화면의 저장값만 바꿔요. 회원 앱 시연 화면에서 운동기록 탭을 숨기진 않아요(시연이 막히지 않게).'))}
-    ${sec('다음 단계로 올리기 전 확인', `<ul class="achk"><li>H3 부정 감지율 2% 미만 · 보류 경험치 처리 밀림 없음</li><li>H4 유저당 코칭 비용 ≤ 기획 추정(≈200원)</li><li>H5 D7 재방문이 꺼진 그룹보다 낮지 않음</li><li>H7 월 포인트 적립 예측이 예산 안</li><li>앱 오류율·서버 응답 시간 정상(개발사)</li></ul>`)}</div>
+    ${sec('다음 단계로 올리기 전 확인', `<ul class="achk"><li>H3 부정 감지율 2% 미만 · 보류 경험치 처리 밀림 없음</li><li>H4 유저당 코칭 비용 ≤ 기획 추정(≈200원)</li><li>H5 D7 재방문이 꺼진 그룹보다 낮지 않음</li><li>H7 구매적립 충전·아이템 사용 이상치 없음</li><li>앱 오류율·서버 응답 시간 정상(개발사)</li></ul>`)}</div>
   <div class="agrid2">${sec('계정별 칸 예시', tbl(['계정', '칸(0~99)', `${p}%일 때`], rows))}
     ${sec('바꾼 기록', tbl(['시각', '내용'], (D.rollLog || [{ at: '10/20 10:00', what: '0% → 10% (첫 공개)' }]).map(x => `<tr><td class="num">${x.at}</td><td>${x.what}</td></tr>`)))}</div>`;
 }
@@ -315,12 +315,10 @@ function vH6() {
 function vH7() {
   const r = rng(5), months = ['5월', '6월', '7월', '8월', '9월', '10월'], earn = months.map((_, i) => Math.round(820000 * (1 + i * .28) * (.95 + r() * .1)));
   const cats = SHOP82.reduce((a, x) => { a[x.cat_ko] = (a[x.cat_ko] || 0) + 1; return a; }, {}), use = Object.keys(cats).map((k, i) => [k, Math.round([5120, 4380, 1980, 1210, 1460, 1720, 640, 410][i] * (.9 + r() * .2))]);
-  const fc = [1, 2, 3].map(i => Math.round(earn[5] * Math.pow(1.17, i)));
-  return `<div class="ahead"><div><h2>포인트·유료 모니터</h2><p>레벨업 포인트 적립과 현금 충전·아이템 사용을 같이 봐요. 1P = 1원 가정.</p></div><div class="aflt"><span class="amut">이번 달 = 10월 1일~오늘</span></div></div>
-  <div class="akrow">${kpi('이번 달 적립', (earn[5] / 10000).toFixed(1) + '만P', `계정당 상한 ${nf(CFG.POINT.monthCap)}P`)}${kpi('상한 도달 계정', '214명', '적립 계정의 6.3%')}${kpi('유료 충전', '1,842만원', '1,912건')}${kpi('아이템 장부 비중', '17%', '전체 경험치 중 아이템분')}${kpi('💰 표시 계정', '11%', '현금 충전 포인트로 아이템 산 계정')}${kpi('«최근 7일 운동» 조건에 막힘', '1,284회', '사용 시도의 4.1% · 아이템 차감 안 함')}</div>
-  <div class="agrid2">${sec('월 적립 총액 (P)', vbars(earn, months, { unit: 'P', h: 190 }))}
-    ${sec('카테고리별 아이템 사용 (이번 달)', tbl(['카테고리', '사용', '비중'], use.map(([k, v]) => `<tr><td>${k}</td><td class="num">${nf(v)}</td><td class="wbar">${hshare(v, Math.max(...use.map(u => u[1])), pct(v, use.reduce((a, u) => a + u[1], 0)) + '%')}</td></tr>`)))}</div>
-  ${sec('적립 비용 예측 (월 17% 증가 가정)', tbl(['', '11월', '12월', '1월'], [`<tr><td>예상 적립</td>${fc.map(v => `<td class="num">${nf(v)}P</td>`).join('')}</tr>`, `<tr><td>원화 환산</td>${fc.map(v => `<td class="num">₩${nf(v)}</td>`).join('')}</tr>`]) + note(`상한(${nf(CFG.POINT.monthCap)}P)·자가 기록 ${Math.round(CFG.POINT.v0Rate * 100)}%·아이템으로 오른 레벨 0P는 H2 값과 같은 엔진 규칙. 비용이 예산을 넘으면 H2 «월 포인트 적립 상한»을 먼저 조정.`))}`;
+  return `<div class="ahead"><div><h2>포인트·유료 모니터</h2><p>구매적립(실결제 충전)과 상점 아이템 사용을 봐요. 운동·레벨업 포인트 지급은 없어요(결정 38). 1P = 1원 가정.</p></div><div class="aflt"><span class="amut">이번 달 = 10월 1일~오늘</span></div></div>
+  <div class="akrow">${kpi('유료 충전', '1,842만원', '1,912건')}${kpi('아이템 장부 비중', '17%', '전체 경험치 중 아이템분')}${kpi('💰 표시 계정', '11%', '현금 충전 포인트로 아이템 산 계정')}${kpi('«최근 7일 운동» 조건에 막힘', '1,284회', '사용 시도의 4.1% · 아이템 차감 안 함')}</div>
+  <div class="agrid2">${sec('월 구매적립 충전 (P)', vbars(earn, months, { unit: 'P', h: 190 }))}
+    ${sec('카테고리별 아이템 사용 (이번 달)', tbl(['카테고리', '사용', '비중'], use.map(([k, v]) => `<tr><td>${k}</td><td class="num">${nf(v)}</td><td class="wbar">${hshare(v, Math.max(...use.map(u => u[1])), pct(v, use.reduce((a, u) => a + u[1], 0)) + '%')}</td></tr>`)))}</div>`;
 }
 
 /* ===== 틀·이벤트 ===== */
@@ -379,7 +377,7 @@ document.addEventListener('change', e => {
   const num = t.value === '' ? null : +t.value;
   if (d.cfg) { if (num == null && !d.null) return rerender(); setCfg(d.cfg, num == null ? null : +(num / +d.mul).toFixed(6)); }
   else if (d.lv) { const n = +d.lv, o = D.levels[n] = { ...(D.levels[n] || {}) };
-    const def = withCfg({ cfg: D.cfg, levels: {} }, () => ({ xp: need(n), pt: lvPoint(n), evo: evoBonus(n), title: '' }))[d.f];
+    const def = withCfg({ cfg: D.cfg, levels: {} }, () => ({ xp: need(n), title: '' }))[d.f];
     const val = d.f === 'title' ? t.value.trim() : num;
     if (val == null || val === '' || val === def) delete o[d.f]; else o[d.f] = val;
     if (!Object.keys(o).length) delete D.levels[n]; }

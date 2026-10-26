@@ -1,8 +1,8 @@
 'use strict';
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
-   경험치·레벨·표정·포인트 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
+   경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.18';
+const VER = 'v1.19';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -27,7 +27,6 @@ const ro = w => { const c = w.charCodeAt(w.length - 1) - 0xAC00; if (c < 0 || c 
 const wa = t => CH[t].josa === '가' ? '와' : '과';
 const TIER_NAME = ['', '기본', '하늘 링', '하늘 링+입자', '로즈 링', '로즈 2중 링', '골드 아우라'];
 const isBigBoundary = lv => lv % 10 === 0 || lv === 99;
-const MONTH_CAP = CFG.POINT.monthCap;
 
 /* 효과형은 «사용»(소모) · 외형형은 «장착». 가격·상한 PLAN §2-10 */
 const ITEMS = [
@@ -43,7 +42,7 @@ const ITEMS = [
 ];
 patchItems();   // 본사(H2) 가격·판매 여부 — config_store.js
 const FRIENDS = [
-  { n:'운동하는곰', t:'koa', lv:27, week:1420, rate:100, paid:0 },
+  { n:'운동하는곰', t:'koa', lv:27, week:2140, rate:100, paid:0 },
   { n:'새벽러너', t:'saetbyeol', lv:41, week:980, rate:75, paid:0 },
   { n:'벤치왕', t:'ttukbi', lv:33, week:1650, rate:100, paid:2, pure:24 },
   { n:'필라테스러', t:'mungchi', lv:12, week:610, rate:67, paid:0 },
@@ -103,7 +102,7 @@ const seedHist = () => {
 
 const fresh = () => ({ type:'mungchi', chosen:false, onboarded:false, goal:3, goalNext:null, perm:{ noti:false, loc:false },
   noti:{ entry:true, nudge:true, report:true }, locCheck:true, hideTips:false, bodyweight:null,
-  level:18, xp:need(18) - 120, points:2450, month:0, monthKey:'2026-10',
+  level:18, xp:need(18) - 120, exLv:18, exXp:need(18) - 120, points:2450,
   events:[], pending:null, sound:true, placeholder:false, demo:'none', quitDemo:false,
   exprDemo:'auto', moodDemo:'auto', mood:null, lowRun:0,
   owned:{ cap:1 }, equipped:{ cap:true }, inv:{ boost1:0, boost7:0, potion:0, charm:0 }, boostNext:false, boost7Until:null, nextBoosts:[], timedBoosts:[], eatCat:'all', paidLog:[], shields:0,
@@ -113,6 +112,7 @@ const fresh = () => ({ type:'mungchi', chosen:false, onboarded:false, goal:3, go
   calc:null });
 let S;
 try { S = Object.assign(fresh(), JSON.parse(localStorage.getItem(KEY) || '{}')); } catch { S = fresh(); }
+if (S.exLv == null) { S.exLv = S.level; S.exXp = S.xp; }   // v1.18 이전 저장분: 운동 레벨 = 지금 레벨에서 시작
 (S.custom || []).forEach(c => { EX[c.id] = c; });
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { toast('저장 공간이 부족해요 — 사진을 몇 장 지워 주세요'); } };
 const $ = id => document.getElementById(id);
@@ -181,6 +181,8 @@ const ledger = (excludeId = null) => ledgerOf([...S.records.filter(r => r.id !==
 const weekXP = () => weekUsedOf(ledger());   // 운동 경험치만(주 1,800 한도 대상)
 const itemWeek = () => ledger().weekItem;    // 아이템 경험치(한도 없음)
 const centerWeek = () => ledger().weekCenter;   // 결정 36 입점 보너스(주 900 · 운동 1,800과 따로)
+const leagueWeek = () => leagueWeekOf(S.records, weekDays());   // 결정 38 리그·랭킹 주간 = 운동 + 입점 보너스(검증 세션만)
+const gainEx = g => { const e = applyXP({ level: S.exLv, xp: S.exXp }, g); S.exLv = e.level; S.exXp = e.xp; };   // 운동 레벨(아이템 장부 제외)
 const CB_TXT = '입점센터 운동 시 경험치 1.5배';
 const findCenterBtn = (id = '') => `<button class="linkbtn cfind" data-act="findCenter"${id ? ` id="${id}"` : ''}>센터 찾기 ›</button>`;
 const lastWorkoutDays = () => { const ds = realRecs().map(r => r.date).sort(); if (!ds.length) return 99;
@@ -580,7 +582,7 @@ function vResult() {
     ${rec && rec.xpBoost ? `<div class="muted capline" id="resultBoost">×${(rec.br && rec.br.bm) || CFG.BOOST.mul} 부스터로 늘어난 +${fmt(rec.xpBoost)} XP는 한도 없이 다 들어갔어요 💰</div>` : ''}
     ${rec && !rec.demo && rec.centerIf > 0 ? `<div class="cbif" id="cbIf"><span>입점센터였다면 <b>+${fmt(rec.centerIf)}</b> 경험치</span>${findCenterBtn('cbIfFind')}</div>` : ''}
     <div class="bar"><i style="width:${lv >= 99 ? 100 : Math.round(S.xp / need(lv) * 100)}%"></i></div><div class="muted">${lv >= 99 ? '최고 레벨' : `Lv.${lv + 1}까지 ${(need(lv) - S.xp).toLocaleString()} XP`}</div>
-    ${ev ? `<div class="ptline" id="ptLine">Lv.${ev.from} → ${ev.to} 레벨업 · ${ev.points ? `+${ev.points.toLocaleString()}P 적립` : '적립 0P'} <span class="muted">이번 달 ${S.month.toLocaleString()}/${MONTH_CAP.toLocaleString()}P${ev.pointsCut ? ` · 한도 때문에 ${ev.pointsCut.toLocaleString()}P 빠짐` : ''}${rec.v === 'self' ? ' · 자가 기록 레벨업은 50%' : ''}</span></div>` : ''}
+    ${ev ? `<div class="ptline" id="ptLine">Lv.${ev.from} → ${ev.to} 레벨업</div>` : ''}
     <div class="muted" style="margin-top:6px" id="resultNote">${note}</div>
     ${m && m.ratio != null && S.moodDemo === 'auto' ? `<div class="muted" style="margin-top:4px">평소 대비 ${Math.round(m.ratio * 100)}% (오늘 한 종목만 · 지난 10회 기준)</div>` : ''}</div>
   ${canSelfie ? selfieCta(rec) : sfDone ? `<div class="card sfdone" id="sfDone">${CAM}<div><b>오운완 인증 완료 · +${fmt(rec.selfieIn ?? rec.selfieXP)} XP</b><small>사진은 나한테만 보여요 · 셀카 보너스는 하루 1번</small></div></div>` : ''}
@@ -632,7 +634,7 @@ function vSelfie() {
 
 /* ===== 랭킹·내 캐릭터 (v1.10 그대로) ===== */
 function rankList() {
-  const me = { n:'나', t:S.type, lv:S.level, week:Math.min(CFG.WEEK_CAP, weekXP()), rate:Math.min(100, Math.round(weekCount()/S.goal*100)), paid:S.paidLog.length ? 1 : 0, pure:S.level, me:true };
+  const me = { n:'나', t:S.type, lv:S.level, week:leagueWeek(), rate:Math.min(100, Math.round(weekCount()/S.goal*100)), paid:S.paidLog.length ? 1 : 0, pure:S.exLv, me:true };
   let arr = [...FRIENDS, me].map(f => ({ ...f, key: S.fTab === 'week' ? f.rate * 10000 + f.week : (S.pureOnly ? (f.pure ?? f.lv) : f.lv) }));
   return arr.sort((a, b) => b.key - a.key);
 }
@@ -645,13 +647,13 @@ function vFriends() {
   <div><b>${esc(f.n)}</b> ${f.paid?'<span title="유료 사용">💰</span>':''}<div class="muted">${esc(CH[f.t].name)} · ${stageName(f.t, f.lv)}</div></div>
   <div class="val">${S.fTab==='week'?`${f.rate}%<small>${f.week.toLocaleString()} XP</small>`:`Lv.${S.pureOnly?(f.pure??f.lv):f.lv}<small>${f.paid&&!S.pureOnly&&f.pure!==f.lv?`운동만 Lv.${f.pure}`:TIER_NAME[tierOf(f.lv)]}</small>`}</div></div>`).join('')}</div>
   <button class="btn ghost" data-act="invite">친구 초대</button>
-  <div class="muted" style="margin-top:8px">이번 주 = 주간 목표 달성률 기준 · 검증된 운동만 집계</div></div>`;
+  <div class="muted" style="margin-top:8px">이번 주 = 주간 목표 달성률 기준 · 검증된 운동만 집계(입점센터 보너스 포함)</div></div>`;
 }
 function vMe() {
   const t = S.type, looks = ITEMS.filter(i => i.kind === 'look');
   return `${subHead('내 캐릭터')}<div class="sec">
   <div class="card" style="text-align:center">${charHTML(t, S.level, 170, true, exprNow())}<div style="margin-top:14px"><span class="name">${esc(CH[t].name)}</span> <span class="pill lvpill">Lv.${S.level}</span> <span class="pill tier${tierOf(S.level)}">${TIER_NAME[tierOf(S.level)]}</span></div>
-  <div class="muted" style="margin-top:4px">칭호 «${stageName(t, S.level)}» · 포인트 ${S.points.toLocaleString()}P · 이번 달 적립 ${S.month}/${MONTH_CAP.toLocaleString()}P</div>
+  <div class="muted" style="margin-top:4px">칭호 «${stageName(t, S.level)}» · 운동 레벨 Lv.${S.exLv} · 포인트 ${S.points.toLocaleString()}P</div>
   <div class="slots">${looks.map(i => `<div class="slot ${S.equipped[i.id]?'on':''}">${S.equipped[i.id] ? i.name : '빈 슬롯'}</div>`).slice(0, 3).join('')}${ITEMS.filter(i => i.kind === 'effect' && S.equipped[i.id]).map(i => `<div class="slot on">${i.name}</div>`).join('')}</div>
   <button class="btn" data-act="sub" data-v="shop" id="shopBtn">🛍️ 아이템 상점</button>
   <button class="btn ghost" data-act="rechoose" style="margin-top:8px">캐릭터 바꾸기 <span class="muted">(Lv.10 전 1회 무료)</span></button></div>
@@ -723,7 +725,7 @@ function vShop() {
     return `<div class="item">${i.use ? (n ? `<span class="tag">${n}개</span>` : '') : eq?'<span class="tag">장착중</span>':own?'<span class="tag">보유</span>':''}${itemImg(i)}<b>${i.name}</b><small>${i.desc}</small>
     ${i.use ? (n ? `<div class="grid2 ib"><button class="btn ghost" data-act="buy" data-id="${i.id}">${i.price.toLocaleString()}P</button><button class="btn" data-act="use" data-id="${i.id}">사용</button></div>` : `<button class="btn" data-act="buy" data-id="${i.id}">${i.price.toLocaleString()}P</button>`)
       : own ? `<button class="btn ${eq?'ghost':''}" data-act="equip" data-id="${i.id}">${eq?'해제':'장착'}</button>` : `<button class="btn" data-act="buy" data-id="${i.id}">${i.price.toLocaleString()}P</button>`}</div>`; }).join('')}</div>
-  <div class="muted" style="margin-top:10px">니짐 포인트로 구매 · 적립분 먼저 사용 · 가격은 예시값 · 효과형은 사용 후 환불되지 않아요</div></div>`;
+  <div class="muted" style="margin-top:10px">니짐 포인트로 구매 · 가격은 예시값 · 효과형은 사용 후 환불되지 않아요</div></div>`;
 }
 const avgSession = () => { const rs = realRecs().filter(r => r.v !== 'lesson' && !r.edited).slice(-10).map(r => r.raw || r.xp); return rs.length ? Math.round(median(rs) / 10) * 10 : 260; };
 function calcDefaults() { return { sessions: Math.max(1, S.goal - weekCount()), per: avgSession(), booster: 'one', potions: 0 }; }
@@ -752,7 +754,7 @@ function vCalc() {
   <div class="cmp"><div class="cmprow"><span>운동만</span><div class="cbar"><i style="width:${barW(exOnly.weeks)}%"></i></div><b>${dur(exOnly.weeks)}</b></div>
   <div class="cmprow it"><span>아이템 쓰면</span><div class="cbar"><i style="width:${barW(withIt.weeks)}%"></i></div><b>${dur(withIt.weeks)}</b></div></div>
   <div class="muted">한 주 운동 ${fmt(exOnly.exWeek)} XP(주 ${CFG.WEEK_CAP.toLocaleString()} 한도) · 아이템 쓰면 + 아이템 ${fmt(withIt.itemWeek)} XP(한도 없음) · 남은 ${fmt(exOnly.left)} XP 기준 어림값</div>
-  <div class="muted">아이템으로 오른 레벨엔 포인트가 쌓이지 않고, 주간 랭킹·«운동만 보기»엔 운동 경험치만 들어가요</div></div>
+  <div class="muted">주간 랭킹·«운동만 보기»엔 운동 경험치(입점센터 보너스 포함)만 들어가고, 아이템 경험치는 빠져요</div></div>
   <div class="muted">운동 경험치만 하루 ${CFG.DAY_CAP} · 주 ${CFG.WEEK_CAP.toLocaleString()} XP 한도 · 운동 1번 = 하루 1번으로 셈</div></div>`;
 }
 
@@ -877,15 +879,16 @@ function endSession(auto = false) {
   if (!isDemo && (S.holdDemo || times.some(isHeld))) { held = gained; gained = 0; }
   const boosted = !isDemo && boostOn() && r.any; if (boosted) boostConsume();
   const cbr = centerBonus(r, L, isDemo || held > 0), cb = cbr.cb;   // 결정 36: 운동 장부 잘림과 무관 · 주 900만
-  const itemPart = isDemo || held ? 0 : cap.boostGained;   // 부스터로 늘어난 몫 = 아이템 경험치 → 그 몫으로 오른 레벨은 포인트 0
-  const res = applyGain({ level: S.level, xp: S.xp }, gained - itemPart, itemPart + cb, { v0: r.v === 'V0', monthUsed: S.month });   // 입점 보너스는 화면 레벨에만 · 포인트 0(⑦-1 A)
-  S.level = res.level; S.xp = res.xp; S.month += res.points; S.points += res.points;
+  const itemPart = isDemo || held ? 0 : cap.boostGained;   // 부스터로 늘어난 몫 = 아이템 경험치 → 운동 레벨엔 안 들어감
+  const res = applyGain({ level: S.level, xp: S.xp }, gained - itemPart, itemPart, cb);
+  gainEx(gained - itemPart + cb);   // 결정 38 ⑦-1 B: 입점 보너스도 운동 레벨에
+  S.level = res.level; S.xp = res.xp;
   const items = s.items.filter(it => (it.sets || []).some(x => x.done) || it.min > 0).map(({ draft, run, plan, ...it }) => ({ ...it, sets: it.sets ? it.sets.filter(x => x.done).map(({ at, ...x }) => x) : undefined }));
   const rec = { id: Date.now(), date: TODAY, place: s.place.name, placeKind: s.place.kind, summary: summaryOf(items), items, xp: gained + cb, xpCenter: cb, cbCut: cbr.cut, centerBase: r.baseXP, centerIf: isDemo ? null : centerIf(s, ctx, r), raw: r.raw, held, cut: isDemo ? 0 : cap.cut, cutReason: cap.reason,
     xpBoost: isDemo ? 0 : cap.boostGained, selfieXP: isDemo || held ? 0 : r.selfieXP, selfieIn: isDemo || held ? 0 : cap.selfieGained, boosted, v: V2K[r.v], light: s.light, prCount: s.prCount, photo: s.photo, ctx, br: isDemo ? { demoXP: gained } : r, demo: isDemo, auto: auto || undefined };
-  if (res.level > res.from) rec.lvUp = { from: res.from, to: res.level, points: res.points, pointsCut: res.pointsCut };
+  if (res.level > res.from) rec.lvUp = { from: res.from, to: res.level };
   S.records.push(rec);
-  /* 결정 21: 표정만 바뀜 — 위 레벨·경험치·포인트 계산에 관여하지 않음 */
+  /* 결정 21: 표정만 바뀜 — 위 레벨·경험치 계산에 관여하지 않음 */
   const j = judgeIntensity(items, { hist: histVol(), today: TODAY, light: s.light, comeback: ctx.lastDays >= CFG.COMEBACK_DAYS, lowRun: S.lowRun });
   const verdict = S.moodDemo !== 'auto' ? S.moodDemo : j.verdict;
   S.lowRun = verdict === 'low' ? S.lowRun + 1 : verdict === 'na' ? S.lowRun : 0;
@@ -900,7 +903,7 @@ function afterGain(res, { toast: msg, to = 'result' } = {}) {
   if (res.level > res.from) {
     let big = false; for (let l = res.from + 1; l <= res.level; l++) if (isBigBoundary(l)) big = true;
     const d = new Date(), at = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    const ev = { id: Date.now(), from: res.from, to: res.level, big, type: S.type, points: res.points, pointsCut: res.pointsCut, at, watched: false, skipped: false, replays: 0 };
+    const ev = { id: Date.now(), from: res.from, to: res.level, big, type: S.type, at, watched: false, skipped: false, replays: 0 };
     S.events.push(ev); S.pending = ev.id; save();   // 연출 전에 먼저 기록 → 끊겨도 다음 진입 때 재생
     play(ev, { onDone: done });
   } else { save(); done(); }
@@ -950,9 +953,9 @@ function applySelfie() {
   const c = selfieCalc(rec); if (!c || !c.r2.selfieXP) return;   // 하루 1회·대상 기록 없음 → 사진만 저장
   const g = c.g; rec.br = c.r2; rec.raw = c.r2.raw; rec.selfieXP = c.r2.selfieXP; rec.selfieIn = Math.max(0, c.r2.selfieXP - c.cut); rec.xp += g; S.selfieGot = g;
   if (c.cut) { rec.cut = (rec.cut || 0) + c.cut; rec.cutReason = rec.cutReason || c.reason; }
-  const res = applyXP({ level: S.level, xp: S.xp }, g, { monthUsed: S.month });
-  S.level = res.level; S.xp = res.xp; S.month += res.points; S.points += res.points;
-  if (res.level > res.from) rec.lvUp = { from: rec.lvUp ? rec.lvUp.from : res.from, to: res.level, points: (rec.lvUp ? rec.lvUp.points : 0) + res.points, pointsCut: res.pointsCut };
+  const res = applyXP({ level: S.level, xp: S.xp }, g); gainEx(g);
+  S.level = res.level; S.xp = res.xp;
+  if (res.level > res.from) rec.lvUp = { from: rec.lvUp ? rec.lvUp.from : res.from, to: res.level };
   S.selfieRes = res;
 }
 
@@ -968,7 +971,7 @@ function useItem(id) {
   if (id === 'potion') {
     const g = potionGain(L);
     return sheet(`<div class="h2">경험치 물약을 쓸까요?</div><div class="xrow"><span>지금 바로</span><b>+${fmt(g.gained)} XP</b></div>${nolimit}
-      <div class="muted">유료 경험치라 랭킹에 💰가 붙고, 물약으로 오른 레벨엔 포인트가 적립되지 않아요 · 하루 몇 병이든 쓸 수 있어요</div>
+      <div class="muted">유료 경험치라 랭킹에 💰가 붙고, «운동만 보기»·주간 리그엔 안 들어가요 · 하루 몇 병이든 쓸 수 있어요</div>
       <div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="shClose">취소</button><button class="btn" data-act="usePotion">사용</button></div>`);
   }
   const f = forecastWeek({ L, sessions: Math.max(1, S.goal - weekCount()), per: avgSession(), booster: id === 'boost1' ? 'one' : '7d', potions: 0 });
@@ -1011,7 +1014,7 @@ function play(ev, { replay = false, onDone } = {}) {
   el.className = `evo on ${ev.big ? 'big' : 'short'} tier${tr}`; el.setAttribute('aria-hidden', 'false');
   [old, nw].forEach(i => { i.className = i.id === 'evoOld' ? 'evo-old' : 'evo-new'; i.style.opacity = 0; i.style.transform = ''; });
   ring.className = 'evo-ring'; $('evoFlash').className = 'evo-flash'; $('evoParts').innerHTML = '';
-  $('evoOk').classList.remove('show'); $('evoPt').classList.remove('show');
+  $('evoOk').classList.remove('show');
   $('evoSound').textContent = S.sound ? '🔊' : '🔇';
   $('evoTag').textContent = replay ? '다시 보기' : (ev.to - ev.from > 1 ? `${ev.to - ev.from}레벨 한꺼번에` : '');
   const name = CH[t].name;
@@ -1019,7 +1022,6 @@ function play(ev, { replay = false, onDone } = {}) {
   const ringStyle = c => { ring.className = `evo-ring ring t${tr}`; ring.style.width = Math.max(c.w * 1.1, boxH * .7) + 'px'; ring.style.height = boxH * .14 + 'px'; };
   const lvNum = $('evoLvNum'); lvNum.textContent = `Lv.${ev.from}`;
   $('evoTitle').textContent = ''; $('evoSub').textContent = '';
-  const ptText = replay ? '' : ev.points ? `+${ev.points.toLocaleString()}P 적립 · 이번 달 ${S.month.toLocaleString()}/${MONTH_CAP.toLocaleString()}P` : (ev.pointsCut ? '이번 달 적립 한도 도달' : '');
   const rollTo = (from, to, dur) => { const steps = to - from; if (steps <= 0) return; const each = Math.max(60, dur / steps);
     for (let k = 1; k <= steps; k++) at(each * k, () => { lvNum.textContent = `Lv.${from + k}`; lvNum.classList.remove('roll'); void lvNum.offsetWidth; lvNum.classList.add('roll'); }); };
   P.finish = () => {   // 결과 상태(건너뛰기도 여기로)
@@ -1028,7 +1030,6 @@ function play(ev, { replay = false, onDone } = {}) {
     ringStyle(nc); ring.classList.add('show'); lvNum.textContent = `Lv.${ev.to}`;
     $('evoTitle').textContent = ev.to === 99 ? `${name}${CH[t].josa} 최고 레벨에 도달했다!` : evolved ? `${name}${CH[t].josa} «${stageName(t, ev.to)}»${ro(stageName(t, ev.to))} 진화했다!` : '레벨 업!';
     $('evoSub').textContent = ev.to === 99 ? '최고 레벨 달성 · 골드 아우라' : `칭호 «${stageName(t, ev.to)}» · ${TIER_NAME[tr]}`;
-    if (ptText) { $('evoPt').textContent = ptText; $('evoPt').classList.add('show'); }
     el.classList.remove('p1', 'p2'); el.classList.add('p3');
     P.phase = 'result';
     if (ev.big) $('evoOk').classList.add('show'); else at(900, close);
@@ -1040,7 +1041,7 @@ function play(ev, { replay = false, onDone } = {}) {
     at(80, () => { nw.classList.add('grow'); burst('#9FDBFF'); sfxShort(); });
     $('evoTitle').textContent = '레벨 업!';
     rollTo(ev.from, ev.to, 700);
-    at(800, () => { $('evoSub').textContent = `칭호 «${stageName(t, ev.to)}»`; if (ptText) { $('evoPt').textContent = ptText; $('evoPt').classList.add('show'); } });
+    at(800, () => { $('evoSub').textContent = `칭호 «${stageName(t, ev.to)}»`; });
     at(1900, close);
     return;
   }
@@ -1138,8 +1139,8 @@ document.addEventListener('click', e => {
   else if (a === 'autoEndDemo') { s.lastAt = Date.now() - (CFG.AUTO_END_MIN + 1) * 60000; save(); return render(); }
   else if (a === 'holdDemo') S.holdDemo = !S.holdDemo;
   else if (a === 'release') { const r = S.records.find(x => x.id === +id); if (!r || !r.held) return; const cbr = r.br && r.br.v === 'V1' ? centerBonus(r.br, ledger(r.id)) : { cb: 0, cut: 0 }, g = r.held + cbr.cb; r.xp += g; r.held = 0; r.xpCenter = cbr.cb; r.cbCut = cbr.cut;
-    const res = applyXP({ level: S.level, xp: S.xp }, g, { v0: r.v === 'self', monthUsed: S.month }); S.level = res.level; S.xp = res.xp; S.month += res.points; S.points += res.points;
-    if (res.level > res.from) r.lvUp = { from: res.from, to: res.level, points: res.points, pointsCut: res.pointsCut };
+    const res = applyXP({ level: S.level, xp: S.xp }, g); gainEx(g); S.level = res.level; S.xp = res.xp;
+    if (res.level > res.from) r.lvUp = { from: res.from, to: res.level };
     return afterGain(res, { toast: `보류됐던 ${fmt(g)} XP가 반영됐어요` }); }
   else if (a === 'mset') { const mm = MOOD[v]; S.mood = { verdict: v, ratio: null, date: TODAY, line: mm.lines[0] }; }
   else if (a === 'wseg') S.wseg = v;
@@ -1167,7 +1168,7 @@ document.addEventListener('click', e => {
   else if (a === 'eatCat') S.eatCat = v;
   else if (a === 'useBoost') { S.inv[id]--; if (id === 'boost1') S.boostNext = true; else { const d = new Date(); d.setDate(d.getDate() + 6); S.boost7Until = ymd(d); } shClose(); toast(id === 'boost1' ? '다음 운동 1번 경험치 2배!' : '7일 동안 경험치 2배!'); }
   else if (a === 'usePotion') { const g = potionGain(ledger()); S.inv.potion--; S.paidLog.push({ id: Date.now(), date: TODAY, xp: g.gained, v: 'paid' }); shClose();
-    const res = applyXP({ level: S.level, xp: S.xp }, g.gained, { paid: true, monthUsed: S.month }); S.level = res.level; S.xp = res.xp;
+    const res = applyXP({ level: S.level, xp: S.xp }, g.gained); S.level = res.level; S.xp = res.xp;
     return afterGain(res, { toast: `물약 +${fmt(g.gained)} XP · 💰 유료 경험치`, to: 'shop' }); }
   else if (a === 'calc') { const c = S.calc, lim = { sessions: [0, 7, 1], per: [0, 1200, 20], potions: [0, 7, 1] }[b.dataset.k]; c[b.dataset.k] = clampStep(c[b.dataset.k], dd, lim[2], lim[0], lim[1]); }
   else if (a === 'calcB') S.calc.booster = v;
@@ -1191,7 +1192,7 @@ document.addEventListener('click', e => {
   else if (a === 'eMin') { const x = S.editRec.items[+b.dataset.i]; x.min = clampStep(x.min, dd, 5, 5, CFG.LIM.cardioMaxMin); }
   else if (a === 'editSave') { const r = S.records.find(x => x.id === S.recId), items = S.editRec.items.filter(x => (x.sets || []).some(q => q.done) || x.min > 0), ed = editCalc(r, items), diff = ed.xp + (r.xpCenter || 0) - r.xp;
     Object.assign(r, { items, summary: summaryOf(items), xp: ed.xp + (r.xpCenter || 0), raw: ed.br.raw, v: 'self', br: ed.br, cut: ed.cap.cut, cutReason: ed.cap.reason, selfieXP: 0, edited: true });
-    const res = applyXP({ level: S.level, xp: S.xp }, diff, { v0: true, monthUsed: S.month }); S.level = res.level; S.xp = res.xp; S.month += res.points; S.points += res.points; S.editRec = null;
+    const res = applyXP({ level: S.level, xp: S.xp }, diff); gainEx(diff); S.level = res.level; S.xp = res.xp; S.editRec = null;
     toast(diff < 0 ? `수정 저장 · ${fmt(-diff)} XP 줄었어요(레벨은 그대로)` : `수정 저장 · ${diff ? '+' + fmt(diff) + ' XP' : '경험치 변화 없음'}`);
     if (res.level > res.from) return afterGain(res, { to: 'rec' }); }
   else if (a === 'delPhoto') return sheet(`<div class="h2">이 사진을 지울까요?</div><div class="muted">지운 사진은 되돌릴 수 없어요. 기록·경험치는 그대로예요.</div><div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="shClose">취소</button><button class="btn" data-act="delPhotoOk" data-id="${id}">지우기</button></div>`);

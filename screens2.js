@@ -340,7 +340,7 @@ function vProfile() {
   ensure2();
   const p = profileData(S.prof || 'me'); if (!p) return vFriends2();
   const back = S.profFrom || 'friends', backLabel = { friends: '랭킹 · 친구', me: '내 캐릭터', addFriend: '친구 추가' }[back] || '운동기록';
-  const pureLv = p.me ? S.level : (p.pure ?? p.lv);
+  const pureLv = p.me ? S.exLv : (p.pure ?? p.lv);
   const actions = p.me ? '<div class="muted" style="text-align:center;margin-top:12px">다른 사람에게는 이렇게 보여요 · 표정·사진·기록 상세는 나만 봐요</div>'
     : p.friend ? `<button class="btn" data-act="cheer" data-v="${esc(p.n)}" id="cheerBtn" ${S.fr.cheered[p.n] === TODAY ? 'disabled' : ''}>${S.fr.cheered[p.n] === TODAY ? '오늘 응원했어요 👏' : '응원 👏'}</button><div class="muted" style="text-align:center;margin-top:8px">친구 · 하루 1번 응원할 수 있어요</div>`
     : `${S.fr.sent.includes(p.n) ? '<button class="btn" disabled>요청 보냄 · 수락 기다리는 중</button>' : S.fr.recv.includes(p.n) ? `<button class="btn" data-act="frAccept" data-v="${esc(p.n)}">친구 요청 수락</button>` : `<button class="btn" data-act="frRequest" data-v="${esc(p.n)}" id="frReqBtn">친구 요청 보내기</button>`}<div class="muted" style="text-align:center;margin-top:8px">친구가 아니어도 레벨·칭호·운동 비율은 누구나 볼 수 있어요<br>친구가 되면 이번 주 리그에서 같이 겨뤄요</div>`;
@@ -359,7 +359,7 @@ function vProfile() {
 
 /* ===== C15 친구·리그 (친구 0명 상태 + 행 눌러 프로필) ===== */
 rankList = function () {
-  const me = { n: '나', t: S.type, lv: S.level, week: Math.min(CFG.WEEK_CAP, weekXP()), rate: Math.min(100, Math.round(weekCount() / S.goal * 100)), paid: S.paidLog.length ? 1 : 0, pure: S.level, me: true };
+  const me = { n: '나', t: S.type, lv: S.level, week: leagueWeek(), rate: Math.min(100, Math.round(weekCount() / S.goal * 100)), paid: S.paidLog.length ? 1 : 0, pure: S.exLv, me: true };
   return [...friendsAll(), me].map(f => ({ ...f, key: S.fTab === 'week' ? f.rate * 10000 + f.week : (S.pureOnly ? (f.pure ?? f.lv) : f.lv) })).sort((a, b) => b.key - a.key);
 };
 function lastVsThis() {
@@ -389,7 +389,7 @@ function vFriends2() {
   <div><b>${esc(f.n)}</b> ${f.paid ? '<span title="유료 사용">💰</span>' : ''}<div class="muted">${esc(CH[f.t].name)} · ${stageName(f.t, f.lv)}</div></div>
   <div class="val">${S.fTab === 'week' ? `${f.rate}%<small>${f.week.toLocaleString()} XP</small>` : `Lv.${S.pureOnly ? (f.pure ?? f.lv) : f.lv}<small>${f.paid && !S.pureOnly && f.pure !== f.lv ? `운동만 Lv.${f.pure}` : TIER_NAME[tierOf(f.lv)]}</small>`}</div></div>`).join('')}</div>
   <button class="btn ghost" data-act="sub" data-v="addFriend" id="goAddFriend">친구 추가</button>
-  <div class="muted" style="margin-top:8px">이번 주 = 주간 목표 달성률 기준 · 검증된 운동만 집계 · 이름을 누르면 프로필</div>${zeroDemo}</div>`;
+  <div class="muted" style="margin-top:8px">이번 주 = 주간 목표 달성률 기준 · 검증된 운동만 집계(입점센터 보너스 포함) · 이름을 누르면 프로필</div>${zeroDemo}</div>`;
 }
 
 /* ===== C15b 친구 추가 ===== */

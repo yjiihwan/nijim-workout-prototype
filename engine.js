@@ -1,5 +1,5 @@
 'use strict';
-/* ===== 경험치·레벨·표정·포인트 계산 엔진 — 계산은 이 파일 한 곳에서만 =====
+/* ===== 경험치·레벨·표정·랭킹 계산 엔진 — 계산은 이 파일 한 곳에서만 =====
    화면(app.js)은 여기 함수를 부르고 결과만 그린다. DOM·저장소 접근 없음(순수 함수) → 4단계 인계 꾸러미의 기준 코드.
    실서비스: 서버 함수로 옮겨 같은 입력이면 같은 출력이 나와야 한다(PLAN §2-3·§2-5·§2-10·§2-11 · VERIFICATION §1·§4).
    의존: exercises.js 의 EX(운동 사전). */
@@ -13,7 +13,6 @@ const CFG = {
   COMEBACK_DAYS: 7, COMEBACK_MUL: 1.5,                // 7일+ 쉬고 첫 세션 — 연속 배율 대신
   MOOD: { low: 0.6, high: 1.3, baseN: 10, baseDays: 56, minBase: 5, newShare: 0.5, quietAfter: 3 },
   CARDIO_K: { light: 0.8, normal: 1.0, hard: 1.2 },
-  POINT: { monthCap: 1000, v0Rate: 0.5 },
   BOOST: { mul: 2 },
   POTION: { xp: 300 },
   /* 결정 33: 하루 600·주 1,800 은 «운동 경험치»에만. 아이템 경험치(부스터로 늘어난 몫·물약·앞으로 나올 먹는/마시는 아이템)는
@@ -31,13 +30,15 @@ const CFG = {
   /* 결정 36(SPEC §3-2a): 입점센터 입장(V1) 세션 = 기본 경험치(운동량 ×1.2 전·첫 세트·완료·레슨 포함) × pct% 를 «입점 보너스 장부»에.
      이 장부는 주 weekCap 만 본다 — 하루 600·주 1,800 과 무관, 아이템 배율·부스터도 안 붙는다 */
   CENTER_BONUS: { pct: 50, weekCap: 900 },
+  /* 결정 38: 운동·레벨업·진화·업적 포인트 지급 없음(POINT 키 삭제). 캐릭터 쪽 포인트는 구매적립(실결제)·상점 쓰기만.
+     ⑦-1 B — 입점 보너스는 운동 레벨·[운동만 보기]·친구 리그·주간 리그(xp_week)·DID 랭킹판에 전부 들어간다. 빠지는 건 아이템 장부뿐 */
   /* 결정 37(SPEC §3-2b): 오운완 셀카 = round(기본 경험치 × pct%) 고정 가산 — 인증·연속·×1.2 안 곱함 · 장소 무관 · 하루 perDay회 ·
      앱 안 카메라만 · 운동 장부(하루 600·V0 200·주 1,800 안, 잘릴 땐 셀카 몫부터) · 입점 보너스와 서로 안 곱함 */
   SELFIE_BONUS: { pct: 20, perDay: 1 },
 };
-/* ----- 운영자 설정(H2·H1) — 본사가 바꾼 값은 전부 여기로만 들어온다. 화면은 CFG·need·lvPoint 를 통해서만 읽는다 ----- */
+/* ----- 운영자 설정(H2·H1) — 본사가 바꾼 값은 전부 여기로만 들어온다. 화면은 CFG·need 를 통해서만 읽는다 ----- */
 const CFG_DEFAULT = JSON.parse(JSON.stringify(CFG));
-const LV_OVR = {};   // 레벨표 99행 중 바꾼 행 { n: { xp, pt, evo, title } }
+const LV_OVR = {};   // 레벨표 99행 중 바꾼 행 { n: { xp, title } }
 const merge = (t, o) => { Object.keys(o || {}).forEach(k => { const v = o[k];
   if (v && typeof v === 'object' && !Array.isArray(v) && t[k] && typeof t[k] === 'object' && !Array.isArray(t[k])) merge(t[k], v); else t[k] = v; }); return t; };
 function applyConfig({ cfg = {}, levels = {} } = {}) {
@@ -46,38 +47,27 @@ function applyConfig({ cfg = {}, levels = {} } = {}) {
 }
 const VERIFY_LABEL = { V0: '자가 기록', V1: '입점센터 입장 ✓', V3: '선생님 확인 ★ 2배' };
 
-/* ----- 레벨 곡선·포인트 ----- */
+/* ----- 레벨 곡선 ----- */
 const needBase = n => Math.round(CFG.CURVE.a + CFG.CURVE.b * n + CFG.CURVE.c * n * n);
-const lvPointBase = L => L <= 9 ? 50 : L <= 29 ? 100 : L <= 49 ? 200 : L <= 69 ? 300 : L <= 89 ? 500 : 1000;
-const evoBonusBase = L => ({ 10: 300, 20: 300, 30: 500, 40: 500, 50: 500, 60: 500, 70: 1000, 80: 1000, 90: 1000, 99: 3000 })[L] || 0;
 const ovr = (n, k) => LV_OVR[n] && LV_OVR[n][k] != null && LV_OVR[n][k] !== '' ? LV_OVR[n][k] : null;
 const need = n => ovr(n, 'xp') ?? needBase(n);
-const lvPoint = L => ovr(L, 'pt') ?? lvPointBase(L);
-const evoBonus = L => ovr(L, 'evo') ?? evoBonusBase(L);
 const levelTitle = L => ovr(L, 'title');   // null = 기본 칭호(단계명)
 const streakMul = w => CFG.STREAK[Math.min(CFG.STREAK.length - 1, Math.max(0, w))];
 
-/* 경험치 반영 → 레벨·포인트. 음수(기록 수정으로 줄어듦)면 레벨은 그대로, 이번 레벨 안에서만 줄어든다(0 아래로 안 감)
-   포인트: 레벨업 1회 lvPoint + 10단위 진화 보너스 · 유료(물약)로 오른 레벨 0 · V0만으로 오른 레벨 50% · 월 상한 1,000P */
-function applyXP({ level, xp }, gained, { paid = false, v0 = false, monthUsed = 0 } = {}) {
-  if (gained < 0) return { from: level, level, xp: Math.max(0, xp + gained), points: 0, pointsCut: 0, raw: 0 };
-  let lv = level, x = xp + gained, pts = 0;
-  while (lv < 99 && x >= need(lv)) {
-    x -= need(lv); lv++;
-    const p = lvPoint(lv) + evoBonus(lv);
-    pts += paid ? 0 : v0 ? Math.round(p * CFG.POINT.v0Rate) : p;
-  }
+/* 경험치 반영 → 레벨. 음수(기록 수정으로 줄어듦)면 레벨은 그대로, 이번 레벨 안에서만 줄어든다(0 아래로 안 감)
+   결정 38: 레벨업·진화로 포인트를 주지 않는다 — 반환에 points 없음 */
+function applyXP({ level, xp }, gained) {
+  if (gained < 0) return { from: level, level, xp: Math.max(0, xp + gained) };
+  let lv = level, x = xp + gained;
+  while (lv < 99 && x >= need(lv)) { x -= need(lv); lv++; }
   if (lv >= 99) x = 0;
-  const grant = Math.max(0, Math.min(pts, CFG.POINT.monthCap - monthUsed));
-  return { from: level, level: lv, xp: x, points: grant, pointsCut: pts - grant, raw: pts };
+  return { from: level, level: lv, xp: x };
 }
 
-/* 운동분 먼저(포인트 적립) → 아이템분(포인트 0, 결정 33 «아이템으로 오른 레벨은 포인트 0») 순서로 반영 */
-function applyGain(st, exXP, itemXP, { v0 = false, monthUsed = 0 } = {}) {
-  const a = applyXP(st, exXP, { v0, monthUsed });
-  if (!itemXP) return a;
-  const b = applyXP({ level: a.level, xp: a.xp }, itemXP, { paid: true });
-  return { from: a.from, level: b.level, xp: b.xp, points: a.points, pointsCut: a.pointsCut, raw: a.raw };
+/* 화면 레벨(세 장부 합)과 운동 레벨(운동 + 입점 보너스, ⑦-1 B)을 같이 올린다. itemXP 는 화면 레벨에만 */
+function applyGain(st, exXP, itemXP, cbXP = 0) {
+  const a = applyXP(st, exXP + cbXP), b = itemXP ? applyXP({ level: a.level, xp: a.xp }, itemXP) : a;
+  return { from: a.from, level: b.level, xp: b.xp };
 }
 
 /* ----- 장부 — 운동 경험치와 아이템 경험치를 따로 센다(결정 33) -----
@@ -95,6 +85,11 @@ function ledgerOf(records, today, weekDays) {
 }
 /* 이번 주 운동 경험치(주 1,800 한도에 세는 양) — 아이템분은 들어가지 않는다 */
 const weekUsedOf = L => L.weekEx;
+/* 결정 38(⑦-1 B) 리그·랭킹 주간 경험치 xp_week = 운동 장부 + 입점 보너스 장부, V1·V3 검증 세션만(V0·아이템 제외) → 최대 1,800 + 900 */
+function leagueWeekOf(records, weekDays) {
+  return records.filter(r => weekDays.includes(r.date) && !r.demo && !r.paid && r.v !== 'self')
+    .reduce((s, r) => s + Math.max(0, (r.xp || 0) - (r.xpBoost || 0)), 0);
+}
 /* 아이템 경험치 남은 한도 — 지금은 Infinity(한도 없음) */
 const itemLeftOf = L => Math.min(CFG.ITEM_CAP.day == null ? Infinity : CFG.ITEM_CAP.day - L.dayItem, CFG.ITEM_CAP.week == null ? Infinity : CFG.ITEM_CAP.week - L.weekItem);
 const itemUncapped = () => CFG.ITEM_CAP.day == null && CFG.ITEM_CAP.week == null;

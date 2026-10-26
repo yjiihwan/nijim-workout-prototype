@@ -216,9 +216,9 @@ function eatUse(id) {
 async function eatNext() {
   const id = EAT.q.shift(); if (!id) { EAT.cur = null; render(); return; }
   const f = foodById(id), from = S.level, fromXP = S.xp, R = RARITY[f.rarity] || RARITY['일반'];
-  /* 상태는 시작할 때 확정(끊겨도 잃지 않게) — 아이템 경험치 = 유료 장부·한도 없음·포인트 0(결정 33) */
+  /* 상태는 시작할 때 확정(끊겨도 잃지 않게) — 아이템 경험치 = 유료 장부·한도 없음·운동 레벨엔 안 들어감(결정 33·38) */
   let res = null, label = '';
-  if (f.eff.xp) { S.paidLog.push({ id: Date.now(), date: TODAY, xp: f.eff.xp, v: 'paid', item: id }); res = applyXP({ level: S.level, xp: S.xp }, f.eff.xp, { paid: true, monthUsed: S.month }); S.level = res.level; S.xp = res.xp; label = `+${f.eff.xp.toLocaleString()} XP`; }
+  if (f.eff.xp) { S.paidLog.push({ id: Date.now(), date: TODAY, xp: f.eff.xp, v: 'paid', item: id }); res = applyXP({ level: S.level, xp: S.xp }, f.eff.xp); S.level = res.level; S.xp = res.xp; label = `+${f.eff.xp.toLocaleString()} XP`; }
   if (f.eff.next) { (S.nextBoosts = S.nextBoosts || []).push({ id, mul: f.eff.next.mul, left: f.eff.next.n }); label = `다음 운동${f.eff.next.n > 1 ? ` ${f.eff.next.n}번` : ''} ×${f.eff.next.mul}`; }
   if (f.eff.days) { const dd = new Date(TODAY); dd.setDate(dd.getDate() + f.eff.days.d - 1); (S.timedBoosts = S.timedBoosts || []).push({ id, mul: f.eff.days.mul, until: ymd(dd) }); label = `${f.eff.days.d}일 ×${f.eff.days.mul}`; }
   if (f.eff.cond) S.recoverDate = TODAY;
@@ -226,7 +226,7 @@ async function eatNext() {
   if (res && res.level > from) {
     let big = false; for (let l = from + 1; l <= res.level; l++) if (isBigBoundary(l)) big = true;
     const d = new Date(), at = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    ev = { id: Date.now(), from, to: res.level, big, type: S.type, points: 0, pointsCut: 0, at, watched: false, skipped: false, replays: 0, item: id };
+    ev = { id: Date.now(), from, to: res.level, big, type: S.type, at, watched: false, skipped: false, replays: 0, item: id };
     S.events.push(ev); S.pending = ev.id;   // 연출 전에 먼저 기록 → 끊겨도 다음 진입 때 재생
   }
   save();
@@ -289,7 +289,7 @@ function vEatTab() {
   <div class="chips">${[['all', '전체'], ['food', '먹는 거'], ['drink', '마시는 거']].map(([k, l]) => `<button class="${cat === k ? 'on' : ''}" data-act="eatCat" data-v="${k}">${l}</button>`).join('')}</div>
   <div class="fhead"><b>먹고 마시는 아이템</b><span>쓰면 바로 효과</span></div>
   <div class="fgrid">${list.map(card).join('')}</div>
-  <div class="muted" style="margin-top:10px">즉시 경험치는 유료 경험치(랭킹 💰·레벨업 포인트 없음) · 배율은 가장 큰 것 1개만 적용, 나머지는 다음 운동으로 대기 · 화면 탭하면 연출 건너뛰기</div>`;
+  <div class="muted" style="margin-top:10px">즉시 경험치는 유료 경험치(랭킹 💰·«운동만 보기»·주간 리그 제외) · 배율은 가장 큰 것 1개만 적용, 나머지는 다음 운동으로 대기 · 화면 탭하면 연출 건너뛰기</div>`;
 }
 function buyFood(id) {
   const f = foodById(id); if (!f) return;

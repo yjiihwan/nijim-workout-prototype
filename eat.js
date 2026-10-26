@@ -45,7 +45,7 @@ function loadScript(src) { return new Promise((ok, no) => { const s = document.c
 const loadImg = src => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(src); i.src = src; });
 async function eatCell(t, cut) {
   const key = t + cut; if (EATC[key]) return EATC[key];
-  if (!window.EAT_DATA || !EAT_DATA[t]) await loadScript(`assets/eat/${t}/data.js`);
+  if (!window.EAT_DATA || !EAT_DATA[t]) await loadScript(`assets/eat/${t}/data.js?v=${VER}`);
   const d = EAT_DATA[t][cut], base = `assets/eat/${t}/lv${cut}/`;
   const [rest, eat, mo, cl, cr, arm, w] = await Promise.all(['rest.webp', 'eat.webp', 'mo.webp', 'cl.webp', 'cr.webp', 'arm.webp', 'w.png'].map(f => loadImg(base + f)));
   const cv = (W, H) => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; };
@@ -162,6 +162,7 @@ function frame(F) {
   /* 캐릭터: 레이어 캔버스(웹 px)에 합성 → 표시 배율로 */
   const wk = C.work, wg = wk.getContext('2d'); wg.setTransform(1, 0, 0, 1, 0, 0); wg.clearRect(0, 0, d.W, d.H);
   const eating = !F.idle && t >= ET.swapIn && t < ET.swapOut;
+  let foodDraw = null, armDraw = null;
   if (!eating) {
     const k = F.idle ? 0 : pumpK(t, R.k), dx = F.idle ? 0 : shakeAt(t, R.shake * d.sz[0]);
     if (Math.abs(k) < 1e-6 && Math.abs(dx) < 1e-6) wg.drawImage(C.rest, d.crop.rest[0], d.crop.rest[1]); else wg.putImageData(pumpInto(C, k, dx), 0, 0);
@@ -171,14 +172,16 @@ function frame(F) {
       if (t >= ET.eat1) { kind = 'cl'; bites = 3; } else if (ph < 200) squash = 1 - .04 * Math.sin(Math.PI * ph / 200); }
     const pop = t < ET.raise1 + 120 ? .6 + .4 * eob(c01(t / (ET.raise1 + 120))) : 1, fade = t >= ET.poof0 ? 1 - c01((t - ET.poof0) / (ET.poof1 - ET.poof0 - 60)) : 1;
     wg.drawImage(C.eat, d.crop.eat[0], d.crop.eat[1]); wg.drawImage(C[kind], d.crop[kind][0], d.crop[kind][1]);
+    /* 음식·앞 팔은 무대 canvas 에 바로 그림: 레이어 캔버스 밖으로 나가는 음식도 안 잘리게(overflow visible) */
     if (fade > 0 && F.food) {
       const ft = d.food[F.food.fid], p = FOOD_PTS[F.food.fid], m = !!ft.m, ic = bittenIcon(F.food.fid, F.food.img, p.kind === '먹는 거' ? Math.min(bites, 2) : 0, m);
       const s = ft.s * squash * pop * (.85 + .15 * fade), gx = m ? 256 - p.g[0] : p.g[0];
-      wg.save(); wg.globalAlpha = fade; wg.translate(ft.g[0], ft.g[1]); wg.rotate(ft.a * Math.PI / 180); wg.scale(s, s); wg.drawImage(ic, -gx, -p.g[1], 256, 256); wg.restore();
+      foodDraw = () => { g.save(); g.globalAlpha = fade; g.translate(px + ft.g[0] * disp, py + ft.g[1] * disp); g.rotate(ft.a * Math.PI / 180); g.scale(s * disp, s * disp); g.drawImage(ic, -gx, -p.g[1], 256, 256); g.restore(); };
     }
-    wg.drawImage(C.arm, d.crop.arm[0], d.crop.arm[1]);
+    armDraw = () => g.drawImage(C.arm, px + d.crop.arm[0] * disp, py + d.crop.arm[1] * disp, C.arm.width * disp, C.arm.height * disp);
   }
   g.imageSmoothingQuality = 'high'; g.drawImage(wk, px, py, d.W * disp, d.H * disp);
+  if (foodDraw) foodDraw(); if (armDraw) armDraw();
   if (F.food && t >= ET.poof0 && t < ET.poof1 + 120) {   // 음식 사라짐 반짝(흰 3개)
     const u = (t - ET.poof0) / 320, ft = d.food[F.food.fid], bx = px + ft.b[0] * disp, by = py + ft.b[1] * disp;
     for (let i = 0; i < 3; i++) { const an = i * 2.1 + .5, rr = S_ * (.2 + .5 * u); star(g, bx + rr * Math.cos(an), by + rr * Math.sin(an), S_ * .16 * (1 - u * .6), '#FFFFFF'); }

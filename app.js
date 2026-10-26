@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.19';
+const VER = 'v1.19.1';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -67,9 +67,9 @@ const MOOD = {
 };
 const QUIET_LINE = '요즘 컨디션 어때? 쉬어가도 괜찮아';
 const VERIFY = [['auto','입점센터 입장 · 자동'],['lesson','레슨 확정(2배)'],['self','자가 기록']];
-/* 결정 37: 등급은 V0·V1·V3 셋. 옛 저장본의 gps(V1b)→자가 기록, selfie(V2)→입점센터 입장 으로 읽는다. 셀카는 등급이 아니라 따로(rec.selfieXP) */
-const vk = k => k === 'gps' ? 'self' : k === 'selfie' ? 'auto' : k;
-const V2K = { V1:'auto', V3:'lesson', V0:'self' }, K2V = { auto:'V1', lesson:'V3', self:'V0', gps:'V0', selfie:'V1' };
+/* 결정 37·SPEC 단위 32: 등급은 V0·V1·V3 셋. 옛 저장본의 gps(V1b)·selfie(V2)는 둘 다 자가 기록(V0)으로 읽는다. 셀카는 등급이 아니라 따로(rec.selfieXP) */
+const vk = k => k === 'gps' || k === 'selfie' ? 'self' : k;
+const V2K = { V1:'auto', V3:'lesson', V0:'self' }, K2V = { auto:'V1', lesson:'V3', self:'V0', gps:'V0', selfie:'V0' };
 const vLabel = k => VERIFY.find(v => v[0] === vk(k))[1].replace(' · 자동', '');
 const SELFIE_SHOT = { src: 'camera', ai: 'ok' };   // 앱 안 카메라로 찍고 «사람 1명» 판정 통과한 사진(시연)
 const selfieClaims = (exceptId = null) => realRecs().filter(r => r.date === TODAY && r.id !== exceptId && r.selfieXP > 0).length;   // 그날 셀카 보너스 받은 기록 수(하루 1회)

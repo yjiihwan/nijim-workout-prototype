@@ -53,7 +53,7 @@ function vbars(vals, labels, { h = 180, unit = '', mark = [], every = 1, fmt = n
     <s>${i % every === 0 ? labels[i] : ''}</s></div>`).join('')}</div>`;
 }
 const hshare = (v, max, label = '') => `<div class="ahs"><i style="width:${(v / Math.max(1, max) * 100).toFixed(1)}%"></i><span>${label}</span></div>`;
-const V_SEQ = { V0: '#D5D5DC', V1: '#FF9EC2', V2: '#F0367F', V3: '#A80043' };   // 검증 등급은 순서가 있는 값 → 로즈 한 색 밝음→어두움
+const V_SEQ = { V0: '#D5D5DC', V1: '#FF9EC2', V3: '#A80043' };   // 검증 등급은 순서가 있는 값 → 로즈 한 색 밝음→어두움
 function stack(parts) { const t = parts.reduce((a, p) => a + p[1], 0);
   return `<div class="ast">${parts.map(([k, v, c]) => `<i style="width:${(v / t * 100).toFixed(1)}%;background:${c}" title="${k} ${(v / t * 100).toFixed(1)}%"></i>`).join('')}</div>
   <div class="astl">${parts.map(([k, v, c]) => `<span><i style="background:${c}"></i>${k} <b>${(v / t * 100).toFixed(0)}%</b></span>`).join('')}</div>`; }

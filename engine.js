@@ -124,7 +124,7 @@ function sessionXP(s, c) {
   const first = c.firstToday && any ? X.firstSet : 0, complete = c.firstToday && any ? X.complete : 0;
   const v = effVerify(s), vm = CFG.VERIFY[v];
   const comeback = c.lastDays >= CFG.COMEBACK_DAYS, sm = comeback ? CFG.COMEBACK_MUL : streakMul(c.streakWeeks);
-  const mult = Math.round((base + first + complete) * vm * sm), boostPart = c.boost && any ? mult * (CFG.BOOST.mul - 1) : 0;
+  const mult = Math.round((base + first + complete) * vm * sm), bm = c.boost === true ? CFG.BOOST.mul : (c.boost || 0), boostPart = bm && any ? Math.round(mult * (bm - 1)) : 0;   // c.boost = 배율(숫자) · true 는 예전 2배 부스터
   const worked = it => (it.sets || []).some(x => x.done) || it.min > 0 || (EX[it.ex] && EX[it.ex].xpk === 'lesson');
   const parts = [...new Set(s.items.filter(worked).map(it => EX[it.ex] && EX[it.ex].part).filter(Boolean))];
   const fresh = parts.filter(p => !c.weekParts.includes(p));
@@ -132,7 +132,7 @@ function sessionXP(s, c) {
   const prN = Math.min(s.prCount || 0, Math.max(0, CFG.LIM.prDay - (c.prToday || 0)));
   const goal = any && !c.todayCounted && c.weekCountBefore + 1 === c.goal ? X.weekGoal : 0;
   const fixed = newN * X.newPart + prN * X.pr + goal;
-  return { lines, base, first, complete, v, vm, sm, comeback, mult, boostPart, newParts: fresh.slice(0, newN), newXP: newN * X.newPart,
+  return { lines, base, first, complete, v, vm, sm, comeback, mult, boostPart, bm, newParts: fresh.slice(0, newN), newXP: newN * X.newPart,
     prN, prXP: prN * X.pr, goal, fixed, raw: mult + boostPart + fixed, any };
 }
 

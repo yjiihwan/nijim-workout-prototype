@@ -8,7 +8,7 @@ const CFG = {
   WEEK_CAP: 1800,                          // 결정 32
   XP: { weight: 10, body: 8, cardio: 2, lesson: 150, firstSet: 20, complete: 50, newPart: 15, pr: 30, weekGoal: 200 },
   LIM: { weightSets: 30, bodySets: 30, cardioMin: 60, newPartsWeek: 6, prDay: 3, exPerSession: 25, cardioMaxMin: 180 },
-  VERIFY: { V0: 0.4, V1: 0.8, V1b: 0.7, V2: 1.0, V3: 2.0 },
+  VERIFY: { V0: 0.4, V1: 1.0, V1b: 0.7, V2: 1.0, V3: 2.0 },   // 결정 36 ①: 입점센터 입장 V1 0.8 → 1.0
   STREAK: [1.0, 1.0, 1.05, 1.10, 1.20, 1.20, 1.30],   // 연속 주 0~6+ (6주 이상 1.30)
   COMEBACK_DAYS: 7, COMEBACK_MUL: 1.5,                // 7일+ 쉬고 첫 세션 — 연속 배율 대신
   MOOD: { low: 0.6, high: 1.3, baseN: 10, baseDays: 56, minBase: 5, newShare: 0.5, quietAfter: 3 },
@@ -28,6 +28,9 @@ const CFG = {
      «내 평소» 기간·횟수는 표정(MOOD.baseN·baseDays·minBase)과 같은 키를 읽고, 임계값은 표정(MOOD.high)과 따로 둔다 */
   MIN_REPS: 5,
   VOL_BONUS: { ratioPct: 130, mult: 1.2 },
+  /* 결정 36(SPEC §3-2a): 입점센터 입장(V1) 세션 = 기본 경험치(운동량 ×1.2 전·첫 세트·완료·레슨 포함) × pct% 를 «입점 보너스 장부»에.
+     이 장부는 주 weekCap 만 본다 — 하루 600·주 1,800 과 무관, 아이템 배율·부스터도 안 붙는다 */
+  CENTER_BONUS: { pct: 50, weekCap: 900 },
 };
 /* ----- 운영자 설정(H2·H1) — 본사가 바꾼 값은 전부 여기로만 들어온다. 화면은 CFG·need·lvPoint 를 통해서만 읽는다 ----- */
 const CFG_DEFAULT = JSON.parse(JSON.stringify(CFG));
@@ -79,10 +82,11 @@ function applyGain(st, exXP, itemXP, { v0 = false, monthUsed = 0 } = {}) {
 function ledgerOf(records, today, weekDays) {
   const wk = records.filter(r => weekDays.includes(r.date) && !r.demo), td = wk.filter(r => r.date === today);
   const sum = (a, f) => a.reduce((s, r) => s + (f(r) || 0), 0);
-  const exOnly = r => r.paid ? 0 : (r.xp || 0) - (r.xpBoost || 0), itemOnly = r => r.paid ? r.xp : r.xpBoost;
+  const exOnly = r => r.paid ? 0 : (r.xp || 0) - (r.xpBoost || 0) - (r.xpCenter || 0), itemOnly = r => r.paid ? r.xp : r.xpBoost;
   return {
     dayUsed: sum(td, exOnly), weekEx: sum(wk, exOnly),
     dayItem: sum(td, itemOnly), weekItem: sum(wk, itemOnly), weekPaid: sum(wk.filter(r => r.paid), r => r.xp),
+    weekCenter: sum(wk, r => r.paid ? 0 : r.xpCenter),
     allV0Today: td.filter(r => !r.paid).every(r => r.v === 'self'),
   };
 }
@@ -113,7 +117,7 @@ function potionGain(L) {
    s = { verify:'V0'|'V1'|'V1b'|'V3', selfie, items:[{ ex, sets:[{w,r,s,done,pr}], min }], prCount }
    c = { firstToday, weekParts[], streakWeeks, lastDays, prToday, goal, weekCountBefore, todayCounted, boost,
          xpBase:{ex: 평소 양|null}, todayQ:{ex: 오늘 앞 세션 대상 양}, todayPrev:[{ex, cnt, bonus, mul}] } */
-const effVerify = s => s.selfie && (s.verify === 'V1' || s.verify === 'V1b') ? 'V2' : s.verify;   // 셀카는 센터 확인이 있을 때만 100%
+const effVerify = s => s.selfie && s.verify === 'V1b' ? 'V2' : s.verify;   // 결정 36 ①: 입점센터(V1)는 입장만으로 100% — 셀카 단계 없음. 비입점 위치 확인(V1b)만 셀카로 100%
 /* 경험치 대상 세트 = 완료 + (시간형이거나 MIN_REPS회 이상). 5회 미만도 기록·PR·표정·코칭엔 그대로 쓴다 */
 const xpEligible = (e, st) => !!st.done && (e.mode !== 'wr' && e.mode !== 'r' ? true : (st.r || 0) >= CFG.MIN_REPS);
 /* 운동 1개의 «경험치 양» — 웨이트·맨몸 = 대상 세트 수 · 유산소 = 분 · 레슨 = 1 */
@@ -139,7 +143,7 @@ function sessionXP(s, c) {
   const X = CFG.XP, UNIT = { weight: X.weight, body: X.body, cardio: X.cardio }, LEFT = { weight: CFG.LIM.weightSets, body: CFG.LIM.bodySets, cardio: CFG.LIM.cardioMin };
   const xb = c.xpBase || {}, tq = c.todayQ || {};
   const cnt = { weight: 0, body: 0, cardio: 0 }, xpOf = { weight: 0, body: 0, cardio: 0 };
-  let l = 0, base = 0, bonusXP = 0, short = 0;
+  let l = 0, base = 0, plainSum = 0, bonusXP = 0, short = 0;
   const per = [], bonusRows = [], noBase = [];
   s.items.slice(0, CFG.LIM.exPerSession).forEach(it => {
     const e = EX[it.ex]; if (!e) return;
@@ -149,7 +153,7 @@ function sessionXP(s, c) {
     if (!n) return;
     const b = xb[it.ex] ?? null, qd = (tq[it.ex] || 0) + n, on = volBonusOn(qd, b);
     const plain = UNIT[k] * n, extra = on ? plain * (CFG.VOL_BONUS.mult - 1) : 0;
-    cnt[k] += n; xpOf[k] += plain; base += plain + extra; bonusXP += extra;
+    cnt[k] += n; xpOf[k] += plain; plainSum += plain; base += plain + extra; bonusXP += extra;
     per.push({ ex: it.ex, cnt: n, bonus: on, base: b, qd });
     if (on) bonusRows.push([e.name, extra, b, qd]); else if (b == null) noBase.push(e.name);
   });
@@ -170,8 +174,26 @@ function sessionXP(s, c) {
   const prN = Math.min(s.prCount || 0, Math.max(0, CFG.LIM.prDay - (c.prToday || 0)));
   const goal = any && !c.todayCounted && c.weekCountBefore + 1 === c.goal ? X.weekGoal : 0;
   const fixed = newN * X.newPart + prN * X.pr + goal;
-  return { lines, base, bonusXP, bonusRows, noBase, short, per, catchUp, first, complete, v, vm, sm, comeback, mult, boostPart, bm, newParts: fresh.slice(0, newN), newXP: newN * X.newPart,
+  const baseXP = plainSum + l * X.lesson + first + complete;   // SPEC ④-b: 입점 보너스 기준 = 운동량 ×1.2 전 · 검증·연속·고정 전
+  return { lines, base, baseXP, bonusXP, bonusRows, noBase, short, per, catchUp, first, complete, v, vm, sm, comeback, mult, boostPart, bm, newParts: fresh.slice(0, newN), newXP: newN * X.newPart,
     prN, prXP: prN * X.pr, goal, fixed, raw: mult + catchUp + boostPart + fixed, any };
+}
+
+/* ----- 입점 보너스 (결정 36 · SPEC §3-2a) — 세 번째 장부. 운동 장부 반영(capGain) 결과와 무관하게 baseXP 에서 바로 -----
+   r = sessionXP 결과 · L = ledgerOf · held = 보류 세션. 반환 { cb, cbRaw, cut, weekLeft } */
+function centerBonus(r, L, held = false) {
+  const weekLeft = Math.max(0, CFG.CENTER_BONUS.weekCap - (L.weekCenter || 0));
+  if (r.v !== 'V1' || held || !(r.baseXP > 0)) return { cb: 0, cbRaw: 0, cut: 0, weekLeft };
+  const cbRaw = Math.round(r.baseXP * CFG.CENTER_BONUS.pct / 100), cb = Math.min(cbRaw, weekLeft);
+  return { cb, cbRaw, cut: cbRaw - cb, weekLeft };
+}
+/* «입점센터였다면 +○○» — 같은 운동을 입점센터 입장(V1)으로 했을 때와의 차이(한도·주 900 미적용 «이번 운동만» 값).
+   V1·레슨(V3)이면 null, 0 이하면 화면에서 숨김. 부스터 몫은 양쪽에서 빼고 비교 */
+function centerIf(s, c, r = sessionXP(s, c)) {
+  if (r.v === 'V1' || r.v === 'V3') return null;
+  const r1 = sessionXP({ ...s, verify: 'V1', selfie: false }, c);
+  const d = (r1.raw - r1.boostPart) + Math.round(r1.baseXP * CFG.CENTER_BONUS.pct / 100) - (r.raw - r.boostPart);
+  return d > 0 ? d : null;
 }
 
 /* ----- 세트 판정 ----- */

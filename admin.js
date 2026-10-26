@@ -192,9 +192,10 @@ function vH2() {
       ${sec('경험치 단위 (PLAN §2-3)', [['XP.weight', '웨이트·머신 1세트'], ['XP.body', '맨몸 1세트'], ['XP.cardio', '유산소 1분'], ['XP.lesson', '레슨 1회'], ['XP.firstSet', '첫 세트 보너스'], ['XP.complete', '세션 완료 보너스'], ['XP.newPart', '이번 주 새 부위'], ['XP.pr', 'PR 1개'], ['XP.weekGoal', '주간 목표 달성']].map(([p, l]) => fr(l, numIn(p), 'XP')).join(''))}
       ${sec('한도 (결정 32·33)', fr('하루 운동 경험치', numIn('DAY_CAP'), 'XP') + fr('하루 · 전부 자가 기록이면', numIn('DAY_CAP_V0'), 'XP') + fr('주 운동 경험치', numIn('WEEK_CAP', { w: 90 }), 'XP')
         + fr('월 포인트 적립 상한', numIn('POINT.monthCap', { w: 90 }), 'P') + fr('자가 기록 레벨업 포인트', numIn('POINT.v0Rate', { mul: 100 }), '%') + note('하루·주 한도는 <b>운동 경험치에만</b> 걸려요. 아이템 경험치 한도는 «부스터·물약» 탭.'))}
-      ${sec('검증 배율·연속 배율', [['VERIFY.V0', '자가 기록 V0'], ['VERIFY.V1', '입장 확인 V1'], ['VERIFY.V1b', '위치 확인 V1b'], ['VERIFY.V2', '셀카 V2'], ['VERIFY.V3', '레슨 확정 V3']].map(([p, l]) => fr(l, numIn(p, { step: '0.05' }), '×')).join('')
+      ${sec('검증 배율·연속 배율', [['VERIFY.V0', '자가 기록 V0'], ['VERIFY.V1', '입점센터 입장 V1'], ['VERIFY.V1b', '위치 확인 V1b'], ['VERIFY.V2', '셀카 V2'], ['VERIFY.V3', '레슨 확정 V3']].map(([p, l]) => fr(l, numIn(p, { step: '0.05' }), '×')).join('')
         + `<div class="afr"><span>연속 주 0·1·2·3·4·5·6+</span></div><div class="astreak">${CFG_DEFAULT.STREAK.map((_, i) => numIn('STREAK.' + i, { step: '0.05', w: 66 })).join('')}</div>`
-        + fr('복귀 기준(쉰 날)', numIn('COMEBACK_DAYS'), '일') + fr('복귀 첫 세션 배율', numIn('COMEBACK_MUL', { step: '0.05' }), '×'))}</div>`,
+        + fr('복귀 기준(쉰 날)', numIn('COMEBACK_DAYS'), '일') + fr('복귀 첫 세션 배율', numIn('COMEBACK_MUL', { step: '0.05' }), '×')
+        + fr('입점센터 보너스(기본 경험치의)', numIn('CENTER_BONUS.pct'), '%') + fr('입점 보너스 주 한도', numIn('CENTER_BONUS.weekCap', { w: 90 }), 'XP') + note('결정 36 · 입점 보너스는 운동 하루·주 한도와 <b>따로</b> 세요. 운동량 ×1.2 전 기본 경험치 기준 · 아이템 배율 안 붙음.'))}</div>`,
     mood: () => `<div class="agrid3">${sec('표정 판정 (결정 21 · 경험치와 무관)', fr('«아쉬운» — 평소 대비 미만', numIn('MOOD.low', { mul: 100 }), '%') + fr('«신남» — 평소 대비 이상', numIn('MOOD.high', { mul: 100 }), '%')
         + fr('«평소» = 최근 몇 회 중앙값', numIn('MOOD.baseN'), '회') + fr('«평소» 기간', numIn('MOOD.baseDays', { mul: 1 / 7 }), '주') + fr('판정에 필요한 최소 기록', numIn('MOOD.minBase'), '회')
         + fr('«아쉬운» 몇 번 연속이면 표정 대신 한마디', numIn('MOOD.quietAfter'), '번'))}

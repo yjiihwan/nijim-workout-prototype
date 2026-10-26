@@ -473,3 +473,21 @@ select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--g2)
 .minreps{color:var(--g5);font-size:12px;text-align:center;margin:-2px 0 6px}
 .xrow.vol b{color:var(--rose)}
 .xrow.note span{color:var(--g5);font-size:12px}
+/* v1.17 결정 36 입점센터 보너스 */
+.cbtag{display:inline-block;margin-right:6px;font-size:10px;font-weight:800;padding:1px 6px;border-radius:6px;background:#FFE3EE;color:var(--rose);vertical-align:1px}
+.cbopen{background:#FFF5F9;border-radius:12px;padding:10px 12px;margin:2px 0 8px;font-size:13px;font-weight:600;color:var(--ink)}.cbopen .grid2{margin-top:8px}.cbopen .btn{margin:0}
+.cbline{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 10px;margin-top:10px;padding:8px 10px;border-radius:10px;background:var(--g1);font-size:13px;color:var(--g5);word-break:keep-all}
+.cbline.on{background:#FFE3EE;color:var(--rose);font-weight:600}.cbline.full{color:var(--g5)}
+.cbline .linkbtn,.cbif .linkbtn,.cbzero .linkbtn{margin:0;flex:none}
+.cbif{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 10px;margin-top:8px;padding:8px 10px;border-radius:10px;background:#FFF5F9;font-size:13px;color:var(--ink);text-align:left;word-break:keep-all}.cbif b{color:var(--rose)}
+.cbzero{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 10px;font-size:14px;font-weight:600;color:var(--rose);word-break:keep-all}
+.bar.cb i{background:var(--rose)}
+.xrow.center b{color:var(--rose)}
+.nb .nbfilter{display:flex;align-items:center;justify-content:space-between;margin:12px 0 8px}
+.cbtop{background:#FFE3EE;color:var(--rose);font-size:13px;font-weight:700;padding:8px 12px;border-radius:10px;margin-bottom:8px}
+.nbc{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--g1);text-align:left}.nbc:last-child{border-bottom:0}
+.nbimg{flex:none;width:72px;height:72px;border-radius:12px;background:var(--g2)}
+.nbt{flex:1;min-width:0}.nbt b{display:block;font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nbtags{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 4px}.nbtags span{font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;background:var(--g1);color:var(--g5)}
+.nbtags .cbbadge{background:#FFE3EE;color:var(--rose);font-weight:800}
+.nbt small{display:block;font-size:12px;color:var(--g5)}

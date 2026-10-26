@@ -1,0 +1,61 @@
+﻿id,name,category,part,sub_parts,record_mode,xp_unit,default_kg,kg_step,unreal_bw_mul,home_ok,aliases
+treadmill,트레드밀,유산소 기구,유산소,하체,cardio,cardio,,,,0,러닝머신 런닝머신 걷기
+bike_up,업라이트 사이클,유산소 기구,유산소,하체,cardio,cardio,,,,0,자전거 실내자전거
+bike_rec,리컴번트 사이클,유산소 기구,유산소,하체,cardio,cardio,,,,0,자전거 등받이
+spin,스핀 바이크,유산소 기구,유산소,하체,cardio,cardio,,,,0,스피닝 자전거
+elliptical,일립티컬,유산소 기구,유산소,전신,cardio,cardio,,,,0,크로스트레이너 천국의계단X
+rower,로잉머신,유산소 기구,유산소,등,cardio,cardio,,,,0,조정 로잉
+stepmill,스텝밀,유산소 기구,유산소,하체,cardio,cardio,,,,0,천국의계단 계단
+assault,어썰트바이크,유산소 기구,유산소,전신,cardio,cardio,,,,0,에어바이크
+skierg,스키에르그,유산소 기구,유산소,등,cardio,cardio,,,,0,스키
+chest_press,체스트프레스,웨이트 머신,가슴,팔,wr,weight,30,5,2,0,
+pec_deck,펙덱 플라이,웨이트 머신,가슴,,wr,weight,25,5,1.5,0,버터플라이
+m_shoulder,머신 숄더프레스,웨이트 머신,어깨,팔,wr,weight,20,5,1.5,0,
+lat_pulldown,랫풀다운,웨이트 머신,등,팔,wr,weight,40,5,1.8,0,
+seated_row,시티드로우,웨이트 머신,등,팔,wr,weight,35,5,1.8,0,케이블로우
+leg_press,레그프레스,웨이트 머신,하체,,wr,weight,100,10,5,0,
+leg_ext,레그익스텐션,웨이트 머신,하체,,wr,weight,30,5,1.5,0,
+leg_curl,레그컬,웨이트 머신,하체,,wr,weight,25,5,1.2,0,
+hip_abd,힙 어브덕션,웨이트 머신,하체,코어,wr,weight,30,5,2,0,아웃타이
+hip_add,힙 어덕션,웨이트 머신,하체,,wr,weight,30,5,2,0,이너타이
+hack_squat,핵스쿼트,웨이트 머신,하체,,wr,weight,40,5,3,0,
+calf_raise,카프레이즈,웨이트 머신,하체,,wr,weight,40,5,3,0,종아리
+assist_pullup,어시스트 풀업·딥스,웨이트 머신,등,팔,wr,weight,30,5,1.2,0,어시스티드
+back_ext,백익스텐션,웨이트 머신,등,코어,r,body,,,,0,허리
+crunch_m,크런치머신,웨이트 머신,코어,,wr,weight,20,5,1.5,0,복근
+bench,벤치프레스,프리웨이트,가슴,팔|어깨,wr,weight,40,2.5,2.2,0,벤치 바벨
+squat,바벨 스쿼트,프리웨이트,하체,코어,wr,weight,50,2.5,3,0,스쿼트 백스쿼트
+deadlift,데드리프트,프리웨이트,등,하체,wr,weight,60,2.5,3.2,0,데드
+ohp,오버헤드프레스,프리웨이트,어깨,팔,wr,weight,30,2.5,1.5,0,밀리터리프레스 OHP
+barbell_row,바벨로우,프리웨이트,등,팔,wr,weight,40,2.5,2,0,
+hip_thrust,힙쓰러스트,프리웨이트,하체,코어,wr,weight,40,2.5,3.5,0,힙업 엉덩이
+db_press,덤벨 프레스,프리웨이트,가슴,팔,wr,weight,14,2,1,0,덤벨벤치
+incline_db,인클라인 덤벨프레스,프리웨이트,가슴,어깨,wr,weight,12,2,1,0,
+db_row,덤벨 로우,프리웨이트,등,팔,wr,weight,16,2,1,0,원암로우
+db_shoulder,덤벨 숄더프레스,프리웨이트,어깨,팔,wr,weight,10,2,0.8,0,
+db_lunge,덤벨 런지,프리웨이트,하체,코어,wr,weight,8,2,1,0,
+db_curl,덤벨 컬,프리웨이트,팔,,wr,weight,8,2,0.6,0,이두 바이셉스
+lateral,레터럴레이즈,프리웨이트,어깨,,wr,weight,5,1,0.4,0,사레레 사이드레터럴
+kb_swing,케틀벨 스윙,프리웨이트,전신,하체,wr,weight,12,4,0.8,0,
+smith_squat,스미스머신 스쿼트,프리웨이트,하체,,wr,weight,40,5,3,0,스미스
+cable_cross,케이블 크로스오버,프리웨이트,가슴,,wr,weight,10,2.5,1,0,케이블플라이
+tricep_pd,케이블 트라이셉스,프리웨이트,팔,,wr,weight,15,2.5,1,0,푸시다운 삼두
+face_pull,페이스풀,프리웨이트,어깨,등,wr,weight,12.5,2.5,1,0,
+pushup,푸시업,맨몸·소도구,가슴,팔|코어,r,body,,,,1,팔굽혀펴기
+pullup,풀업,맨몸·소도구,등,팔,r,body,,,,1,턱걸이
+dips,딥스,맨몸·소도구,가슴,팔,r,body,,,,1,
+plank,플랭크,맨몸·소도구,코어,,t,body,,,,1,
+air_squat,맨몸 스쿼트,맨몸·소도구,하체,,r,body,,,,1,스쿼트
+lunge,맨몸 런지,맨몸·소도구,하체,,r,body,,,,1,런지
+burpee,버피,맨몸·소도구,전신,유산소,r,body,,,,1,
+crunch,크런치,맨몸·소도구,코어,,r,body,,,,1,윗몸 복근
+leg_raise,레그레이즈,맨몸·소도구,코어,,r,body,,,,1,복근
+jump_rope,줄넘기,맨몸·소도구,유산소,하체,t,body,,,,1,
+band,밴드 운동,맨몸·소도구,전신,,r,body,,,,1,루프밴드 튜빙
+stretch,폼롤러·스트레칭,맨몸·소도구,전신,,t,body,,,,1,스트레칭 폼롤러 요가
+lesson_pt,PT 수업,수업(레슨),전신,,lesson,lesson,,,,0,
+lesson_pilates,필라테스 수업,수업(레슨),코어,,lesson,lesson,,,,0,
+lesson_gx,GX 수업,수업(레슨),전신,,lesson,lesson,,,,0,요가 줌바 스피닝
+walk,걷기,집·야외,유산소,하체,cardio,cardio,,,,1,산책
+run,달리기,집·야외,유산소,하체,cardio,cardio,,,,1,러닝 조깅
+cycle,자전거(야외),집·야외,유산소,하체,cardio,cardio,,,,1,라이딩

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>니짐내짐 운동기록 · 캐릭터 성장 프로토타입 v1.10</title>
+<title>니짐내짐 운동기록 · 캐릭터 성장 프로토타입 v1.11</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -11,7 +11,7 @@
 <div class="app" id="app">
   <header class="top">
     <div class="logo">N 니짐내짐</div>
-    <div class="ver">프로토타입 v1.10</div>
+    <div class="ver">프로토타입 v1.11</div>
   </header>
   <main id="view"></main>
   <!-- 하단탭 5개 (결정 20) — 실제 앱 캡슐 탭바 규격(design 10-25). 운동기록 = 정식 A 사선 덤벨, 기존 4칸은 대조용 재현(실앱은 원본 에셋) -->
@@ -23,6 +23,7 @@
     <button data-tab="all" aria-label="전체"><svg viewBox="0 0 26 26" aria-hidden="true"><path d="M1.5 4.7H24.5M1.5 13H24.5M1.5 21.3H24.5" stroke-linecap="butt"/></svg><span>전체</span></button>
   </nav>
   <div class="toast" id="toast"></div>
+  <div class="sheet" id="sheet"></div>
 </div>
 
 <div class="evo" id="evo" aria-hidden="true">
@@ -51,6 +52,8 @@
 </div>
 
 <script src="assets/chars.js"></script>
+<script src="exercises.js"></script>
+<script src="engine.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

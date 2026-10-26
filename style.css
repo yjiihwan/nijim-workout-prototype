@@ -373,3 +373,12 @@ select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--g2)
 .chips.white .chip{background:#fff}
 .notice.hold .btn.sm{white-space:nowrap;flex:none}
 .shot.reject img{filter:grayscale(1) brightness(.55)}
+/* ===== v1.12 — 결정 33: 아이템 경험치 한도 없음 표시 ===== */
+.notice.nolimit{display:block;background:#FFF6E3;color:#6B4700;margin:10px 0 0;line-height:1.45;word-break:keep-all}
+.wxp.itm{margin-top:6px}.wxp.itm span,.wxp.itm b{color:#B07D1F;font-size:12px}
+.cmp{margin:10px 0 8px}
+.cmprow{display:grid;grid-template-columns:72px 1fr auto;gap:8px;align-items:center;margin-top:8px;font-size:13px}
+.cmprow b{font-size:14px;white-space:nowrap}
+.cbar{height:8px;border-radius:99px;background:var(--g1);overflow:hidden}.cbar i{display:block;height:100%;background:var(--g5);border-radius:99px}
+.cmprow.it .cbar i{background:var(--gold)}
+.nw{white-space:nowrap}

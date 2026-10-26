@@ -1,8 +1,8 @@
 'use strict';
-/* v1.11 — C안 1/4: 고객 앱 기록 흐름 전부(C2·C3·C3b·C4·C6·C6b·C7·C7b·C13·C14 + 부스터·물약 계산기).
+/* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·포인트 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.11';
+const VER = 'v1.12';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -31,9 +31,9 @@ const MONTH_CAP = CFG.POINT.monthCap;
 
 /* 효과형은 «사용»(소모) · 외형형은 «장착». 가격·상한 PLAN §2-10 */
 const ITEMS = [
-  { id:'boost1', img:'headband_gold', kind:'effect', use:1, name:'2배 부스터 · 1세션', desc:'다음 운동 1번 경험치 2배', price:300 },
-  { id:'boost7', img:'shaker', kind:'effect', use:1, name:'2배 부스터 · 7일', desc:'7일 동안 모든 운동 2배', price:1500 },
-  { id:'potion', img:null, kind:'effect', use:1, name:'경험치 물약 +300', desc:'운동 없이 +300 · 하루 1병 · 💰', price:1000 },
+  { id:'boost1', img:'headband_gold', kind:'effect', use:1, name:'2배 부스터 · 1세션', desc:'다음 운동 1번 2배 · 한도 없음', price:300 },
+  { id:'boost7', img:'shaker', kind:'effect', use:1, name:'2배 부스터 · 7일', desc:'7일 동안 운동 2배 · 한도 없음', price:1500 },
+  { id:'potion', img:null, kind:'effect', use:1, name:'경험치 물약 +300', desc:'운동 없이 +300 · 한도 없음 · 💰', price:1000 },
   { id:'charm', img:'charm', kind:'effect', use:1, name:'연속 보호권', desc:'못 채운 주 1회 보호', price:500 },
   { id:'crown', img:'crown', kind:'effect', name:'리그 왕관', desc:'리그 표시 꾸미기 · 7일', price:800 },
   { id:'cap', img:'cap', kind:'look', name:'스포츠 캡', desc:'효과 없음', price:200 },
@@ -173,7 +173,8 @@ const realRecs = () => S.records.filter(r => !r.demo);
 const todayDone = () => S.records.some(r => r.date === TODAY);
 const weekCount = () => weekDays().filter(x => S.records.some(r => r.date === x)).length;
 const ledger = (excludeId = null) => ledgerOf([...S.records.filter(r => r.id !== excludeId), ...S.paidLog.map(p => ({ ...p, paid: true }))], TODAY, weekDays());
-const weekXP = () => weekUsedOf(ledger());
+const weekXP = () => weekUsedOf(ledger());   // 운동 경험치만(주 1,800 한도 대상)
+const itemWeek = () => ledger().weekItem;    // 아이템 경험치(한도 없음)
 const lastWorkoutDays = () => { const ds = realRecs().map(r => r.date).sort(); if (!ds.length) return 99;
   return Math.round((new Date(TODAY) - new Date(ds[ds.length - 1])) / 864e5); };
 const boostOn = () => S.boostNext || (S.boost7Until && S.boost7Until >= TODAY);
@@ -344,7 +345,7 @@ function vWorkout() {
   <div class="muted" style="text-align:center;margin:6px 0 12px">${S.session ? `${esc(S.session.place.name)}에서 운동 중 · <span data-clock="sess">${clock(Date.now() - S.session.startedAt)}</span>` : '센터 입장이 확인되면 바로 시작돼요 · 셀카는 선택'}</div>
   <div class="card" id="streakCard"><div style="display:flex;justify-content:space-between;align-items:center"><div class="h2" style="margin:0;font-size:16px">이번 주 ${wk}/${S.goal}회</div><span class="pill ${wk>=S.goal?'tier4':'tier1'}">🔥 ${S.streakWeeks}주 연속</span></div>
     <div class="week">${week}</div>
-    <div class="wxp" id="weekXP"><span>이번 주 경험치</span><b>${weekXP().toLocaleString()}/${CFG.WEEK_CAP.toLocaleString()}</b></div><div class="bar thin"><i style="width:${Math.min(100, Math.round(weekXP() / CFG.WEEK_CAP * 100))}%"></i></div>
+    <div class="wxp" id="weekXP"><span>이번 주 운동 경험치</span><b>${weekXP().toLocaleString()}/${CFG.WEEK_CAP.toLocaleString()}</b></div><div class="bar thin"><i style="width:${Math.min(100, Math.round(weekXP() / CFG.WEEK_CAP * 100))}%"></i></div>${itemWeek() ? `<div class="wxp itm" id="weekItemXP"><span>+ 아이템 경험치</span><b>${itemWeek().toLocaleString()} · 한도 없음</b></div>` : ''}
     <div class="muted" style="margin-top:8px;font-weight:700;color:var(--ink)">${now.getMonth()+1}월</div><div class="cal">${cal}</div></div>
   <div class="card coach" id="coachCard"><div class="cbox">${charFit(t, lv, 52, ex)}</div><div><div class="say">${coachLine()}</div><button class="linkbtn" data-act="coach">코치에게 물어보기 › <span class="muted" style="font-weight:500">월 20회</span></button></div></div>
   <div class="card" id="recentCard"><div style="display:flex;justify-content:space-between;align-items:center"><div class="h2" style="margin:0;font-size:16px">최근 기록</div><button class="linkbtn" data-act="sub" data-v="stats" style="margin:0">전체 보기 ›</button></div>
@@ -505,10 +506,10 @@ function xpRows(rec) {
   return [...b.lines.map(([l, n, u, x]) => row(`${l} ${n}${u}`, `+${fmt(x)}`)),
     b.first ? row('오늘 첫 세트', `+${b.first}`) : '', b.complete ? row('운동 완료', `+${b.complete}`) : '',
     row(`검증 · ${VERIFY_LABEL[b.v]}`, `×${b.vm}`, 'mul'), row(b.comeback ? '복귀 첫 운동' : `연속 ${S.streakWeeks}주`, `×${b.sm.toFixed(2)}`, 'mul'),
-    b.boostPart ? row('2배 부스터', `+${fmt(b.boostPart)}`) : '',
+    b.boostPart ? row('2배 부스터 · 한도 없음', `+${fmt(b.boostPart)}`, 'gold') : '',
     b.newXP ? row(`새 부위 (${b.newParts.join('·')})`, `+${b.newXP}`) : '', b.prXP ? row(`개인 기록 ${b.prN}번`, `+${b.prXP}`) : '',
     b.goal ? row(`주간 목표 ${S.goal}회 달성`, `+${b.goal}`) : '',
-    rec.cut ? row(rec.cutReason === 'week' ? '이번 주 상한' : '오늘 상한', `−${fmt(rec.cut)}`, 'cut') : '',
+    rec.cut ? row(rec.cutReason === 'week' ? '운동 경험치 이번 주 상한' : '운동 경험치 오늘 상한', `−${fmt(rec.cut)}`, 'cut') : '',
     rec.held ? row('곧 반영(보류)', `−${fmt(rec.held)}`, 'cut') : '',
     rec.selfieXP ? row('오운완 셀카 100% 반영', `+${fmt(rec.selfieXP)}`, 'gold') : ''].join('');
 }
@@ -529,7 +530,8 @@ function vResult() {
     <div class="est"><span>오늘 얻은 경험치</span><em class="${S.bump ? 'bump' : ''}" id="resultXP">+${(rec ? rec.xp : 0).toLocaleString()} XP</em></div>
     <div class="rmeta">${rec ? vBadge(rec.v) : ''}<span class="muted">${rec ? esc(rec.summary) : ''}</span></div>
     ${rec && rec.held ? `<div class="notice hold" id="holdNote"><span>${fmt(rec.held)} XP는 곧 반영돼요 · 기록은 저장됐어요</span><button class="btn sm ghost" data-act="release" data-id="${rec.id}">🧪 24시간 뒤</button></div>` : ''}
-    ${rec && rec.cut ? `<div class="muted capline" id="resultCap">${rec.cutReason === 'week' ? `이번 주 경험치 ${CFG.WEEK_CAP.toLocaleString()} 다 모았어요` : `오늘 경험치 ${(rec.v === 'self' ? CFG.DAY_CAP_V0 : CFG.DAY_CAP).toLocaleString()} 다 모았어요`} · ${fmt(rec.cut)} XP는 안 들어갔어요. 기록·연속·주간 목표는 그대로 쌓여요</div>` : ''}
+    ${rec && rec.cut ? `<div class="muted capline" id="resultCap">${rec.cutReason === 'week' ? `이번 주 운동 경험치 ${CFG.WEEK_CAP.toLocaleString()} 다 모았어요` : `오늘 운동 경험치 ${(rec.v === 'self' ? CFG.DAY_CAP_V0 : CFG.DAY_CAP).toLocaleString()} 다 모았어요`} · ${fmt(rec.cut)} XP는 안 들어갔어요. 기록·연속·주간 목표는 그대로 쌓여요</div>` : ''}
+    ${rec && rec.xpBoost ? `<div class="muted capline" id="resultBoost">2배 부스터로 늘어난 +${fmt(rec.xpBoost)} XP는 한도 없이 다 들어갔어요 💰</div>` : ''}
     ${rec && rec.v === 'self' && !S.hideTips ? `<div class="muted capline" id="v0Note">센터에서 기록하면 경험치가 2배 이상이에요</div>` : ''}
     <div class="bar"><i style="width:${lv >= 99 ? 100 : Math.round(S.xp / need(lv) * 100)}%"></i></div><div class="muted">${lv >= 99 ? '최고 레벨' : `Lv.${lv + 1}까지 ${(need(lv) - S.xp).toLocaleString()} XP`}</div>
     ${ev ? `<div class="ptline" id="ptLine">Lv.${ev.from} → ${ev.to} 레벨업 · ${ev.points ? `+${ev.points.toLocaleString()}P 적립` : '적립 0P'} <span class="muted">이번 달 ${S.month.toLocaleString()}/${MONTH_CAP.toLocaleString()}P${ev.pointsCut ? ` · 한도 때문에 ${ev.pointsCut.toLocaleString()}P 빠짐` : ''}${rec.v === 'self' ? ' · 자가 기록 레벨업은 50%' : ''}</span></div>` : ''}
@@ -604,7 +606,6 @@ function vMe() {
 /* ===== C13 주간 목표 · 설정 ===== */
 function vSettings() {
   const evs = [...S.events].reverse(), photos = S.records.filter(r => r.photo);
-  const pol = (k, opts) => `<select data-act="pol" data-k="${k}">${opts.map(([v, l]) => `<option value="${v}" ${CFG.POLICY[k] === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
   return `${subHead('설정')}<div class="sec">
   <div class="card" id="goalCard"><div class="h2" style="font-size:16px">주간 목표</div><div class="chips">${[2, 3, 4, 5].map(n => `<button class="chip ${(S.goalNext || S.goal) === n ? 'on' : ''}" data-act="goalSet" data-v="${n}">주 ${n}회</button>`).join('')}</div>
     <div class="muted" style="margin-top:8px">${S.goalNext && S.goalNext !== S.goal ? `이번 주는 주 ${S.goal}회 그대로 · <b style="color:var(--ink)">다음 주 월요일부터 주 ${S.goalNext}회</b>` : `지금 주 ${S.goal}회 · 바꾸면 다음 주 월요일부터 적용돼요`}</div></div>
@@ -633,8 +634,7 @@ function vSettings() {
   ${evs.length ? evs.map(e => `<div class="row"><div><b>Lv.${e.from} → ${e.to}</b> ${e.big?'<span class="pill tier4">진화</span>':''}<div class="muted">${e.at} · ${e.watched?(e.skipped?'건너뜀':'봤음'):'아직 못 봄'}${e.replays?` · 다시 본 횟수 ${e.replays}`:''}</div></div><button class="btn sm ghost" data-act="replay" data-id="${e.id}">다시 보기</button></div>`).join('') : '<div class="muted">아직 레벨업 기록이 없어요</div>'}</div>
   <div class="card demo"><div class="h3">🧪 시연 도구</div>
   <div class="row"><span>오늘 센터 입장 기록 있음</span>${sw('entryDemo', S.entryDemo)}</div>
-  <div class="row"><span>부스터 정책 <span class="muted">잠정 A</span></span>${pol('booster', [['A', 'A 주 1,800 안'], ['B', 'B 주 한도 밖'], ['C', 'C 그 주 +600']])}</div>
-  <div class="row"><span>물약 정책 <span class="muted">잠정 A</span></span>${pol('potion', [['A', 'A 주 1,800에 합산'], ['B', 'B 유료 주 900'], ['C', 'C 하루 600만']])}</div>
+  <div class="row"><div><span>아이템 경험치 한도</span><div class="muted">결정 33 · 운동 경험치만 하루 ${CFG.DAY_CAP}·주 ${CFG.WEEK_CAP.toLocaleString()}</div></div><b>없음</b></div>
   <div class="row"><span>이번 주 경험치 채우기</span><button class="btn sm ghost" data-act="fillWeek">1,800 채우기</button></div>
   <div class="row"><span>캐릭터</span><select data-act="type">${Object.keys(CH).map(k => `<option value="${k}" ${S.type===k?'selected':''}>${CH[k].name}</option>`).join('')}</select></div>
   <div class="row"><span>표정 강제 보기</span><select data-act="exprDemo">${[['auto','자동(기록대로)'],...EXPR_KEYS.map(k => [k, EXPR[k].label])].map(([k, l]) => `<option value="${k}" ${(S.exprDemo||'auto')===k?'selected':''}>${l}</option>`).join('')}</select></div>
@@ -650,7 +650,7 @@ function vShop() {
   const list = ITEMS.filter(i => i.kind === S.sTab);
   return `${subHead('아이템 상점')}<div class="sec"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><button class="linkbtn" data-act="sub" data-v="calc" id="goCalc" style="margin:0">부스터·물약 계산기 ›</button><b>${S.points.toLocaleString()}P</b></div>
   <div class="seg"><button class="${S.sTab==='effect'?'on':''}" data-act="stab" data-v="effect">효과형</button><button class="${S.sTab==='look'?'on':''}" data-act="stab" data-v="look">외형형</button></div>
-  ${S.sTab === 'effect' ? `<div class="muted wkleft" id="wkLeft">이번 주 경험치 ${weekXP().toLocaleString()}/${CFG.WEEK_CAP.toLocaleString()} · 부스터·물약도 이 한도 안에서 세요${boostOn() ? ' · <b>2배 부스터 적용 중</b>' : ''}</div>` : ''}
+  ${S.sTab === 'effect' ? `<div class="muted wkleft" id="wkLeft">이번 주 운동 경험치 ${weekXP().toLocaleString()}/${CFG.WEEK_CAP.toLocaleString()} · <b>아이템 경험치는 한도 없어요</b>${boostOn() ? ' · <b>2배 부스터 적용 중</b>' : ''}</div>` : ''}
   <div class="grid2">${list.map(i => { const n = i.use ? (S.inv[i.id] || 0) : 0, own = i.use ? n > 0 : S.owned[i.id], eq = S.equipped[i.id];
     return `<div class="item">${i.use ? (n ? `<span class="tag">${n}개</span>` : '') : eq?'<span class="tag">장착중</span>':own?'<span class="tag">보유</span>':''}${itemImg(i)}<b>${i.name}</b><small>${i.desc}</small>
     ${i.use ? (n ? `<div class="grid2 ib"><button class="btn ghost" data-act="buy" data-id="${i.id}">${i.price.toLocaleString()}P</button><button class="btn" data-act="use" data-id="${i.id}">사용</button></div>` : `<button class="btn" data-act="buy" data-id="${i.id}">${i.price.toLocaleString()}P</button>`)
@@ -659,19 +659,33 @@ function vShop() {
 }
 const avgSession = () => { const rs = realRecs().filter(r => r.v !== 'lesson' && !r.edited).slice(-10).map(r => r.raw || r.xp); return rs.length ? Math.round(median(rs) / 10) * 10 : 260; };
 function calcDefaults() { return { sessions: Math.max(1, S.goal - weekCount()), per: avgSession(), booster: 'one', potions: 0 }; }
+function cmpDefaults() { return { perWeek: S.goal, per: avgSession(), booster: '7d', potions: 7 }; }
+const dur = w => !isFinite(w) ? '도달 못 함' : w < 9 ? `${w}주` : w < 104 ? `약 ${Math.round(w / 4.345)}개월` : `약 ${(w / 52.18).toFixed(1)}년`;
 function vCalc() {
   const c = S.calc || (S.calc = calcDefaults()), f = forecastWeek({ L: ledger(), ...c });
-  const step = (k, v, l, u) => `<div class="ex"><div><b>${l}</b></div><div class="step"><button data-act="calc" data-k="${k}" data-d="-1">−</button><span>${v}${u}</span><button data-act="calc" data-k="${k}" data-d="1">+</button></div></div>`;
+  const step = (k, v, l, u, act = 'calc') => `<div class="ex"><div><b>${l}</b></div><div class="step"><button data-act="${act}" data-k="${k}" data-d="-1">−</button><span>${v}${u}</span><button data-act="${act}" data-k="${k}" data-d="1">+</button></div></div>`;
+  const bchips = (cur, act) => `<div class="chips">${[['none', '없음'], ['one', '1세션'], ['7d', '7일']].map(([k, l]) => `<button class="chip ${cur === k ? 'on' : ''}" data-act="${act}" data-v="${k}">${l}</button>`).join('')}</div>`;
+  const m = S.cmp || (S.cmp = cmpDefaults());
+  const exOnly = weeksToLv99({ level: S.level, xp: S.xp, perWeek: m.perWeek, per: m.per }), withIt = weeksToLv99({ level: S.level, xp: S.xp, perWeek: m.perWeek, per: m.per, booster: m.booster, potionsWeek: m.potions });
+  const maxW = Math.max(...[exOnly.weeks, withIt.weeks].filter(isFinite), 1), barW = w => isFinite(w) ? Math.max(4, Math.round(w / maxW * 100)) : 100;
   return `${subHead('부스터·물약 계산기', 'shop', '상점')}<div class="sec">
-  <div class="card"><div class="wxp" style="margin-top:0"><span>이번 주 경험치 지금</span><b>${weekXP().toLocaleString()}/${CFG.WEEK_CAP.toLocaleString()}</b></div><div class="bar thin"><i style="width:${Math.min(100, Math.round(weekXP() / CFG.WEEK_CAP * 100))}%"></i></div>
-  ${step('sessions', c.sessions, '이번 주 남은 운동', '번')}${step('per', c.per, '1번 경험치(상한 전)', ' XP')}
-  <div class="ex"><div><b>부스터</b></div><div class="chips">${[['none', '없음'], ['one', '1세션'], ['7d', '7일']].map(([k, l]) => `<button class="chip ${c.booster === k ? 'on' : ''}" data-act="calcB" data-v="${k}">${l}</button>`).join('')}</div></div>
+  <div class="card"><div class="wxp" style="margin-top:0"><span>이번 주 운동 경험치 지금</span><b>${weekXP().toLocaleString()}/${CFG.WEEK_CAP.toLocaleString()}</b></div><div class="bar thin"><i style="width:${Math.min(100, Math.round(weekXP() / CFG.WEEK_CAP * 100))}%"></i></div>
+  ${step('sessions', c.sessions, '이번 주 남은 운동', '번')}${step('per', c.per, '1번 운동 경험치(상한 전)', ' XP')}
+  <div class="ex"><div><b>부스터</b></div>${bchips(c.booster, 'calcB')}</div>
   ${step('potions', c.potions, '물약', '병')}</div>
   <div class="card" id="calcOut"><div class="xrow"><span>아이템 없이</span><b>+${fmt(f.base)} XP</b></div><div class="xrow"><span>아이템 쓰면</span><b>+${fmt(f.with)} XP</b></div>
-  <div class="xrow total"><span>실제로 늘어나는 경험치</span><b class="${f.extra ? '' : 'zero'}">+${fmt(f.extra)} XP</b></div>
-  ${f.wasted ? `<div class="xrow cut"><span>한도 때문에 안 들어가는 경험치</span><b>${fmt(f.wasted)} XP</b></div>` : ''}
-  ${!f.extra && (c.booster !== 'none' || c.potions) ? `<div class="warn" id="calcWarn">이번 주는 경험치 한도(${CFG.WEEK_CAP.toLocaleString()})에 닿아서 아이템 효과가 없어요. 다음 주에 쓰는 게 좋아요</div>` : ''}</div>
-  <div class="muted">하루 ${CFG.DAY_CAP} · 주 ${CFG.WEEK_CAP.toLocaleString()} XP 한도 안에서 계산해요. 운동 1번 = 하루 1번으로 셈 · 지금 정책: 부스터 ${CFG.POLICY.booster}안 · 물약 ${CFG.POLICY.potion}안(잠정 A안: 둘 다 주 ${CFG.WEEK_CAP.toLocaleString()} 안)</div></div>`;
+  <div class="xrow total"><span>아이템으로 늘어나는 경험치</span><b class="${f.extra ? '' : 'zero'}">+${fmt(f.extra)} XP</b></div>
+  ${f.wasted ? `<div class="xrow cut"><span>운동 한도 때문에 안 들어가는 경험치</span><b>${fmt(f.wasted)} XP</b></div>` : ''}
+  <div class="notice nolimit" id="calcNoLimit">💰 아이템 경험치는 <b>한도 없음</b> · 이번 주 운동 한도를 다 채워도 그대로 들어가요</div></div>
+  <div class="card" id="lv99Card"><div class="h2" style="font-size:16px">Lv.${S.level} → Lv.99 얼마나 걸릴까</div>
+  ${step('perWeek', m.perWeek, '주 운동', '번', 'cmp')}${step('per', m.per, '1번 운동 경험치', ' XP', 'cmp')}
+  <div class="ex"><div><b>매주 부스터</b></div>${bchips(m.booster, 'cmpB')}</div>
+  ${step('potions', m.potions, '매주 물약', '병', 'cmp')}
+  <div class="cmp"><div class="cmprow"><span>운동만</span><div class="cbar"><i style="width:${barW(exOnly.weeks)}%"></i></div><b>${dur(exOnly.weeks)}</b></div>
+  <div class="cmprow it"><span>아이템 쓰면</span><div class="cbar"><i style="width:${barW(withIt.weeks)}%"></i></div><b>${dur(withIt.weeks)}</b></div></div>
+  <div class="muted">한 주 운동 ${fmt(exOnly.exWeek)} XP(주 ${CFG.WEEK_CAP.toLocaleString()} 한도) · 아이템 쓰면 + 아이템 ${fmt(withIt.itemWeek)} XP(한도 없음) · 남은 ${fmt(exOnly.left)} XP 기준 어림값</div>
+  <div class="muted">아이템으로 오른 레벨엔 포인트가 쌓이지 않고, 주간 랭킹·«운동만 보기»엔 운동 경험치만 들어가요</div></div>
+  <div class="muted">운동 경험치만 하루 ${CFG.DAY_CAP} · 주 ${CFG.WEEK_CAP.toLocaleString()} XP 한도 · 운동 1번 = 하루 1번으로 셈</div></div>`;
 }
 
 /* ===== 통계(C11 자리) · C14 기록 상세·수정 ===== */
@@ -703,7 +717,7 @@ function vRec() {
 /* 수정 = 자가 기록(V0)으로 다시 계산(VERIFICATION §4 «과거 입력은 V0 고정») — 그날 다른 기록과 합쳐 하루 한도 안에서 */
 function editCalc(r, items) {
   const ctx = r.ctx || { firstToday: true, weekParts: [], streakWeeks: S.streakWeeks, lastDays: 1, prToday: 0, goal: S.goal, weekCountBefore: 0, todayCounted: true, boost: false };
-  const x = sessionXP({ verify: 'V0', selfie: false, items, prCount: 0 }, { ...ctx, boost: false });
+  const x = sessionXP({ verify: 'V0', selfie: false, items, prCount: 0 }, { ...ctx, boost: !!r.boosted });   // 이미 쓴 부스터는 수정해도 유지
   const L = ledgerOf([...S.records.filter(q => q.id !== r.id), ...S.paidLog.map(p => ({ ...p, paid: true }))], r.date, weekDaysOf(r.date));
   const cap = capGain(x, L, true);
   return { xp: cap.gained, br: x, cap };
@@ -793,7 +807,8 @@ function endSession(auto = false) {
   const times = Object.values(s.times || {});
   if (!isDemo && (S.holdDemo || times.some(isHeld))) { held = gained; gained = 0; }
   const boosted = !isDemo && boostOn() && r.any; if (boosted && S.boostNext) S.boostNext = false;
-  const res = applyXP({ level: S.level, xp: S.xp }, gained, { v0: r.v === 'V0', monthUsed: S.month });
+  const itemPart = isDemo || held ? 0 : cap.boostGained;   // 부스터로 늘어난 몫 = 아이템 경험치 → 그 몫으로 오른 레벨은 포인트 0
+  const res = applyGain({ level: S.level, xp: S.xp }, gained - itemPart, itemPart, { v0: r.v === 'V0', monthUsed: S.month });
   S.level = res.level; S.xp = res.xp; S.month += res.points; S.points += res.points;
   const items = s.items.filter(it => (it.sets || []).some(x => x.done) || it.min > 0).map(({ draft, run, plan, ...it }) => ({ ...it, sets: it.sets ? it.sets.filter(x => x.done).map(({ at, ...x }) => x) : undefined }));
   const rec = { id: Date.now(), date: TODAY, place: s.place.name, placeKind: s.place.kind, summary: summaryOf(items), items, xp: gained, raw: r.raw, held, cut: isDemo ? 0 : cap.cut, cutReason: cap.reason,
@@ -874,24 +889,22 @@ function applySelfie() {
 function sheet(html) { const el = $('sheet'); el.innerHTML = `<div class="sh-bg" data-act="shClose"></div><div class="sh" role="dialog">${html}</div>`; el.classList.add('on'); }
 function shClose() { const el = $('sheet'); el.classList.remove('on'); el.innerHTML = ''; }
 
-/* ===== 효과형 아이템 사용 — 계산기와 같은 함수로 효과 미리 보여 주기(잠정 A안: 한도에 닿은 주엔 «효과 없음») ===== */
+/* ===== 효과형 아이템 사용 — 계산기와 같은 함수로 효과 미리 보여 주기(결정 33: 아이템 경험치는 한도 없음) ===== */
 function useItem(id) {
   const it = ITEMS.find(i => i.id === id), L = ledger();
   if (id === 'charm') { S.inv.charm--; S.shields++; save(); render(); return toast('연속 보호권 1장 보관 · 설정 › 쉬어가기 티켓에서 확인'); }
+  const nolimit = `<div class="notice nolimit" id="useNoLimit">💰 아이템 경험치는 <b>한도 없음</b><br>이번 주 운동 한도(${fmt(weekXP())}/${CFG.WEEK_CAP.toLocaleString()})와 따로 세요</div>`;
   if (id === 'potion') {
     const g = potionGain(L);
-    if (!g.gained) return sheet(`<div class="h2">지금은 물약 효과가 없어요</div><div class="muted">${g.reason === 'week' ? `이번 주 경험치 ${CFG.WEEK_CAP.toLocaleString()}을 다 모았어요. 물약 경험치도 이 한도 안에서 세요(잠정 A안).` : '오늘 물약 한도(하루 1병·600)를 다 썼어요.'} 물약은 그대로 남아 있어요.</div><div class="warn" style="margin-top:10px">이번 주는 효과 없음 · 다음 주에 쓰는 게 좋아요</div><button class="btn" data-act="shClose" style="margin-top:14px">다음 주에 쓰기</button>`);
-    return sheet(`<div class="h2">경험치 물약을 쓸까요?</div><div class="xrow"><span>지금 바로</span><b>+${fmt(g.gained)} XP</b></div>${g.cut ? `<div class="xrow cut"><span>한도 때문에 빠짐</span><b>${fmt(g.cut)} XP</b></div>` : ''}
-      <div class="muted">유료 경험치라 랭킹에 💰가 붙고, 물약으로 오른 레벨엔 포인트가 적립되지 않아요 · 이번 주 남은 한도 ${fmt(Math.max(0, CFG.WEEK_CAP - weekXP()))} XP</div>
+    return sheet(`<div class="h2">경험치 물약을 쓸까요?</div><div class="xrow"><span>지금 바로</span><b>+${fmt(g.gained)} XP</b></div>${nolimit}
+      <div class="muted">유료 경험치라 랭킹에 💰가 붙고, 물약으로 오른 레벨엔 포인트가 적립되지 않아요 · 하루 몇 병이든 쓸 수 있어요</div>
       <div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="shClose">취소</button><button class="btn" data-act="usePotion">사용</button></div>`);
   }
   const f = forecastWeek({ L, sessions: Math.max(1, S.goal - weekCount()), per: avgSession(), booster: id === 'boost1' ? 'one' : '7d', potions: 0 });
-  const noEff = f.extra <= 0;
-  sheet(`<div class="h2">${it.name}${noEff ? ' — 이번 주는 효과가 없어요' : '를 쓸까요?'}</div>
-    <div class="xrow"><span>이번 주 남은 한도</span><b>${fmt(f.weekLeftNow)} XP</b></div><div class="xrow"><span>예상으로 더 받는 경험치</span><b class="${noEff ? 'zero' : ''}">+${fmt(f.extra)} XP</b></div>
-    <div class="muted">남은 운동 ${Math.max(1, S.goal - weekCount())}번 · 1번 ${fmt(avgSession())} XP 기준 · 부스터로 늘어난 경험치도 하루 ${CFG.DAY_CAP}·주 ${CFG.WEEK_CAP.toLocaleString()} 안에서 세요</div>
-    ${noEff ? `<div class="warn" style="margin-top:10px">이번 주는 경험치를 다 모아서 부스터를 써도 늘지 않아요</div><div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="useBoost" data-id="${id}">그래도 쓰기</button><button class="btn" data-act="shClose">다음 주에 쓰기</button></div>`
-    : `<div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="shClose">취소</button><button class="btn" data-act="useBoost" data-id="${id}">사용</button></div>`}`);
+  sheet(`<div class="h2">${it.name}을 쓸까요?</div>
+    <div class="xrow"><span>예상으로 더 받는 경험치</span><b>+${fmt(f.extra)} XP</b></div>${nolimit}
+    <div class="muted">남은 운동 ${Math.max(1, S.goal - weekCount())}번 · 1번 ${fmt(avgSession())} XP 기준 · 2배로 늘어난 몫은 운동 한도를 다 채운 주에도 그대로 들어가요</div>
+    <div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="shClose">취소</button><button class="btn" data-act="useBoost" data-id="${id}">사용</button></div>`);
 }
 /* ===== 사운드 (WebAudio 합성, 에셋 없음) ===== */
 let AC;
@@ -1080,6 +1093,8 @@ document.addEventListener('click', e => {
     return afterGain(res, { toast: `물약 +${fmt(g.gained)} XP · 💰 유료 경험치`, to: 'shop' }); }
   else if (a === 'calc') { const c = S.calc, lim = { sessions: [0, 7, 1], per: [0, 1200, 20], potions: [0, 7, 1] }[b.dataset.k]; c[b.dataset.k] = clampStep(c[b.dataset.k], dd, lim[2], lim[0], lim[1]); }
   else if (a === 'calcB') S.calc.booster = v;
+  else if (a === 'cmp') { const m = S.cmp, lim = { perWeek: [0, 7, 1], per: [0, 1200, 20], potions: [0, 21, 1] }[b.dataset.k]; m[b.dataset.k] = clampStep(m[b.dataset.k], dd, lim[2], lim[0], lim[1]); }
+  else if (a === 'cmpB') S.cmp.booster = v;
   else if (a === 'equip') { S.equipped[id] = !S.equipped[id]; }
   else if (a === 'goalSet') { S.goalNext = +v === S.goal ? null : +v; toast(+v === S.goal ? `주 ${S.goal}회 그대로` : `다음 주 월요일부터 주 ${v}회`); }
   else if (a === 'ticketAuto') S.ticketAuto = !S.ticketAuto;
@@ -1120,7 +1135,6 @@ document.addEventListener('change', e => {
   if (a === 'exprDemo') S.exprDemo = e.target.value;
   if (a === 'setlv') { S.level = +e.target.value; S.xp = 0; }
   if (a === 'light' && S.session) S.session.light = e.target.checked;
-  if (a === 'pol') { CFG.POLICY[e.target.dataset.k] = e.target.value; S.policy = { ...CFG.POLICY }; }
   save(); render();
 });
 document.addEventListener('toggle', e => { if (e.target.dataset && e.target.dataset.act === 'cmore') { const it = curItem(); if (it && it.draft) { it.draft.open = e.target.open; save(); } } }, true);
@@ -1149,7 +1163,6 @@ setInterval(() => {
   if (s && S.tab === 'workout' && (S.sub === 'session' || !S.sub) && Date.now() - s.lastAt > CFG.AUTO_END_MIN * 60000) render();
 }, 1000);
 
-if (S.policy) Object.assign(CFG.POLICY, S.policy);
 document.querySelector('.ver').textContent = `프로토타입 ${VER}`;
 render();
 if (S.pending) setTimeout(() => { toast('지난번에 못 본 레벨업 연출을 재생해요'); playPending(); }, 700);

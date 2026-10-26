@@ -15,12 +15,10 @@ const CFG = {
   CARDIO_K: { light: 0.8, normal: 1.0, hard: 1.2 },
   POINT: { monthCap: 1000, v0Rate: 0.5 },
   BOOST: { mul: 2 },
-  POTION: { xp: 300, paidDayCap: 600, paidWeekCapB: 900 },
-  /* ⚠ 잠정 A안(PLAN §8 ①② — 형 답 전): 부스터로 늘어난 경험치·물약 경험치 모두 주 1,800 한도 안.
-     값만 바꾸면 전 화면·계산기가 따라간다. booster: A 주 한도 안 / B 주 한도 밖(하루 600만) / C 부스터 쓴 주만 주 한도 +600
-     potion: A 주 1,800에 합산 / B 유료만 주 900 별도 / C 유료 하루 600만 */
-  POLICY: { booster: 'A', potion: 'A' },
-  BOOSTER_C_EXTRA: 600,
+  POTION: { xp: 300 },
+  /* 결정 33: 하루 600·주 1,800 은 «운동 경험치»에만. 아이템 경험치(부스터로 늘어난 몫·물약·앞으로 나올 먹는/마시는 아이템)는
+     장부를 따로 세고 지금은 한도 없음(null). 나중에 걸더라도 이 칸에만 — 운동 한도와 합치거나 나눠 쓰지 않는다 */
+  ITEM_CAP: { day: null, week: null },
   SET_GAP_SEC: 20, SET_GAP_RUN: 3,         // 같은 운동 세트 완료 간격 20초 미만 3회 연속 → 경험치 보류
   UNREAL_PR_MUL: 1.5, SAFETY_JUMP: 0.2, BODYWEIGHT_DEFAULT: 70,
   REST_SEC: 90, AUTO_END_MIN: 180,
@@ -48,38 +46,46 @@ function applyXP({ level, xp }, gained, { paid = false, v0 = false, monthUsed = 
   return { from: level, level: lv, xp: x, points: grant, pointsCut: pts - grant, raw: pts };
 }
 
-/* ----- 장부(이번 주·오늘 이미 받은 경험치) — records: { date, xp, xpBoost, paid, v } ----- */
+/* 운동분 먼저(포인트 적립) → 아이템분(포인트 0, 결정 33 «아이템으로 오른 레벨은 포인트 0») 순서로 반영 */
+function applyGain(st, exXP, itemXP, { v0 = false, monthUsed = 0 } = {}) {
+  const a = applyXP(st, exXP, { v0, monthUsed });
+  if (!itemXP) return a;
+  const b = applyXP({ level: a.level, xp: a.xp }, itemXP, { paid: true });
+  return { from: a.from, level: b.level, xp: b.xp, points: a.points, pointsCut: a.pointsCut, raw: a.raw };
+}
+
+/* ----- 장부 — 운동 경험치와 아이템 경험치를 따로 센다(결정 33) -----
+   records: { date, xp(받은 합계), xpBoost(그중 부스터로 늘어난 몫), paid(물약 등 아이템 단독), v } */
 function ledgerOf(records, today, weekDays) {
   const wk = records.filter(r => weekDays.includes(r.date) && !r.demo), td = wk.filter(r => r.date === today);
   const sum = (a, f) => a.reduce((s, r) => s + (f(r) || 0), 0);
-  const exW = wk.filter(r => !r.paid), exD = td.filter(r => !r.paid);
+  const exOnly = r => r.paid ? 0 : (r.xp || 0) - (r.xpBoost || 0), itemOnly = r => r.paid ? r.xp : r.xpBoost;
   return {
-    dayUsed: sum(exD, r => r.xp), dayPaid: sum(td.filter(r => r.paid), r => r.xp),
-    weekEx: sum(exW, r => r.xp), weekBoost: sum(exW, r => r.xpBoost), weekPaid: sum(wk.filter(r => r.paid), r => r.xp),
-    boostWeek: exW.some(r => r.boosted), allV0Today: exD.every(r => r.v === 'self'),
+    dayUsed: sum(td, exOnly), weekEx: sum(wk, exOnly),
+    dayItem: sum(td, itemOnly), weekItem: sum(wk, itemOnly), weekPaid: sum(wk.filter(r => r.paid), r => r.xp),
+    allV0Today: td.filter(r => !r.paid).every(r => r.v === 'self'),
   };
 }
-const weekCapOf = (L, boostNow) => CFG.WEEK_CAP + (CFG.POLICY.booster === 'C' && (L.boostWeek || boostNow) ? CFG.BOOSTER_C_EXTRA : 0);
-/* 운동 경험치가 주 한도 계산에서 차지하는 양 — 정책에 따라 부스터분·물약분을 넣고 뺀다 */
-const weekUsedOf = L => L.weekEx - (CFG.POLICY.booster === 'B' ? L.weekBoost : 0) + (CFG.POLICY.potion === 'A' ? L.weekPaid : 0);
+/* 이번 주 운동 경험치(주 1,800 한도에 세는 양) — 아이템분은 들어가지 않는다 */
+const weekUsedOf = L => L.weekEx;
+/* 아이템 경험치 남은 한도 — 지금은 Infinity(한도 없음) */
+const itemLeftOf = L => Math.min(CFG.ITEM_CAP.day == null ? Infinity : CFG.ITEM_CAP.day - L.dayItem, CFG.ITEM_CAP.week == null ? Infinity : CFG.ITEM_CAP.week - L.weekItem);
+const itemUncapped = () => CFG.ITEM_CAP.day == null && CFG.ITEM_CAP.week == null;
 
-/* 하루·주 상한 적용 — 더 적게 남은 쪽까지만. 반환 { gained, boostGained, cut, reason: 'day'|'week'|null } */
+/* 한도 적용 — 운동분만 하루·주 상한(더 적게 남은 쪽까지), 부스터로 늘어난 몫은 아이템 장부(한도 없음)
+   반환 { gained(합계), exGained, boostGained, cut(운동분에서 빠진 양), reason: 'day'|'week'|null } */
 function capGain(r, L, isV0) {
-  const dayCap = (L.allV0Today && isV0) ? CFG.DAY_CAP_V0 : CFG.DAY_CAP, boostNow = r.boostPart > 0;
-  const dayLeft = Math.max(0, dayCap - L.dayUsed), weekLeft = Math.max(0, weekCapOf(L, boostNow) - weekUsedOf(L));
-  let gained, boostGained = 0;
-  if (CFG.POLICY.booster === 'B') {   // 부스터분은 주 한도 밖(하루 한도 안)
-    const a = Math.min(r.raw - r.boostPart, dayLeft, weekLeft); boostGained = Math.min(r.boostPart, dayLeft - a); gained = a + boostGained;
-  } else { gained = Math.min(r.raw, dayLeft, weekLeft); boostGained = Math.max(0, Math.min(r.boostPart, gained - (r.raw - r.boostPart))); }
-  const cut = r.raw - gained;
-  return { gained, boostGained, cut, reason: cut > 0 ? (weekLeft <= dayLeft ? 'week' : 'day') : null, dayLeft, weekLeft };
+  const dayCap = (L.allV0Today && isV0) ? CFG.DAY_CAP_V0 : CFG.DAY_CAP;
+  const dayLeft = Math.max(0, dayCap - L.dayUsed), weekLeft = Math.max(0, CFG.WEEK_CAP - weekUsedOf(L));
+  const exRaw = r.raw - (r.boostPart || 0), exGained = Math.max(0, Math.min(exRaw, dayLeft, weekLeft));
+  const boostGained = Math.max(0, Math.min(r.boostPart || 0, itemLeftOf(L)));
+  const cut = exRaw - exGained;
+  return { gained: exGained + boostGained, exGained, boostGained, cut, reason: cut > 0 ? (weekLeft <= dayLeft ? 'week' : 'day') : null, dayLeft, weekLeft };
 }
-/* 물약 1병 — 유료 경험치(💰). 정책 A면 주 1,800에 합산 */
+/* 물약 1병 — 유료 경험치(💰) · 아이템 장부 · 하루 개수 제한 없음 */
 function potionGain(L) {
-  const P = CFG.POLICY.potion, dayLeft = CFG.POTION.paidDayCap - L.dayPaid;
-  const wk = P === 'A' ? weekCapOf(L, false) - weekUsedOf(L) : P === 'B' ? CFG.POTION.paidWeekCapB - L.weekPaid : Infinity;
-  const gained = Math.max(0, Math.min(CFG.POTION.xp, dayLeft, wk));
-  return { gained, cut: CFG.POTION.xp - gained, reason: gained >= CFG.POTION.xp ? null : wk <= dayLeft ? 'week' : 'day' };
+  const gained = Math.max(0, Math.min(CFG.POTION.xp, itemLeftOf(L)));
+  return { gained, cut: CFG.POTION.xp - gained, reason: gained >= CFG.POTION.xp ? null : 'item' };
 }
 
 /* ----- 세션 경험치 (PLAN §2-3) -----
@@ -171,20 +177,32 @@ function exprFor({ demo, mood, lastDays }) {
 }
 
 /* ----- 부스터·물약 계산기 (상점·사용 확인 화면) — 위 capGain·potionGain 을 그대로 돌려 한 주를 흉내 낸다 -----
-   { L: 현재 장부, sessions: 이번 주 남은 운동 횟수, per: 1회 경험치(상한 전), booster: 'none'|'one'|'7d', potions } */
+   { L: 현재 장부, sessions: 이번 주 남은 운동 횟수, per: 1회 운동 경험치(상한 전), booster: 'none'|'one'|'7d', potions } */
 function forecastWeek({ L, sessions, per, booster = 'none', potions = 0 }) {
   const run = (bst, pots) => {
-    const led = { ...L }; let total = 0, boost = 0, wasted = 0, pot = 0;
+    const led = { ...L }; let total = 0, ex = 0, boost = 0, wasted = 0, pot = 0;
     for (let i = 0; i < sessions; i++) {
-      const on = bst === '7d' || (bst === 'one' && i === 0), raw = per * (on ? CFG.BOOST.mul : 1);
-      const g = capGain({ raw, boostPart: on ? raw - per : 0 }, { ...led, dayUsed: 0, allV0Today: false }, false);
-      total += g.gained; boost += g.boostGained; wasted += g.cut;
-      led.weekEx += g.gained; led.weekBoost += g.boostGained; if (on) led.boostWeek = true;
+      const on = bst === '7d' || (bst === 'one' && i === 0);
+      const g = capGain({ raw: per * (on ? CFG.BOOST.mul : 1), boostPart: on ? per * (CFG.BOOST.mul - 1) : 0 }, { ...led, dayUsed: 0, allV0Today: false }, false);
+      total += g.gained; ex += g.exGained; boost += g.boostGained; wasted += g.cut;
+      led.weekEx += g.exGained; led.weekItem += g.boostGained;
     }
-    for (let i = 0; i < pots; i++) { const g = potionGain({ ...led, dayPaid: 0 }); total += g.gained; pot += g.gained; wasted += g.cut; led.weekPaid += g.gained; }
-    return { total, boost, pot, wasted };
+    for (let i = 0; i < pots; i++) { const g = potionGain({ ...led, dayItem: 0 }); total += g.gained; pot += g.gained; wasted += g.cut; led.weekItem += g.gained; }
+    return { total, ex, boost, pot, wasted };
   };
-  const base = run('none', 0), withIt = run(booster, potions);
-  return { base: base.total, with: withIt.total, extra: withIt.total - base.total, wasted: withIt.wasted - base.wasted, boostEff: withIt.boost, potEff: withIt.pot,
-    weekLeftNow: Math.max(0, weekCapOf(L, booster !== 'none') - weekUsedOf(L)) };
+  const base = run('none', 0), w = run(booster, potions);
+  return { base: base.total, with: w.total, extra: w.total - base.total, exWith: w.ex, wasted: w.wasted, boostEff: w.boost, potEff: w.pot,
+    weekLeftNow: Math.max(0, CFG.WEEK_CAP - weekUsedOf(L)) };
+}
+
+/* ----- Lv.99 도달 기간 비교 — «운동만 했을 때 vs 아이템을 쓸 때» (결정 33 ③) -----
+   한 주 = 운동 perWeek번(1번 per XP, 운동분은 하루·주 상한) + 매주 부스터(none|one|7d) + 물약 potionsWeek병.
+   { level, xp } 에서 시작해 Lv.99까지 몇 주인지. 시연용 근사: 하루 1번 운동·연속 배율·PR·새 부위 보너스는 per 에 이미 들어 있다고 봄 */
+function totalToLv99(level = 1, xp = 0) { let t = -xp; for (let n = level; n < 99; n++) t += need(n); return Math.max(0, t); }
+function weeksToLv99({ level = 1, xp = 0, perWeek, per, booster = 'none', potionsWeek = 0 }) {
+  const left = totalToLv99(level, xp), zero = { exWeek: 0, itemWeek: 0, ex: 0, boost: 0, pot: 0, wasted: 0 };
+  const L0 = { dayUsed: 0, weekEx: 0, dayItem: 0, weekItem: 0, weekPaid: 0, allV0Today: false };
+  const f = perWeek > 0 || potionsWeek > 0 ? forecastWeek({ L: L0, sessions: perWeek, per, booster, potions: potionsWeek }) : null;
+  const wk = f ? f.with : 0, exWeek = f ? f.exWith : 0;
+  return { left, weekXP: wk, exWeek, itemWeek: wk - exWeek, weeks: wk > 0 ? Math.ceil(left / wk) : Infinity, ...(f ? {} : zero) };
 }

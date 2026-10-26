@@ -257,7 +257,7 @@ const AI = {   // 단순 선 아이콘 — 기존 .ico 와 같은 굵기·둥근
   shoe: '<path d="M3 16.5V11l4-1 3 3 5-1 6 2.5v2z"/><path d="M3 19.5h18"/>', people: '<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9.5" r="2.4"/><path d="M15.5 14.2A4.5 4.5 0 0 1 21 18.5"/>',
   crown: '<path d="M4 18h16l1-10-5 4-4-6-4 6-5-4z"/>', teach: '<circle cx="9" cy="7" r="3"/><path d="M4 20a5 5 0 0 1 10 0"/><path d="M15 5h6v6h-4"/>',
 };
-function achieveList() {
+function achieveList(all = false) {
   const rs = statRecs(), dates = new Set(rs.map(r => r.date)), n = dates.size;
   const exN = new Set(rs.flatMap(r => (r.items || []).map(i => i.ex)).filter(x => EX[x] && EX[x].mode !== 'lesson')).size;
   const places = new Set(rs.map(r => placeBase(r.place))).size, branches = new Set(rs.map(r => placeBase(r.place)).filter(p => p.startsWith('니짐 '))).size;
@@ -269,7 +269,8 @@ function achieveList() {
   const allParts4w = (() => { const p = partSets(inRange(rs, addD(TODAY, -27), TODAY)); return PARTS.filter(x => p[x]).length; })();
   const streak = streakVal(), friends = friendsAll().length;
   const photo = rs.some(r => r.photo || r.v === 'selfie');
-  const A = (cat, icon, name, cond, cur, goal, item, extra) => ({ cat, icon, name, cond, cur: Math.min(cur, goal), goal, done: cur >= goal, item, extra });
+  const A = (cat, icon, name, cond, cur, goal0, item, extra) => { const o = CFG.ACH[name] || {}, goal = o.goal || goal0;
+    return { cat, icon, name, cond: goal === goal0 ? cond : cond.replace(String(goal0), String(goal)), cur: Math.min(cur, goal), goal, goal0, done: cur >= goal, item, extra, off: !!o.off }; };
   return [
     A('시작', 'flag', '첫 기록', '운동을 처음 기록', n, 1, '새싹 배지'),
     A('시작', 'cam', '첫 오운완', '오운완 셀카 첫 인증', photo ? 1 : 0, 1, '반짝 필름 테두리'),
@@ -295,12 +296,12 @@ function achieveList() {
     A('레슨', 'star', '레슨 30회', '선생님 확인 레슨 30회', lessons, 30, '황금 호루라기'),
     A('친구', 'people', '첫 친구', '친구 1명 맺기', friends, 1, '우정 팔찌'),
     A('친구', 'crown', '리그 1위', '친구 주간 리그 1위 1회', 0, 1, '리그 왕관(영구)'),
-  ];
+  ].filter(a => all || !a.off);
 }
 const badge = a => `<div class="bdg ${a.done ? 'on' : ''}">${/^\d+$/.test(a.icon) ? `<b class="bnum">${a.icon}</b>` : `<svg viewBox="0 0 24 24">${AI[a.icon]}</svg>`}${a.done ? '' : `<span class="blk">${LOCK.replace('class="ico"', 'class="ico"')}</span>`}</div>`;
 function achieveCard() {
   const L = achieveList(), done = L.filter(a => a.done).length;
-  return `<div class="card" id="achCard"><div style="display:flex;justify-content:space-between;align-items:baseline"><div class="h2" style="font-size:16px;margin:0">업적</div><span class="muted"><b style="color:var(--ink)">${done}</b>/24 달성</span></div>
+  return `<div class="card" id="achCard"><div style="display:flex;justify-content:space-between;align-items:baseline"><div class="h2" style="font-size:16px;margin:0">업적</div><span class="muted"><b style="color:var(--ink)">${done}</b>/${L.length} 달성</span></div>
   <div class="muted" style="margin:4px 0 10px">업적 보상은 꾸미기 아이템 · 상점에서 못 사요</div>
   <div class="achs">${L.map((a, i) => `<button class="ach tap" data-act="ach" data-v="${i}">${badge(a)}<small>${a.name}</small>${a.done ? '' : `<em>${a.cur}/${a.goal}</em>`}</button>`).join('')}</div></div>
   <button class="card replink tap" data-act="prof" data-v="me" id="goMyProfile"><div><b>남이 보는 내 프로필</b><small>레벨·칭호·운동으로 쌓은 경험치 비율이 공개돼요</small></div><span class="muted">›</span></button>`;
@@ -352,7 +353,7 @@ function vProfile() {
     <div class="ratiobar"><i style="width:${p.ratio}%"></i><s style="width:${100 - p.ratio}%"></s></div>
     <div class="rleg"><span><i class="lgx"></i>운동 ${p.ratio}%</span><span><i class="lgi"></i>아이템 ${100 - p.ratio}%</span></div>
     <div class="muted" style="margin-top:8px">${p.paid ? `💰 = 충전한 포인트를 상점에 쓴 적 있음 · 누적 사용 ${PAID_TIER[p.paid]}` : '💰 표시 없음 = 충전한 포인트를 상점에 쓴 적 없음'} · 금액·결제 내역은 공개하지 않아요</div></div>
-  <div class="card"><div class="tiles" style="margin-top:0"><div class="tile"><small>운동 레벨</small><b>Lv.${pureLv}</b></div><div class="tile"><small>연속</small><b>${p.streak}주</b></div><div class="tile"><small>업적</small><b>${p.ach}/24</b></div></div></div>
+  <div class="card"><div class="tiles" style="margin-top:0"><div class="tile"><small>운동 레벨</small><b>Lv.${pureLv}</b></div><div class="tile"><small>연속</small><b>${p.streak}주</b></div><div class="tile"><small>업적</small><b>${p.ach}/${achieveList().length}</b></div></div></div>
   ${actions}</div>`;
 }
 

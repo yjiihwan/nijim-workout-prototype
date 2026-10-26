@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·포인트 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.13';
+const VER = 'v1.14';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -21,7 +21,7 @@ const CH = {
 const STAGE_KEYS = ['01','10','20','30','40','50','60','70','80','90'];
 const cutOf = lv => lv >= 99 ? '99' : STAGE_KEYS[Math.min(9, Math.floor(lv / 10))];
 const stageIdx = lv => lv >= 99 ? 10 : Math.min(9, Math.floor(lv / 10));
-const stageName = (t, lv) => lv >= 99 ? '완성' : `${stageIdx(lv) + 1}단계`;
+const stageName = (t, lv) => levelTitle(lv) || (lv >= 99 ? '완성' : `${stageIdx(lv) + 1}단계`);
 const tierOf = lv => lv >= 99 ? 6 : lv >= 80 ? 5 : lv >= 60 ? 4 : lv >= 40 ? 3 : lv >= 20 ? 2 : 1;
 const ro = w => { const c = w.charCodeAt(w.length - 1) - 0xAC00; if (c < 0 || c > 11171) return '로'; const j = c % 28; return j === 0 || j === 8 ? '로' : '으로'; };
 const wa = t => CH[t].josa === '가' ? '와' : '과';
@@ -41,6 +41,7 @@ const ITEMS = [
   { id:'towel', img:'towel', kind:'look', name:'스카이 타월', desc:'효과 없음', price:200 },
   { id:'wristband', img:'wristband', kind:'look', name:'손목밴드', desc:'효과 없음', price:100 },
 ];
+patchItems();   // 본사(H2) 가격·판매 여부 — config_store.js
 const FRIENDS = [
   { n:'운동하는곰', t:'koa', lv:27, week:1420, rate:100, paid:0 },
   { n:'새벽러너', t:'saetbyeol', lv:41, week:980, rate:75, paid:0 },
@@ -384,7 +385,7 @@ function vSession() {
   const recs = recommend(s);
   const head = `<div class="card sesshead" id="sessHead"><div class="sh1"><div><b>${esc(s.place.name)}</b>${vBadge(s.selfie && (s.verify === 'V1' || s.verify === 'V1b') ? 'selfie' : V2K[s.verify])}</div><span class="clockbig" data-clock="sess">${clock(Date.now() - s.startedAt)}</span></div>
     <div class="est" style="margin-top:10px"><span>예상 경험치</span><em id="sessEst">+${fmt(S.demo === 'none' ? cap.gained : demoXP())} XP</em></div>
-    ${boostOn() ? '<div class="muted boostline">2배 부스터 적용 중</div>' : ''}
+    ${boostOn() ? `<div class="muted boostline">${CFG.BOOST.mul}배 부스터 적용 중</div>` : ''}
     <div class="muted autoend" id="autoEnd">마지막 기록 후 3시간 동안 입력이 없으면 자동으로 끝나요 · 마지막 기록 ${new Date(s.lastAt).toTimeString().slice(0, 5)}</div></div>`;
   const empty = !s.items.length ? `
   ${lr ? `<button class="card routine" data-act="routine" id="routineCard"><div class="h3">지난번 루틴 그대로</div><b>${md(lr.date)} · ${esc(placeBase(lr.place))}</b><div class="rchips">${lr.items.filter(i => EX[i.ex]).map(i => `<span>${EX[i.ex].name}</span>`).join('')}</div><span class="rgo">한 번에 불러오기 ›</span></button>` : ''}
@@ -404,7 +405,7 @@ function vSession() {
   <div class="h3" style="margin-top:12px">저장 후 표정 (결정 21)</div><div class="chips">${[['auto','기록대로 판정'],['low','아쉬운'],['normal','평소대로'],['high','신남']].map(([k, l]) => `<button class="chip ${S.moodDemo===k?'on':''}" data-act="mdemo" data-v="${k}">${l}</button>`).join('')}</div>
   <div class="muted" style="margin-top:8px" id="moodPreview">${moodPreviewText()}</div>
   <div class="h3" style="margin-top:12px">상태 흉내</div><div class="chips"><button class="chip" data-act="autoEndDemo" id="autoEndDemo">3시간 무입력 → 자동 종료</button><button class="chip ${S.holdDemo ? 'on' : ''}" data-act="holdDemo">세트 간격 20초 미만 3회(보류)</button></div>
-  <div class="h3" style="margin-top:12px">검증 등급 바꿔 보기</div><div class="chips">${[['V1','입장(×0.8)'],['V1b','위치(×0.7)'],['V0','자가(×0.4)'],['V3','레슨 확정(×2)']].map(([k, l]) => `<button class="chip ${s.verify===k?'on':''}" data-act="vdemo" data-v="${k}">${l}</button>`).join('')}</div></div>
+  <div class="h3" style="margin-top:12px">검증 등급 바꿔 보기</div><div class="chips">${[['V1',`입장(×${CFG.VERIFY.V1})`],['V1b',`위치(×${CFG.VERIFY.V1b})`],['V0',`자가(×${CFG.VERIFY.V0})`],['V3',`레슨 확정(×${CFG.VERIFY.V3})`]].map(([k, l]) => `<button class="chip ${s.verify===k?'on':''}" data-act="vdemo" data-v="${k}">${l}</button>`).join('')}</div></div>
   <button class="btn" data-act="endSession" id="endBtn">운동 끝 · 기록 저장</button></div>`;
 }
 function recommend(s) {
@@ -428,7 +429,7 @@ function moodPreviewText() {
 function vPick() {
   const s = S.session; if (!s) return vWorkout();
   const lr = lastRoutine(s.place.name), f = freq().slice(0, 8), mem = placeMem(s.place.name), pop = CENTER_POP[s.place.name] || [];
-  const chip = id => `<button class="chip ${s.items.some(i => i.ex === id) ? 'on' : ''}" data-act="addEx" data-v="${id}">${EX[id].name}</button>`;
+  const chip = id => EX[id].off ? '' : `<button class="chip ${s.items.some(i => i.ex === id) ? 'on' : ''}" data-act="addEx" data-v="${id}">${EX[id].name}</button>`;
   return `${subHead('운동 추가', 'session', '오늘 운동')}<div class="sec">
   <div class="card" style="padding:12px 16px"><div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input id="exQ" placeholder="운동 이름 검색 (예: 벤치, 러닝머신)" value="${esc(S.q)}" autocomplete="off"></div></div>
   ${lr && !s.items.length ? `<button class="card routine" data-act="routine"><div class="h3">지난번 루틴 그대로</div><b>${md(lr.date)} · ${esc(placeBase(lr.place))}</b><div class="rchips">${lr.items.filter(i => EX[i.ex]).map(i => `<span>${EX[i.ex].name}</span>`).join('')}</div><span class="rgo">한 번에 불러오기 ›</span></button>` : ''}
@@ -506,7 +507,7 @@ function xpRows(rec) {
   return [...b.lines.map(([l, n, u, x]) => row(`${l} ${n}${u}`, `+${fmt(x)}`)),
     b.first ? row('오늘 첫 세트', `+${b.first}`) : '', b.complete ? row('운동 완료', `+${b.complete}`) : '',
     row(`검증 · ${VERIFY_LABEL[b.v]}`, `×${b.vm}`, 'mul'), row(b.comeback ? '복귀 첫 운동' : `연속 ${S.streakWeeks}주`, `×${b.sm.toFixed(2)}`, 'mul'),
-    b.boostPart ? row('2배 부스터 · 한도 없음', `+${fmt(b.boostPart)}`, 'gold') : '',
+    b.boostPart ? row(`${CFG.BOOST.mul}배 부스터 · 한도 없음`, `+${fmt(b.boostPart)}`, 'gold') : '',
     b.newXP ? row(`새 부위 (${b.newParts.join('·')})`, `+${b.newXP}`) : '', b.prXP ? row(`개인 기록 ${b.prN}번`, `+${b.prXP}`) : '',
     b.goal ? row(`주간 목표 ${S.goal}회 달성`, `+${b.goal}`) : '',
     rec.cut ? row(rec.cutReason === 'week' ? '운동 경험치 이번 주 상한' : '운동 경험치 오늘 상한', `−${fmt(rec.cut)}`, 'cut') : '',
@@ -531,7 +532,7 @@ function vResult() {
     <div class="rmeta">${rec ? vBadge(rec.v) : ''}<span class="muted">${rec ? esc(rec.summary) : ''}</span></div>
     ${rec && rec.held ? `<div class="notice hold" id="holdNote"><span>${fmt(rec.held)} XP는 곧 반영돼요 · 기록은 저장됐어요</span><button class="btn sm ghost" data-act="release" data-id="${rec.id}">🧪 24시간 뒤</button></div>` : ''}
     ${rec && rec.cut ? `<div class="muted capline" id="resultCap">${rec.cutReason === 'week' ? `이번 주 운동 경험치 ${CFG.WEEK_CAP.toLocaleString()} 다 모았어요` : `오늘 운동 경험치 ${(rec.v === 'self' ? CFG.DAY_CAP_V0 : CFG.DAY_CAP).toLocaleString()} 다 모았어요`} · ${fmt(rec.cut)} XP는 안 들어갔어요. 기록·연속·주간 목표는 그대로 쌓여요</div>` : ''}
-    ${rec && rec.xpBoost ? `<div class="muted capline" id="resultBoost">2배 부스터로 늘어난 +${fmt(rec.xpBoost)} XP는 한도 없이 다 들어갔어요 💰</div>` : ''}
+    ${rec && rec.xpBoost ? `<div class="muted capline" id="resultBoost">${CFG.BOOST.mul}배 부스터로 늘어난 +${fmt(rec.xpBoost)} XP는 한도 없이 다 들어갔어요 💰</div>` : ''}
     ${rec && rec.v === 'self' && !S.hideTips ? `<div class="muted capline" id="v0Note">센터에서 기록하면 경험치가 2배 이상이에요</div>` : ''}
     <div class="bar"><i style="width:${lv >= 99 ? 100 : Math.round(S.xp / need(lv) * 100)}%"></i></div><div class="muted">${lv >= 99 ? '최고 레벨' : `Lv.${lv + 1}까지 ${(need(lv) - S.xp).toLocaleString()} XP`}</div>
     ${ev ? `<div class="ptline" id="ptLine">Lv.${ev.from} → ${ev.to} 레벨업 · ${ev.points ? `+${ev.points.toLocaleString()}P 적립` : '적립 0P'} <span class="muted">이번 달 ${S.month.toLocaleString()}/${MONTH_CAP.toLocaleString()}P${ev.pointsCut ? ` · 한도 때문에 ${ev.pointsCut.toLocaleString()}P 빠짐` : ''}${rec.v === 'self' ? ' · 자가 기록 레벨업은 50%' : ''}</span></div>` : ''}
@@ -647,10 +648,10 @@ function vSettings() {
 /* ===== 상점 · 부스터·물약 계산기 ===== */
 const itemImg = i => i.img ? `<img src="assets/item_${i.img}.png" alt="">` : FLASK;
 function vShop() {
-  const list = ITEMS.filter(i => i.kind === S.sTab);
+  const list = ITEMS.filter(i => i.kind === S.sTab && !i.off);
   return `${subHead('아이템 상점')}<div class="sec"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><button class="linkbtn" data-act="sub" data-v="calc" id="goCalc" style="margin:0">부스터·물약 계산기 ›</button><b>${S.points.toLocaleString()}P</b></div>
   <div class="seg"><button class="${S.sTab==='effect'?'on':''}" data-act="stab" data-v="effect">효과형</button><button class="${S.sTab==='look'?'on':''}" data-act="stab" data-v="look">외형형</button></div>
-  ${S.sTab === 'effect' ? `<div class="muted wkleft" id="wkLeft">이번 주 운동 경험치 ${weekXP().toLocaleString()}/${CFG.WEEK_CAP.toLocaleString()} · <b>아이템 경험치는 한도 없어요</b>${boostOn() ? ' · <b>2배 부스터 적용 중</b>' : ''}</div>` : ''}
+  ${S.sTab === 'effect' ? `<div class="muted wkleft" id="wkLeft">이번 주 운동 경험치 ${weekXP().toLocaleString()}/${CFG.WEEK_CAP.toLocaleString()} · <b>아이템 경험치는 한도 없어요</b>${boostOn() ? ` · <b>${CFG.BOOST.mul}배 부스터 적용 중</b>` : ''}</div>` : ''}
   <div class="grid2">${list.map(i => { const n = i.use ? (S.inv[i.id] || 0) : 0, own = i.use ? n > 0 : S.owned[i.id], eq = S.equipped[i.id];
     return `<div class="item">${i.use ? (n ? `<span class="tag">${n}개</span>` : '') : eq?'<span class="tag">장착중</span>':own?'<span class="tag">보유</span>':''}${itemImg(i)}<b>${i.name}</b><small>${i.desc}</small>
     ${i.use ? (n ? `<div class="grid2 ib"><button class="btn ghost" data-act="buy" data-id="${i.id}">${i.price.toLocaleString()}P</button><button class="btn" data-act="use" data-id="${i.id}">사용</button></div>` : `<button class="btn" data-act="buy" data-id="${i.id}">${i.price.toLocaleString()}P</button>`)

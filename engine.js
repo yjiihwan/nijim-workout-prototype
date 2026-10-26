@@ -22,13 +22,29 @@ const CFG = {
   SET_GAP_SEC: 20, SET_GAP_RUN: 3,         // 같은 운동 세트 완료 간격 20초 미만 3회 연속 → 경험치 보류
   UNREAL_PR_MUL: 1.5, SAFETY_JUMP: 0.2, BODYWEIGHT_DEFAULT: 70,
   REST_SEC: 90, AUTO_END_MIN: 180,
+  CURVE: { a: 200, b: 12, c: 0.3 },        // 레벨 n→n+1 필요 = a + b·n + c·n²
+  ACH: {},                                 // 업적 덮어쓰기 { 이름: { goal, off } } — H2
 };
+/* ----- 운영자 설정(H2·H1) — 본사가 바꾼 값은 전부 여기로만 들어온다. 화면은 CFG·need·lvPoint 를 통해서만 읽는다 ----- */
+const CFG_DEFAULT = JSON.parse(JSON.stringify(CFG));
+const LV_OVR = {};   // 레벨표 99행 중 바꾼 행 { n: { xp, pt, evo, title } }
+const merge = (t, o) => { Object.keys(o || {}).forEach(k => { const v = o[k];
+  if (v && typeof v === 'object' && !Array.isArray(v) && t[k] && typeof t[k] === 'object' && !Array.isArray(t[k])) merge(t[k], v); else t[k] = v; }); return t; };
+function applyConfig({ cfg = {}, levels = {} } = {}) {
+  Object.keys(CFG).forEach(k => delete CFG[k]); merge(CFG, JSON.parse(JSON.stringify(CFG_DEFAULT))); merge(CFG, cfg);
+  Object.keys(LV_OVR).forEach(k => delete LV_OVR[k]); Object.assign(LV_OVR, levels);
+}
 const VERIFY_LABEL = { V0: '자가 기록', V1: '센터 확인 ✓', V1b: '센터 확인 ✓', V2: '오운완 📸', V3: '선생님 확인 ★ 2배' };
 
 /* ----- 레벨 곡선·포인트 ----- */
-const need = n => Math.round(200 + 12 * n + 0.3 * n * n);
-const lvPoint = L => L <= 9 ? 50 : L <= 29 ? 100 : L <= 49 ? 200 : L <= 69 ? 300 : L <= 89 ? 500 : 1000;
-const evoBonus = L => ({ 10: 300, 20: 300, 30: 500, 40: 500, 50: 500, 60: 500, 70: 1000, 80: 1000, 90: 1000, 99: 3000 })[L] || 0;
+const needBase = n => Math.round(CFG.CURVE.a + CFG.CURVE.b * n + CFG.CURVE.c * n * n);
+const lvPointBase = L => L <= 9 ? 50 : L <= 29 ? 100 : L <= 49 ? 200 : L <= 69 ? 300 : L <= 89 ? 500 : 1000;
+const evoBonusBase = L => ({ 10: 300, 20: 300, 30: 500, 40: 500, 50: 500, 60: 500, 70: 1000, 80: 1000, 90: 1000, 99: 3000 })[L] || 0;
+const ovr = (n, k) => LV_OVR[n] && LV_OVR[n][k] != null && LV_OVR[n][k] !== '' ? LV_OVR[n][k] : null;
+const need = n => ovr(n, 'xp') ?? needBase(n);
+const lvPoint = L => ovr(L, 'pt') ?? lvPointBase(L);
+const evoBonus = L => ovr(L, 'evo') ?? evoBonusBase(L);
+const levelTitle = L => ovr(L, 'title');   // null = 기본 칭호(단계명)
 const streakMul = w => CFG.STREAK[Math.min(CFG.STREAK.length - 1, Math.max(0, w))];
 
 /* 경험치 반영 → 레벨·포인트. 음수(기록 수정으로 줄어듦)면 레벨은 그대로, 이번 레벨 안에서만 줄어든다(0 아래로 안 감)

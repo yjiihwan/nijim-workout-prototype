@@ -41,12 +41,17 @@ const RK_MEMBERS = [
 /* 내 입장 기록(시연 보충) — 봉천점 2회(최근 30일) · 서울대입구점은 35일 전 1회뿐이라 자동 등록에서 빠진 상태 */
 const RK_ME_EXTRA = [{ center_id: 'bongcheon', ago: 5 }, { center_id: 'bongcheon', ago: 16 }, { center_id: 'snu', ago: 35 }];
 const RK_MANY = ['snu', 'nakseong', 'gangnam_long', 'sindaebang', 'sadang'];
+/* 시연 «센터 회원 많음» — 신림점 48명 추가(총 60명+), 나는 40위 언저리 → 내 순위 줄 하단 고정 확인용 */
+const RK_TYPES = ['koa', 'saetbyeol', 'ttukbi', 'mungchi', 'bamtol', 'imu', 'capy', 'ppiyak', 'dot', 'shadow', 'youngcha', 'rilla'];
+const RK_CROWD = Array.from({ length: 48 }, (_, i) => ({ member_id: 'c' + i, nickname: `신림헬린이${String(i + 1).padStart(2, '0')}`, t: RK_TYPES[i % RK_TYPES.length], lv: 5 + (i * 7) % 60,
+  hide_in_center_ranking: false, ss: [['sillim', 2300 - i * 33]] }));
+const rkMembers = () => (S.rkCrowd ? RK_MEMBERS.concat(RK_CROWD) : RK_MEMBERS);
 
 const ensureRk = () => {
   S.rkTab = S.rkTab || 'friend';
   S.homeManual = S.homeManual || []; S.homeRemoved = S.homeRemoved || [];
   S.rkHome = S.rkHome || 'multi'; S.rkMeDemo = S.rkMeDemo ?? true;
-  S.hideRank = !!S.hideRank;
+  S.hideRank = !!S.hideRank; S.rkCrowd = !!S.rkCrowd;
 };
 const rkWeekStart = () => weekDays()[0];
 function rkMySessions() {
@@ -60,9 +65,9 @@ function rkMySessions() {
 }
 function rkWorld() {
   const ws = rkWeekStart(), sessions = rkMySessions();
-  RK_MEMBERS.forEach(m => m.ss.forEach(([c, xp]) => sessions.push({ member_id: m.member_id, center_id: c, date: ws, verify: c ? 'V1' : 'V3', xp_league: xp })));
+  rkMembers().forEach(m => m.ss.forEach(([c, xp]) => sessions.push({ member_id: m.member_id, center_id: c, date: ws, verify: c ? 'V1' : 'V3', xp_league: xp })));
   const me = { member_id: 'me', nickname: '나', t: S.type, lv: S.level, me: true, hide_in_center_ranking: S.hideRank };
-  return { ws, sessions, members: [...RK_MEMBERS, me], me };
+  return { ws, sessions, members: [...rkMembers(), me], me };
 }
 /* 내 센터 = CenterRank.homeCenters(입장 기록·직접 추가·직접 뺀 센터) */
 function rkHomes() {
@@ -99,7 +104,7 @@ function vCenterTab(W) {
   const chips = homes.map(h => `<button class="chip rkchip ${h.center_id === sel ? 'on' : ''}" data-act="rkCenter" data-v="${h.center_id}">${esc(rkCenter(h.center_id).name)}</button>`).join('');
   return `<div class="chips rkchips" id="rkChips">${chips}<button class="chip rkchip add" data-act="rkManage" id="rkManage">＋ 관리</button></div>
   <div class="card" id="rkBoard"><div class="rkhd"><b>${esc(c.name)}</b><small>이번 주 · 이 센터 입장으로 번 경험치만 · 월요일 0시 초기화</small></div>
-  ${board.length ? board.slice(0, 20).map(m => rkRow(m, m.weekly_xp, m.me ? `${esc(CH[m.t].name)} · 이번 주 전체 ${fmt(nat.me || 0)} XP` : `${esc(CH[m.t].name)} · Lv.${m.lv}`)).join('') : '<div class="muted" style="padding:14px 0">이번 주 이 센터 기록이 아직 없어요</div>'}</div>
+  ${board.length ? board.slice(0, 100).map(m => rkRow(m, m.weekly_xp, m.me ? `${esc(CH[m.t].name)} · 이번 주 전체 ${fmt(nat.me || 0)} XP` : `${esc(CH[m.t].name)} · Lv.${m.lv}`)).join('') : '<div class="muted" style="padding:14px 0">이번 주 이 센터 기록이 아직 없어요</div>'}</div>
   ${rkMeBar(board, '이번 주 이 센터 기록이 아직 없어요')}
   <div class="muted" style="margin-top:8px">닉네임·캐릭터만 보여요(실명 없음) · 여러 센터를 다니면 센터마다 그 센터에서 번 경험치로만 세요 · 센터 TV 랭킹과 같은 순위</div>`;
 }
@@ -108,7 +113,7 @@ function vNationTab(W) {
   const mainCenter = id => { if (id === 'me') { const s = rkSel(rkHomeList()); return s ? rkCenter(s).name : ''; }
     let best = null, bx = 0; Object.keys(cw).forEach(c => { if ((cw[c][id] || 0) > bx) { bx = cw[c][id]; best = c; } }); return best ? rkCenter(best).name : ''; };
   return `<div class="card" id="rkBoard"><div class="rkhd"><b>니짐내짐 전국</b><small>이번 주 · 검증된 운동 경험치(입점 보너스 포함) · 월요일 0시 초기화</small></div>
-  ${board.slice(0, 20).map(m => rkRow(m, m.weekly_xp, `${esc(CH[m.t].name)}${mainCenter(m.member_id) ? ' · ' + esc(mainCenter(m.member_id)) : ''}`)).join('')}</div>
+  ${board.slice(0, 100).map(m => rkRow(m, m.weekly_xp, `${esc(CH[m.t].name)}${mainCenter(m.member_id) ? ' · ' + esc(mainCenter(m.member_id)) : ''}`)).join('')}</div>
   ${rkMeBar(board, '이번 주 검증된 운동 기록이 아직 없어요')}
   <div class="muted" style="margin-top:8px">닉네임·캐릭터만 보여요(실명 없음) · 센터 이름 = 그 회원이 가장 많이 다닌 센터 · 센터 TV 전국 순위와 같아요</div>`;
 }
@@ -116,6 +121,7 @@ const rkTabs = () => { const none = !rkHomeList().length;
   return `<div class="rktabs" id="rkTabs">${[['friend', '친구리그'], ['center', none ? '근처 입점센터' : '내 센터'], ['nation', '전국']].map(([k, l]) => `<button class="${S.rkTab === k ? 'on' : ''}" data-act="rkTab" data-v="${k}">${l}</button>`).join('')}</div>`; };
 const rkDemo = () => `${demoCard('내 센터', 'rkHome', S.rkHome, [['multi', '2곳 다님'], ['many', '많음·긴 이름'], ['none', '입점 이용 없음']])}
   <div class="card demo" style="margin-top:-4px"><div class="row"><span>이번 주 내 센터 기록 시연(신림 2회·봉천 1회)</span><button class="sw ${S.rkMeDemo ? 'on' : ''}" data-act="rkMeDemo"></button></div>
+  <div class="row"><span>센터 회원 많음(신림점 60명+)</span><button class="sw ${S.rkCrowd ? 'on' : ''}" data-act="rkCrowd" id="rkCrowdDemo"></button></div>
   <div class="row"><span>센터 랭킹에 안 보이기</span><button class="sw ${S.hideRank ? 'on' : ''}" data-act="hideRank" id="rkHideDemo"></button></div></div>`;
 function vRanking() {
   ensureRk();
@@ -163,6 +169,7 @@ document.addEventListener('click', e => {
     rkCenter: () => { S.rkSel = v; },
     rkHome: () => { S.rkHome = v; S.rkSel = null; },
     rkMeDemo: () => { S.rkMeDemo = !S.rkMeDemo; },
+    rkCrowd: () => { S.rkCrowd = !S.rkCrowd; },
     hideRank: () => { S.hideRank = !S.hideRank; toast(S.hideRank ? '센터 랭킹에서 숨겼어요 · 모든 센터 TV와 앱 랭킹에서 빠져요' : '센터 랭킹에 다시 보여요'); },
     rkManage: () => { rkManageSheet(); return true; },
     rkRemove: () => { if (S.homeManual.includes(v)) S.homeManual = S.homeManual.filter(x => x !== v); else if (!S.homeRemoved.includes(v)) S.homeRemoved.push(v); },

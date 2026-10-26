@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·포인트 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.15';
+const VER = 'v1.16';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -210,7 +210,15 @@ function sessCtx() {
   const today = realRecs().filter(r => r.date === TODAY), wk = realRecs().filter(r => weekDays().includes(r.date) && r.date !== TODAY);
   return { firstToday: !today.length, weekParts: [...new Set([...wk, ...today].flatMap(r => (r.items || []).map(i => EX[i.ex] && EX[i.ex].part)).filter(Boolean))],
     streakWeeks: S.streakWeeks, lastDays: lastWorkoutDays(), prToday: today.reduce((a, r) => a + (r.prCount || 0), 0),
-    goal: S.goal, weekCountBefore: weekCount(), todayCounted: todayDone(), boost: boostMul() };
+    goal: S.goal, weekCountBefore: weekCount(), todayCounted: todayDone(), boost: boostMul(), ...volCtx(today) };
+}
+/* 결정 35 입력값 — 종목별 경험치용 «내 평소»(대상 세트·분) + 오늘 앞 세션에서 이미 센 양·그 세션 배율(같은 날 재판정 차액용) */
+function volCtx(today) {
+  const ids = new Set([...Object.keys(S.hist), ...realRecs().flatMap(r => (r.items || []).map(i => i.ex))].filter(x => EX[x] && EX[x].xpk !== 'lesson'));
+  const xpBase = Object.fromEntries([...ids].map(ex => [ex, xpBaselineOf({ [ex]: histOf(ex).map(h => ({ date: h.date, light: h.light, q: xpQty({ ex, ...h }) })) }, ex, TODAY)]));
+  const todayQ = {}, todayPrev = [];
+  today.forEach(r => (r.br && r.br.per || []).forEach(x => { todayQ[x.ex] = (todayQ[x.ex] || 0) + x.cnt; todayPrev.push({ ex: x.ex, cnt: x.cnt, bonus: x.bonus, mul: (r.br.vm || 1) * (r.br.sm || 1) }); }));
+  return { xpBase, todayQ, todayPrev };
 }
 const sessCalc = (s = S.session) => { const r = sessionXP(s, sessCtx()); return { r, cap: capGain(r, ledger(), r.v === 'V0') }; };
 
@@ -396,7 +404,7 @@ function vSession() {
       return `<button class="prow tap" data-act="openEx" data-v="${it.ex}"><div><b>${e.name}${ds.some(x => x.pr) ? ' <span class="prtag">PR</span>' : ''}</b><small>${esc(sub)}</small></div><span class="cnt">${e.mode === 'cardio' || e.mode === 'lesson' ? (it.min ? '✓' : '') : `${ds.length}세트`}</span></button>`; }).join('')}</div>`;
   const selfieBtn = (s.verify === 'V1' || s.verify === 'V1b') && !s.selfie ? `<button class="btn ghost camb" data-act="selfie" data-v="session">${CAM}오운완 셀카 <span class="muted">찍으면 경험치 100% · 나만 봐요</span></button>` : s.selfie ? `<div class="muted" style="text-align:center;margin-top:8px">오운완 셀카 찍음 · 저장하면 경험치 100%로 반영돼요</div>` : '';
   const demos = [['none','실제 기록대로'],['next','다음 레벨까지 (짧은 연출)'],['boundary','10레벨 경계 넘기 (큰 연출)'],['multi','+5레벨 한꺼번에 (묶음)']];
-  return `${subHead('오늘 운동')}<div class="sec">${head}${empty}
+  return `${subHead('오늘 운동')}<div class="sec"><div class="honest" id="honestTop">한 만큼만 솔직하게 기록해 주세요. 기록이 정확해야 AI 코칭이 내 몸에 맞게 나와요.</div>${head}${empty}
   <button class="btn ghost" data-act="sub" data-v="pick" id="addExBtn" style="margin-top:0">+ 운동 추가</button>
   ${selfieBtn}
   <div class="card" style="margin-top:12px"><label class="lightrow" style="margin:0;padding:0;border:0"><input type="checkbox" data-act="light" ${s.light ? 'checked' : ''}><span><b>오늘은 가볍게 한 날</b><small>재활·컨디션 조절 날 체크 — 표정 판정에서 빼고, «평소» 계산에도 안 들어가요. 경험치는 그대로예요</small></span></label></div>
@@ -406,7 +414,8 @@ function vSession() {
   <div class="muted" style="margin-top:8px" id="moodPreview">${moodPreviewText()}</div>
   <div class="h3" style="margin-top:12px">상태 흉내</div><div class="chips"><button class="chip" data-act="autoEndDemo" id="autoEndDemo">3시간 무입력 → 자동 종료</button><button class="chip ${S.holdDemo ? 'on' : ''}" data-act="holdDemo">세트 간격 20초 미만 3회(보류)</button></div>
   <div class="h3" style="margin-top:12px">검증 등급 바꿔 보기</div><div class="chips">${[['V1',`입장(×${CFG.VERIFY.V1})`],['V1b',`위치(×${CFG.VERIFY.V1b})`],['V0',`자가(×${CFG.VERIFY.V0})`],['V3',`레슨 확정(×${CFG.VERIFY.V3})`]].map(([k, l]) => `<button class="chip ${s.verify===k?'on':''}" data-act="vdemo" data-v="${k}">${l}</button>`).join('')}</div></div>
-  <button class="btn" data-act="endSession" id="endBtn">운동 끝 · 기록 저장</button></div>`;
+  <div class="honest end" id="honestEnd">적은 그대로 AI 코칭에 쓰여요. 오늘도 수고했어요!</div>
+  <button class="btn" data-act="endSession" id="endBtn" style="margin-top:6px">운동 끝 · 기록 저장</button></div>`;
 }
 function recommend(s) {
   const wkParts = sessCtx().weekParts, f = freq(), have = new Set(s.items.map(i => i.ex)), out = [];
@@ -464,10 +473,11 @@ function vSet() {
   ${best ? `<div class="muted">최고 기록 ${setTxt(e, best)}</div>` : ''}
   <div class="setsteps">${e.mode === 'wr' ? stepper('stw', kg(d.w).replace('kg', ''), '무게', 'kg') : ''}${e.mode === 't' ? stepper('sts', d.s, '시간', '초') : stepper('str', d.r, '횟수', '회')}</div>
   ${chk.jump && !chk.unreal ? `<div class="warn" id="safetyWarn">지난번보다 ${chk.jumpPct}% 무거워요. 처음 1~2회는 가볍게 몸을 풀고, 보조자와 함께 무리하지 마세요</div>` : ''}
+  ${(e.mode === 'wr' || e.mode === 'r') && d.r < CFG.MIN_REPS ? `<div class="minreps" id="minReps">${CFG.MIN_REPS}회 이상부터 경험치</div>` : ''}
   <button class="btn big" data-act="setDone" id="setDone">${ds.length + 1}세트 완료</button>
   <div class="muted" style="text-align:center;margin-top:6px">다음 세트는 같은 무게·횟수로 미리 채워져요</div></div>
   <div class="card rest ${restLeft ? '' : 'idle'}" id="restBox">${restHTML(restLeft)}</div>
-  ${ds.length ? `<div class="card" id="doneSets"><div class="h3">오늘 한 세트</div>${ds.map((x, i) => `<div class="setrow"><span>${i + 1}세트</span><b>${setTxt(e, x)}</b>${x.pr ? '<span class="prtag">PR</span>' : '<span></span>'}</div>`).join('')}
+  ${ds.length ? `<div class="card" id="doneSets"><div class="h3">오늘 한 세트</div>${ds.map((x, i) => `<div class="setrow"><span>${i + 1}세트</span><b>${setTxt(e, x)}</b><span class="srtags">${xpEligible(e, x) ? '' : '<small class="noxp">경험치 제외</small>'}${x.pr ? '<span class="prtag">PR</span>' : ''}</span></div>`).join('')}
     <button class="linkbtn" data-act="undoSet" style="margin-top:8px">마지막 세트 지우기</button></div>` : ''}
   <div class="grid2"><button class="btn ghost" data-act="sub" data-v="pick" style="margin-top:0">다음 운동 고르기</button><button class="btn ghost" data-act="sub" data-v="session" style="margin-top:0">오늘 운동 보기</button></div></div>`;
 }
@@ -505,6 +515,10 @@ function xpRows(rec) {
   if (b.demoXP) return `<div class="xrow"><span>시연 경험치(연출 확인용 · 상한 미적용)</span><b>+${fmt(b.demoXP)}</b></div>`;
   const row = (l, v, cls = '') => `<div class="xrow ${cls}"><span>${l}</span><b>${v}</b></div>`;
   return [...b.lines.map(([l, n, u, x]) => row(`${l} ${n}${u}`, `+${fmt(x)}`)),
+    ...(b.bonusRows || []).map(([name, x]) => row(`평소보다 많이 함 · ${esc(name)} +${Math.round((CFG.VOL_BONUS.mult - 1) * 100)}%`, `+${fmt(x)}`, 'vol')),
+    b.catchUp ? row('앞 세션 차액(오늘 합계로 평소보다 많이 함)', `+${fmt(b.catchUp)}`, 'vol') : '',
+    b.short ? row(`5회 미만 ${b.short}세트는 기록만 남았어요`, '0', 'note') : '',
+    b.noBase && b.noBase.length && b.lines.length ? row(`기록 5번 쌓이면 «평소보다 많이 한 날 +${Math.round((CFG.VOL_BONUS.mult - 1) * 100)}%»가 열려요`, '', 'note') : '',
     b.first ? row('오늘 첫 세트', `+${b.first}`) : '', b.complete ? row('운동 완료', `+${b.complete}`) : '',
     row(`검증 · ${VERIFY_LABEL[b.v]}`, `×${b.vm}`, 'mul'), row(b.comeback ? '복귀 첫 운동' : `연속 ${S.streakWeeks}주`, `×${b.sm.toFixed(2)}`, 'mul'),
     b.boostPart ? row(`×${b.bm || CFG.BOOST.mul} 부스터 · 한도 없음`, `+${fmt(b.boostPart)}`, 'gold') : '',

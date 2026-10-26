@@ -24,6 +24,10 @@ const CFG = {
   REST_SEC: 90, AUTO_END_MIN: 180,
   CURVE: { a: 200, b: 12, c: 0.3 },        // 레벨 n→n+1 필요 = a + b·n + c·n²
   ACH: {},                                 // 업적 덮어쓰기 { 이름: { goal, off } } — H2
+  /* 결정 35(v1.10): 횟수형 웨이트·맨몸 세트는 5회 이상만 경험치 · 종목별 이번 양(대상 세트·유산소 분)이 «내 평소»의 130% 이상이면 그 운동 기본 ×1.2.
+     «내 평소» 기간·횟수는 표정(MOOD.baseN·baseDays·minBase)과 같은 키를 읽고, 임계값은 표정(MOOD.high)과 따로 둔다 */
+  MIN_REPS: 5,
+  VOL_BONUS: { ratioPct: 130, mult: 1.2 },
 };
 /* ----- 운영자 설정(H2·H1) — 본사가 바꾼 값은 전부 여기로만 들어온다. 화면은 CFG·need·lvPoint 를 통해서만 읽는다 ----- */
 const CFG_DEFAULT = JSON.parse(JSON.stringify(CFG));
@@ -104,27 +108,61 @@ function potionGain(L) {
   return { gained, cut: CFG.POTION.xp - gained, reason: gained >= CFG.POTION.xp ? null : 'item' };
 }
 
-/* ----- 세션 경험치 (PLAN §2-3) -----
-   세션 XP = (Σ 운동별 기본 + 첫 세트 20 + 완료 50) × 검증 × 연속(복귀면 ×1.5) [× 부스터 2] + 고정(새 부위·PR·주간 목표)
+/* ----- 세션 경험치 (PLAN §2-3 · 결정 35 = XP_ENGINE_SPEC v1.10 §3-1) -----
+   세션 XP = (Σ 운동별 기본 × 평소 대비(1.0|1.2) + 첫 세트 20 + 완료 50) × 검증 × 연속(복귀면 ×1.5) [× 부스터] + 고정(새 부위·PR·주간 목표)
    s = { verify:'V0'|'V1'|'V1b'|'V3', selfie, items:[{ ex, sets:[{w,r,s,done,pr}], min }], prCount }
-   c = { firstToday, weekParts[], streakWeeks, lastDays, prToday, goal, weekCountBefore, todayCounted, boost } */
+   c = { firstToday, weekParts[], streakWeeks, lastDays, prToday, goal, weekCountBefore, todayCounted, boost,
+         xpBase:{ex: 평소 양|null}, todayQ:{ex: 오늘 앞 세션 대상 양}, todayPrev:[{ex, cnt, bonus, mul}] } */
 const effVerify = s => s.selfie && (s.verify === 'V1' || s.verify === 'V1b') ? 'V2' : s.verify;   // 셀카는 센터 확인이 있을 때만 100%
+/* 경험치 대상 세트 = 완료 + (시간형이거나 MIN_REPS회 이상). 5회 미만도 기록·PR·표정·코칭엔 그대로 쓴다 */
+const xpEligible = (e, st) => !!st.done && (e.mode !== 'wr' && e.mode !== 'r' ? true : (st.r || 0) >= CFG.MIN_REPS);
+/* 운동 1개의 «경험치 양» — 웨이트·맨몸 = 대상 세트 수 · 유산소 = 분 · 레슨 = 1 */
+function xpQty(it) {
+  const e = EX[it.ex]; if (!e) return 0;
+  if (e.xpk === 'cardio') return Math.min(CFG.LIM.cardioMaxMin, it.min || 0);
+  if (e.xpk === 'lesson') return 1;
+  return (it.sets || []).filter(x => xpEligible(e, x)).length;
+}
+const shortSets = it => { const e = EX[it.ex]; return e && (e.mode === 'wr' || e.mode === 'r') ? (it.sets || []).filter(x => x.done && !xpEligible(e, x)).length : 0; };
+/* 경험치용 «내 평소» = 기준일 −56일 안 · «가볍게» 제외 · 같은 날은 합쳐 1회 · 최신 10회 중앙값 · 5회 미만이면 null (SPEC §3-1a)
+   hist[ex] = [{ date, light, q }] (오늘 것 제외) */
+function xpBaselineOf(hist, exId, today) {
+  const from = new Date(today); from.setDate(from.getDate() - CFG.MOOD.baseDays);
+  const lim = from.toISOString().slice(0, 10), byDay = {};
+  (hist[exId] || []).filter(h => !h.light && h.date >= lim && h.date < today).forEach(h => { byDay[h.date] = (byDay[h.date] || 0) + (h.q || 0); });
+  const v = Object.keys(byDay).sort().reverse().slice(0, CFG.MOOD.baseN).map(d => byDay[d]);
+  return v.length >= CFG.MOOD.minBase ? median(v) : null;
+}
+/* 정수 %로 비교 — 언어·DB마다 경계값(정확히 130%) 판정이 같게 */
+const volBonusOn = (qd, b) => b != null && b > 0 && qd * 100 >= b * CFG.VOL_BONUS.ratioPct;
 function sessionXP(s, c) {
-  let w = 0, b = 0, m = 0, l = 0;
+  const X = CFG.XP, UNIT = { weight: X.weight, body: X.body, cardio: X.cardio }, LEFT = { weight: CFG.LIM.weightSets, body: CFG.LIM.bodySets, cardio: CFG.LIM.cardioMin };
+  const xb = c.xpBase || {}, tq = c.todayQ || {};
+  const cnt = { weight: 0, body: 0, cardio: 0 }, xpOf = { weight: 0, body: 0, cardio: 0 };
+  let l = 0, base = 0, bonusXP = 0, short = 0;
+  const per = [], bonusRows = [], noBase = [];
   s.items.slice(0, CFG.LIM.exPerSession).forEach(it => {
     const e = EX[it.ex]; if (!e) return;
-    if (e.xpk === 'cardio') m += Math.min(CFG.LIM.cardioMaxMin, it.min || 0);
-    else if (e.xpk === 'lesson') l++;
-    else { const n = (it.sets || []).filter(x => x.done).length; if (e.xpk === 'weight') w += n; else b += n; }
+    short += shortSets(it);
+    if (e.xpk === 'lesson') { l++; return; }
+    const k = e.xpk, n = Math.min(xpQty(it), LEFT[k]); LEFT[k] -= n;   // 세션 상한은 개수에 먼저(SPEC ⑥-3)
+    if (!n) return;
+    const b = xb[it.ex] ?? null, qd = (tq[it.ex] || 0) + n, on = volBonusOn(qd, b);
+    const plain = UNIT[k] * n, extra = on ? plain * (CFG.VOL_BONUS.mult - 1) : 0;
+    cnt[k] += n; xpOf[k] += plain; base += plain + extra; bonusXP += extra;
+    per.push({ ex: it.ex, cnt: n, bonus: on, base: b, qd });
+    if (on) bonusRows.push([e.name, extra, b, qd]); else if (b == null) noBase.push(e.name);
   });
-  w = Math.min(w, CFG.LIM.weightSets); b = Math.min(b, CFG.LIM.bodySets); m = Math.min(m, CFG.LIM.cardioMin);
-  const X = CFG.XP, any = w + b + m + l > 0;
-  const lines = [['웨이트·머신', w, '세트', w * X.weight], ['맨몸', b, '세트', b * X.body], ['유산소', m, '분', m * X.cardio], ['레슨', l, '회', l * X.lesson]].filter(x => x[1] > 0);
-  const base = w * X.weight + b * X.body + m * X.cardio + l * X.lesson;
+  const lines = [['웨이트·머신', cnt.weight, '세트', xpOf.weight], ['맨몸', cnt.body, '세트', xpOf.body], ['유산소', cnt.cardio, '분', xpOf.cardio], ['레슨', l, '회', l * X.lesson]].filter(x => x[1] > 0);
+  base += l * X.lesson;
+  const any = cnt.weight + cnt.body + cnt.cardio + l > 0;   // v1.10: «경험치 대상 기록 1개 이상»일 때만 첫 세트·완료
   const first = c.firstToday && any ? X.firstSet : 0, complete = c.firstToday && any ? X.complete : 0;
   const v = effVerify(s), vm = CFG.VERIFY[v];
   const comeback = c.lastDays >= CFG.COMEBACK_DAYS, sm = comeback ? CFG.COMEBACK_MUL : streakMul(c.streakWeeks);
   const mult = Math.round((base + first + complete) * vm * sm), bm = c.boost === true ? CFG.BOOST.mul : (c.boost || 0), boostPart = bm && any ? Math.round(mult * (bm - 1)) : 0;   // c.boost = 배율(숫자) · true 는 예전 2배 부스터
+  /* 같은 날 나눠 저장: 앞 세션에서 ×1.0이던 종목이 그날 합계로 ×1.2가 되면 앞 세션 몫 차액을 이번 세션에 더한다(앞 원장은 안 고침) */
+  const nowOn = new Set(per.filter(x => x.bonus).map(x => x.ex));
+  const catchUp = Math.round((c.todayPrev || []).filter(p => !p.bonus && nowOn.has(p.ex)).reduce((a, p) => a + UNIT[EX[p.ex].xpk] * p.cnt * (CFG.VOL_BONUS.mult - 1) * p.mul, 0));
   const worked = it => (it.sets || []).some(x => x.done) || it.min > 0 || (EX[it.ex] && EX[it.ex].xpk === 'lesson');
   const parts = [...new Set(s.items.filter(worked).map(it => EX[it.ex] && EX[it.ex].part).filter(Boolean))];
   const fresh = parts.filter(p => !c.weekParts.includes(p));
@@ -132,8 +170,8 @@ function sessionXP(s, c) {
   const prN = Math.min(s.prCount || 0, Math.max(0, CFG.LIM.prDay - (c.prToday || 0)));
   const goal = any && !c.todayCounted && c.weekCountBefore + 1 === c.goal ? X.weekGoal : 0;
   const fixed = newN * X.newPart + prN * X.pr + goal;
-  return { lines, base, first, complete, v, vm, sm, comeback, mult, boostPart, bm, newParts: fresh.slice(0, newN), newXP: newN * X.newPart,
-    prN, prXP: prN * X.pr, goal, fixed, raw: mult + boostPart + fixed, any };
+  return { lines, base, bonusXP, bonusRows, noBase, short, per, catchUp, first, complete, v, vm, sm, comeback, mult, boostPart, bm, newParts: fresh.slice(0, newN), newXP: newN * X.newPart,
+    prN, prXP: prN * X.pr, goal, fixed, raw: mult + catchUp + boostPart + fixed, any };
 }
 
 /* ----- 세트 판정 ----- */

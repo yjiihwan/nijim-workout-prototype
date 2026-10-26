@@ -339,7 +339,7 @@ function profileData(key) {
 function vProfile() {
   ensure2();
   const p = profileData(S.prof || 'me'); if (!p) return vFriends2();
-  const back = S.profFrom || 'friends', backLabel = { friends: '랭킹 · 친구', me: '내 캐릭터', addFriend: '친구 추가' }[back] || '운동기록';
+  const back = S.profFrom || 'friends', backLabel = { friends: '랭킹', me: '내 캐릭터', addFriend: '친구 추가' }[back] || '운동기록';
   const pureLv = p.me ? S.exLv : (p.pure ?? p.lv);
   const actions = p.me ? '<div class="muted" style="text-align:center;margin-top:12px">다른 사람에게는 이렇게 보여요 · 표정·사진·기록 상세는 나만 봐요</div>'
     : p.friend ? `<button class="btn" data-act="cheer" data-v="${esc(p.n)}" id="cheerBtn" ${S.fr.cheered[p.n] === TODAY ? 'disabled' : ''}>${S.fr.cheered[p.n] === TODAY ? '오늘 응원했어요 👏' : '응원 👏'}</button><div class="muted" style="text-align:center;margin-top:8px">친구 · 하루 1번 응원할 수 있어요</div>`
@@ -399,7 +399,7 @@ function vAddFriend() {
     return `<div class="frow"><button class="av tap" data-act="prof" data-v="${esc(name)}" aria-label="${esc(name)} 프로필">${charAvatar(p.t, p.lv, 40)}</button><div class="tap" data-act="prof" data-v="${esc(name)}"><b>${esc(name)}</b> ${p.paid ? '💰' : ''}<small>Lv.${p.lv} · ${esc(CH[p.t].name)}${sub ? ' · ' + sub : ''}</small></div><div class="fbtns">${btns}</div></div>`; };
   const recv = S.fr.recv.map(n => row(n, `<button class="btn sm ghost" data-act="frReject" data-v="${esc(n)}">거절</button><button class="btn sm" data-act="frAccept" data-v="${esc(n)}">수락</button>`)).join('');
   const sent = S.fr.sent.map(n => row(n, `<button class="btn sm ghost" data-act="frCancel" data-v="${esc(n)}">취소</button>`, '수락 기다리는 중')).join('');
-  return `${subHead('친구 추가', 'friends', '랭킹 · 친구')}<div class="sec">
+  return `${subHead('친구 추가', 'friends', '랭킹')}<div class="sec">
   <div class="card" id="myCode" style="text-align:center"><div class="h3">내 코드</div><div class="code">${myCode()}</div>
     <div class="grid2" style="margin-top:12px"><button class="btn ghost" data-act="copyCode" style="margin:0">코드 복사</button><button class="btn" data-act="shareLink" style="margin:0">초대 링크 보내기</button></div>
     <div class="muted" style="margin-top:8px">링크를 받은 친구가 열면 바로 요청이 와요 · 연락처는 보지 않아요</div></div>

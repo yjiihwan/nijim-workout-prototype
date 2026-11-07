@@ -55,6 +55,26 @@ async function eatCell(t, cut) {
   for (let i = 0; i < Wt.length; i++) { const v = wd[i * 4] / 255; Wt[i] = v; if (v > 0) { const y = (i / d.W) | 0; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
   return (EATC[key] = { d, rest, eat, mo, cl, cr, arm, restData: rg.getImageData(0, 0, d.W, d.H), Wt, y0, y1, work: cv(d.W, d.H) });
 }
+/* 손으로 쥐는 7종(design nijim_eat_grip_12_20261107 6단계): 음식이 칸에 미리 놓인 레이어 → eat_rig.draw_order 대로 eat → 입 → f_<음식> → fist(손가락 앞판).
+   나머지 14종은 위 10-26 레이어(음식을 변환해 끼움) 그대로 */
+const GRIP7 = new Set(['food_chicken_bite', 'food_egg_white', 'food_muscle_jelly', 'food_triple_chicken_burger', 'drink_gym_water', 'drink_ion_drink', 'drink_rainbow_muscle_juice']);
+async function eatCell2(t, cut, fid) {
+  const key = 'g' + t + cut;
+  if (!EATC[key]) {
+    if (!window.EAT2_DATA || !EAT2_DATA[t]) await loadScript(`assets/eat2/${t}/data.js?v=${VER}`);
+    const d = EAT2_DATA[t][cut], base = `assets/eat2/${t}/lv${cut}/`;
+    const [rest, eat, mo, cl, cr, fist, w] = await Promise.all(['rest.webp', 'eat.webp', 'mo.webp', 'cl.webp', 'cr.webp', 'fist.webp', 'w.png'].map(f => loadImg(`${base}${f}?v=${VER}`)));
+    const cv = (W, H) => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; };
+    const rc = cv(d.W, d.H), rg = rc.getContext('2d'); rg.drawImage(rest, d.crop.rest[0], d.crop.rest[1]);
+    const wc = cv(d.W, d.H), wg = wc.getContext('2d'); wg.drawImage(w, d.crop.w[0], d.crop.w[1]);
+    const wd = wg.getImageData(0, 0, d.W, d.H).data, Wt = new Float32Array(d.W * d.H); let y0 = d.H, y1 = 0;
+    for (let i = 0; i < Wt.length; i++) { const v = wd[i * 4] / 255; Wt[i] = v; if (v > 0) { const y = (i / d.W) | 0; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
+    EATC[key] = { v2: 1, d, rest, eat, mo, cl, cr, fist, fl: {}, restData: rg.getImageData(0, 0, d.W, d.H), Wt, y0, y1, work: cv(d.W, d.H) };
+  }
+  const C = EATC[key];
+  if (fid && !C.fl[fid]) C.fl[fid] = await loadImg(`assets/eat2/${t}/lv${cut}/f_${fid}.webp?v=${VER}`);
+  return C;
+}
 const FOODIMG = {};
 async function foodImg(fid) { return FOODIMG[fid] || (FOODIMG[fid] = await loadImg(`assets/food/${fid}.png`)); }
 /* 한 입 자국(eatlib.food_layer): 먹는 점 근처를 동그랗게 지움 · 최대 2개 · 마시는 것은 없음 */
@@ -131,11 +151,13 @@ function eatMount() {
 }
 async function drawIdle() {
   const t = S.type, lv = S.level, cut = cutOf(lv);
-  try { const C = await eatCell(t, cut); if (EAT.cur || S.level !== lv || S.type !== t) return; frame({ C, t: ET.end, R: RARITY['일반'], idle: true }); } catch (e) { console.error(e); }
+  try { const C = await eatCell2(t, cut); if (EAT.cur || S.level !== lv || S.type !== t) return; frame({ C, t: ET.end, R: RARITY['일반'], idle: true }); } catch (e) { console.error(e); }
 }
 function geom(C) {
   const c = EAT.cv, dpr = c.width / parseFloat(c.style.width || c.width), Wc = c.width / dpr, d = C.d;
-  const t = S.type, disp = scaleOf(t, EAT.cur ? EAT.cur.from : S.level, BOX_H, false, Wc / 1.3) / 1;   // 전설 최대 부풂(+18%)도 칸 안
+  const t = S.type, k0 = scaleOf(t, EAT.cur ? EAT.cur.from : S.level, BOX_H, false, Wc / 1.3);   // 전설 최대 부풂(+18%)도 칸 안
+  /* 쥠 7종 레이어는 기본 자세가 커진 1.7단계 그림(원본 px 배율 = 눈 사이 같음) → 같은 원본 배율로 맞추고 칸을 넘으면 줄임 */
+  const disp = C.v2 ? Math.min(k0 * CHARS[t].k / d.k, BOX_H / d.sz[1], Wc / 1.3 / (1.1 * d.sz[0])) : k0;
   const cx = Wc / 2, px = cx - (d.off[0] + d.sz[0] / 2) * disp, py = BASE_Y - (d.off[1] + d.sz[1]) * disp;
   return { dpr, Wc, disp, cx, px, py, d };
 }
@@ -170,6 +192,14 @@ function frame(F) {
     const te = t - ET.eat0; let kind = 'mo', bites = 0, squash = 1;
     if (te >= 0) { const i = Math.min(2, Math.floor(te / ET.BITE)), ph = te % ET.BITE; kind = ph < 200 ? 'mo' : (ph < 400 || ph >= 600) ? 'cl' : 'cr'; bites = i + (ph >= 200 ? 1 : 0);
       if (t >= ET.eat1) { kind = 'cl'; bites = 3; } else if (ph < 200) squash = 1 - .04 * Math.sin(Math.PI * ph / 200); }
+    if (C.v2) {   // anim.py Scene.char: 뒤판 → 입 → 음식(벌림 구간에 입 쪽으로 살짝·사라질 때 흐려짐) → 손가락 앞판
+      const fade = t >= ET.poof0 ? 1 - c01((t - ET.poof0) / (ET.poof1 - ET.poof0 - 60)) : 1, ph = te % ET.BITE;
+      wg.drawImage(C.eat, d.crop.eat[0], d.crop.eat[1]); wg.drawImage(C[kind], d.crop[kind][0], d.crop[kind][1]);
+      const fk = F.food && 'f_' + F.food.fid, fi = F.food && C.fl[F.food.fid];
+      if (fade > 0 && fi) { const dy = te >= 0 && t < ET.eat1 && ph < 200 ? -.035 * Math.sin(Math.PI * ph / 200) * d.S : 0;
+        wg.globalAlpha = fade; wg.drawImage(fi, d.crop[fk][0], d.crop[fk][1] + dy); wg.globalAlpha = 1; }
+      wg.drawImage(C.fist, d.crop.fist[0], d.crop.fist[1]);
+    } else {
     const pop = t < ET.raise1 + 120 ? .6 + .4 * eob(c01(t / (ET.raise1 + 120))) : 1, fade = t >= ET.poof0 ? 1 - c01((t - ET.poof0) / (ET.poof1 - ET.poof0 - 60)) : 1;
     wg.drawImage(C.eat, d.crop.eat[0], d.crop.eat[1]); wg.drawImage(C[kind], d.crop[kind][0], d.crop[kind][1]);
     /* 음식·앞 팔은 무대 canvas 에 바로 그림: 레이어 캔버스 밖으로 나가는 음식도 안 잘리게(overflow visible) */
@@ -179,6 +209,7 @@ function frame(F) {
       foodDraw = () => { g.save(); g.globalAlpha = fade; g.translate(px + ft.g[0] * disp, py + ft.g[1] * disp); g.rotate(ft.a * Math.PI / 180); g.scale(s * disp, s * disp); g.drawImage(ic, -gx, -p.g[1], 256, 256); g.restore(); };
     }
     armDraw = () => g.drawImage(C.arm, px + d.crop.arm[0] * disp, py + d.crop.arm[1] * disp, C.arm.width * disp, C.arm.height * disp);
+    }
   }
   g.imageSmoothingQuality = 'high'; g.drawImage(wk, px, py, d.W * disp, d.H * disp);
   if (foodDraw) foodDraw(); if (armDraw) armDraw();
@@ -238,8 +269,8 @@ async function eatNext() {
   EAT.cur = { id, f, R, from, fromXP, res, ev, label, sparks, t0: 0, skip: false, toLv: res ? res.level : from, toXP: res ? res.xp : fromXP };
   render();
   try {
-    const [C, img] = await Promise.all([eatCell(S.type, cut), foodImg(f.fid)]);
-    EAT.cur.C = C; EAT.cur.food = { fid: f.fid, img };
+    if (GRIP7.has(f.fid)) { EAT.cur.C = await eatCell2(S.type, cut, f.fid); EAT.cur.food = { fid: f.fid }; }
+    else { const [C, img] = await Promise.all([eatCell(S.type, cut), foodImg(f.fid)]); EAT.cur.C = C; EAT.cur.food = { fid: f.fid, img }; }
   } catch (e) { console.error(e); EAT.cur = null; return eatFinish(ev); }
   if (S.sound) { tone(520, 0, .08, 'triangle', .06); tone(660, .8, .08, 'triangle', .05); tone(780, 1.6, .08, 'triangle', .05); }
   EAT.cur.t0 = performance.now(); tick();

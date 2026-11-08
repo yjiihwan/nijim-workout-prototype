@@ -1,0 +1,414 @@
+{
+ "chest_press": {
+  "source": "Everkinetic open data",
+  "source_title": "Bench Press: Machine",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0066",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "pec_deck": {
+  "source": "wger 운동 DB (Everkinetic 선 그림 계열)",
+  "source_title": "Butterfly",
+  "source_url": "https://wger.de/en/exercise/135/view/",
+  "source_files": [
+   "https://wger.de/media/exercise-images/135/ (image id 111)",
+   "https://wger.de/media/exercise-images/135/ (image id 112)"
+  ],
+  "author": "Everkinetic",
+  "license": "CC BY-SA 3.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "m_shoulder": {
+  "source": "wger 운동 DB (Everkinetic 선 그림 계열)",
+  "source_title": "Shoulder Press, on Machine",
+  "source_url": "https://wger.de/en/exercise/543/view/",
+  "source_files": [
+   "https://wger.de/media/exercise-images/543/ (image id 195)",
+   "https://wger.de/media/exercise-images/543/ (image id 196)"
+  ],
+  "author": "wger.de",
+  "license": "CC BY-SA 3.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "seated_row": {
+  "source": "Everkinetic open data",
+  "source_title": "Seated Cable Rows",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0025",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "leg_press": {
+  "source": "Everkinetic open data",
+  "source_title": "Leg Press",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0127",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "leg_ext": {
+  "source": "Everkinetic open data",
+  "source_title": "Leg Extensions",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0142",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "leg_curl": {
+  "source": "Everkinetic open data",
+  "source_title": "Lying Leg Curl Machine",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0117",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "hip_abd": {
+  "source": "Everkinetic open data",
+  "source_title": "Thigh Abductor",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0156",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "hip_add": {
+  "source": "Everkinetic open data",
+  "source_title": "Thigh Adductor",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0157",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "calf_raise": {
+  "source": "Everkinetic open data",
+  "source_title": "Standing Calf Raises using Machine",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0282",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "back_ext": {
+  "source": "Everkinetic open data",
+  "source_title": "Hyperextensions",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0103",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "smith_bench": {
+  "source": "Everkinetic open data",
+  "source_title": "Bench Press: Smith Machine",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0078",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "tbar_row": {
+  "source": "Everkinetic open data",
+  "source_title": "T-Bar Rows",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0029",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "seated_calf": {
+  "source": "Everkinetic open data",
+  "source_title": "Seated Calf Raise using Machine",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0279",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "bicep_m": {
+  "source": "Everkinetic open data",
+  "source_title": "Preacher Curl: Machine",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0236",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "cable_curl": {
+  "source": "Everkinetic open data",
+  "source_title": "Standing Biceps Curl with Cable",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0212",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "tricep_m": {
+  "source": "Everkinetic open data",
+  "source_title": "Triceps Extension: Machine",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0210",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "bench": {
+  "source": "Everkinetic open data",
+  "source_title": "Bench Press: Barbell",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0042",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "squat": {
+  "source": "Everkinetic open data",
+  "source_title": "Barbell Squat",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0122",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "deadlift": {
+  "source": "Everkinetic open data",
+  "source_title": "Dead Lifts: Barbell",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0099",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "barbell_row": {
+  "source": "wger 운동 DB (Everkinetic 선 그림 계열)",
+  "source_title": "Bent Over Rowing",
+  "source_url": "https://wger.de/en/exercise/83/view/",
+  "source_files": [
+   "https://wger.de/media/exercise-images/83/ (image id 84)",
+   "https://wger.de/media/exercise-images/83/ (image id 90)"
+  ],
+  "author": "Everkinetic",
+  "license": "CC BY-SA 3.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "db_press": {
+  "source": "Everkinetic open data",
+  "source_title": "Bench Press: Dumbbell",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0055",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "incline_db": {
+  "source": "Everkinetic open data",
+  "source_title": "Bench Press: Dumbbell (Incline)",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0061",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "db_shoulder": {
+  "source": "wger 운동 DB (Everkinetic 선 그림 계열)",
+  "source_title": "Shoulder Press, Dumbbells",
+  "source_url": "https://wger.de/en/exercise/567/view/",
+  "source_files": [
+   "https://wger.de/media/exercise-images/567/ (image id 173)",
+   "https://wger.de/media/exercise-images/567/ (image id 174)"
+  ],
+  "author": "Everkinetic",
+  "license": "CC BY-SA 3.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "db_lunge": {
+  "source": "Everkinetic open data",
+  "source_title": "Lunges: Dumbbell",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0115",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "db_curl": {
+  "source": "Everkinetic open data",
+  "source_title": "Biceps Curl: Dumbbell",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0224",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "lateral": {
+  "source": "Everkinetic open data",
+  "source_title": "Lateral Dumbbell Raises",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0018",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "smith_squat": {
+  "source": "Everkinetic open data",
+  "source_title": "Squats: Smith Machine",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0124",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "cable_cross": {
+  "source": "Everkinetic open data",
+  "source_title": "Cable Crossover",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0048",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "tricep_pd": {
+  "source": "Everkinetic open data",
+  "source_title": "Triceps Pushdown: Cable",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0205",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "rdl": {
+  "source": "Everkinetic open data",
+  "source_title": "Romanian Dead Lift",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0118",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "incline_bench": {
+  "source": "Everkinetic open data",
+  "source_title": "Bench Press: Barbell (Incline)",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0043",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "db_fly": {
+  "source": "Everkinetic open data",
+  "source_title": "Dumbbell Flys",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0056",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "barbell_curl": {
+  "source": "Everkinetic open data",
+  "source_title": "Biceps Curl: Barbell",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0211",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "hammer_curl": {
+  "source": "Everkinetic open data",
+  "source_title": "Biceps Curl: Dumbbell (Hammer)",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0227",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "skull": {
+  "source": "Everkinetic open data",
+  "source_title": "Lying Triceps Press with Barbell",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0183",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "oh_ext": {
+  "source": "Everkinetic open data",
+  "source_title": "Triceps Extension: Dumbbell (Standing)",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0198",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "front_raise": {
+  "source": "Everkinetic open data",
+  "source_title": "Front Dumbbell Raise",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0033",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "shrug": {
+  "source": "Everkinetic open data",
+  "source_title": "Shoulder Shrugs: Dumbbell",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0005",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "pushup": {
+  "source": "Everkinetic open data",
+  "source_title": "Push Up: Body Weight",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0077",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "pullup": {
+  "source": "Everkinetic open data",
+  "source_title": "Pull Ups",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0087",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "crunch": {
+  "source": "Everkinetic open data",
+  "source_title": "Crunches",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0291",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "leg_raise": {
+  "source": "Everkinetic open data",
+  "source_title": "Flat Bench Leg Raises",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0021",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ },
+ "glute_bridge": {
+  "source": "Everkinetic open data",
+  "source_title": "Bridging",
+  "source_url": "https://github.com/everkinetic/data/tree/master/src/exercises/0109",
+  "author": "Everkinetic (Greg Priday) · everkinetic/data 기여자",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "changes": "여백 자름 · 선 색 #16161C · 크기 줄임(목록 84px, 확대 높이 240px) · 확대용은 시작·끝 자세 두 장을 가로로 이어 붙임"
+ }
+}

@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.26';
+const VER = 'v1.27';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -504,7 +504,7 @@ function exListHTML() {
     && (q ? (e.name + (e.al || '')).replace(/\s/g, '').toLowerCase().includes(q.toLowerCase())
           : (S.gear === 'all' || e.cat === S.gear) && (S.part === 'all' || e.part === S.part)));
   const kind = e => (e.custom ? '내가 추가 · ' : '') + (CAT_NAME[e.cat] || '맨몸·소도구');
-  const rows = list.map(e => `<button class="prow tap" data-act="addEx" data-v="${e.id}"><div><b>${esc(e.name)}</b><small>${kind(e)} · ${e.part}${e.mode === 'cardio' ? ' · 시간' : e.mode === 'wr' ? ' · 무게×횟수' : e.mode === 't' ? ' · 시간' : ' · 횟수'}</small></div><span class="plus">${s && s.items.some(i => i.ex === e.id) ? '✓' : '+'}</span></button>`).join('');
+  const rows = list.map(e => `<button class="prow tap" data-act="addEx" data-v="${e.id}">${exThumb(e)}<div><b>${esc(e.name)}</b><small>${kind(e)} · ${e.part}${e.mode === 'cardio' ? ' · 시간' : e.mode === 'wr' ? ' · 무게×횟수' : e.mode === 't' ? ' · 시간' : ' · 횟수'}</small></div><span class="plus">${s && s.items.some(i => i.ex === e.id) ? '✓' : '+'}</span></button>`).join('');
   const same = q && EX_DICT.concat(S.custom).some(e => e.name.replace(/\s/g, '') === q);
   const addCustom = q && !same ? `<button class="prow tap" data-act="customEx" id="customEx"><div><b>«${esc(S.q.trim())}» 직접 추가</b><small>기구 종류를 고르면 무게·횟수로 기록할 수 있어요</small></div><span class="plus">+</span></button>` : '';
   const empty = !q && S.gear === 'machine' && home ? `${s.place.name === '집' ? '집' : '야외'}에서는 머신 운동이 없어요` : '찾는 운동이 없어요.';
@@ -1143,6 +1143,8 @@ document.addEventListener('click', e => {
   if (a === 'placeEnter') { S.placeOpen = null; openSession({ name: v, kind: 'center' }, 'V1'); return toast(`입장 확인! ${v}에서 운동 시작`); }
   if (a === 'findCenter') { S.nbOnly = true; S.nbFrom = S.tab === 'workout' ? S.sub || 'main' : null; return go('nearby'); }
   if (a === 'nbOnly') { S.nbOnly = !S.nbOnly; save(); return render(); }
+  if (a === 'exImg') return exImgSheet(v);
+  if (a === 'exImgAdd') { shClose(); return addEx(v); }
   if (a === 'addEx') return addEx(v);
   if (a === 'openEx') { S.cur = v; return go('workout', EX[v].mode === 'cardio' ? 'cardio' : EX[v].mode === 'lesson' ? 'session' : 'set'); }
   if (a === 'routine') return loadRoutine();

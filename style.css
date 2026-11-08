@@ -540,3 +540,17 @@ select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--g2)
 .setrow.edit .wfield{width:74px;min-width:74px;padding:3px 4px}
 /* v1.23 운동 고르기: 흰 카드·시트 안 칩은 회색 바탕(453줄 .chips button 흰 바탕이 덮어써 칩이 안 보이던 것) */
 .chips.gchips button{background:var(--g1)}.chips.gchips button.on{background:var(--ink);color:#fff}.chips.gchips button.rtchip{color:var(--rose)}
+/* v1.24 코치 첫 대화 · 내 정보 */
+.msg .bub small.later,.msg .bub small.hintl{display:block;margin-top:6px;font-size:12px;color:#6B7280;line-height:1.4}
+.msg .bub small.hintl{padding-top:6px;border-top:1px dashed #E2E4EA;color:#5A6275}
+.obdock{background:#fff;border-radius:16px;padding:12px;margin-bottom:12px;box-shadow:0 1px 0 rgba(0,0,0,.04)}
+.obprog2{font-size:12px;color:#8A90A0;margin-bottom:8px}
+.obbtns{display:flex;flex-wrap:wrap;gap:8px}.obbtns .chip{background:#fff;border:1px solid var(--g2);font-size:15px;padding:9px 16px}
+.obfield{flex:1;min-width:0;display:flex;align-items:center;border:1px solid var(--g2);border-radius:12px;background:#fff;padding:0 12px}
+.obfield input{flex:1;min-width:0;border:0!important;padding:11px 0!important;font:inherit;font-size:16px;background:transparent;outline:none}
+.obfield i{font-style:normal;color:#6B7280;font-size:14px;margin-left:4px}
+.obdock .oblater{margin-top:10px;width:100%}
+.mibar{margin-top:-2px}.mibar small{word-break:keep-all}
+.mirow .mival{display:flex;align-items:center;gap:6px}.mirow .obfield{width:116px;flex:none}.mirow .obfield input{text-align:right}
+.mix{border:0;background:var(--g1);border-radius:50%;width:28px;height:28px;font-size:16px;color:#6B7280;flex:none}
+.mirow .chips{justify-content:flex-end}

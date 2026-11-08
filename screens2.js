@@ -416,6 +416,7 @@ const KINDS = {
   next: { label: '다음 운동 추천', q: '오늘 뭐 하면 좋아?' }, plateau: { label: '정체 구간 알림', q: '벤치가 안 늘어' },
   balance: { label: '부위 밸런스', q: '부위 밸런스 괜찮아?' }, rest: { label: '휴식 권고', q: '오늘 쉬어야 할까?' },
   safety: { label: '안전 경고', q: '무게 확 올려도 돼?' }, lesson: { label: '레슨 연계 한마디', q: 'PT 받은 거 들어갔어?' },
+  start: { label: '처음 무게', q: '벤치 처음 무게 몇 kg?' }, burn: { label: '유산소 칼로리(추정)', q: '유산소로 칼로리 얼마나 썼어?' },
 };
 const MED_FIXED = {
   pain: ['아프면 오늘 운동은 바로 멈추자.', '통증·어지러움이 1번이라도 이어지면 의사·물리치료사와 상담해 줘.', '센터 선생님에게도 꼭 말해 줘.'],
@@ -426,12 +427,13 @@ const jo = (w, a, b) => { const c = w.charCodeAt(w.length - 1) - 0xAC00; return 
 /* 정체 질문(v1.22): 실제 기록만으로 답한다. 기록이 없거나 1번뿐이면 숫자를 지어내지 않고 «아직 판단 못 함»
    질문에 무게 운동 이름이 있으면 그 운동, 없으면 벤치프레스 */
 const PLATEAU_WEEKS = 4;   // 주간 리포트 «N주째 제자리»와 같은 기준
-function plateauEx(q) {
+function plateauEx(q) { return exHit(q) || 'bench'; }
+function exHit(q) {   // 질문에 적힌 무게 운동(없으면 null)
   const n = String(q || '').replace(/\s/g, '');
   /* v1.23: 사전이 커져 «벤치»가 «스미스 벤치프레스» 별명에도 걸림 → 가장 길게 맞은 낱말(이름 우선)을 고른다 */
   const score = e => Math.max(0, ...[[e.name, 100], ...(e.al || '').split(' ').map(w => [w, 0])].map(([w, bonus]) => { w = w.replace(/\s/g, ''); return w.length >= 2 && n.includes(w) ? w.length + bonus : 0; }));
   const hit = EX_DICT.filter(e => e.mode === 'wr').map(e => [e, score(e)]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1])[0];
-  return hit ? hit[0].id : 'bench';
+  return hit ? hit[0].id : null;
 }
 function plateauReply(rs, ex) {
   const e = EX[ex], nm = e.name, sess = byDate(rs).filter(r => (r.items || []).some(it => it.ex === ex && doneSets(it).some(x => x.w > 0)));
@@ -439,8 +441,9 @@ function plateauReply(rs, ex) {
   const topOf = r => Math.max(...r.items.filter(it => it.ex === ex).flatMap(it => doneSets(it).map(x => x.w || 0)));
   const best = Math.max(...sess.map(topOf)), first = sess.find(r => topOf(r) === best), wks = Math.floor((dOf(TODAY) - dOf(first.date)) / (7 * DAY));
   if (sess.length < 2) return [`${jo(nm, '은', '는')} ${md(first.date)} ${kg(best)} 1번 기록했어.`, '아직 1번이라 정체인지 판단하긴 일러. 2~3번 더 쌓아 보자!'];
-  if (wks >= PLATEAU_WEEKS) return [`${nm} ${kg(best)}에서 ${wks}주째야.`, `다음엔 ${kg(e.step && e.step < 2.5 ? e.step : 2.5)}만 올려서 8회부터 해 볼까?`, '안 되면 지금 무게로 1세트 더해도 좋아.'];
-  return [`${nm} 최고 무게는 ${kg(best)}, ${md(first.date)}에 찍었어.`, `${wks ? `${wks}주` : '1주도 안'} 됐으니 아직 정체는 아니야. 지금처럼 꾸준히 가자!`];
+  const ratio = bwRatioLine(rs, ex), ns = nextStepLine(ex, best);   // v1.24: 내 정보(성별·몸무게)가 있을 때만
+  if (wks >= PLATEAU_WEEKS) return [`${nm} ${kg(best)}에서 ${wks}주째야.`, ns || `다음엔 ${kg(e.step && e.step < 2.5 ? e.step : 2.5)}만 올려서 8회부터 해 볼까?`, '안 되면 지금 무게로 1세트 더해도 좋아.', ratio].filter(Boolean);
+  return [`${nm} 최고 무게는 ${kg(best)}, ${md(first.date)}에 찍었어.`, `${wks ? `${wks}주` : '1주도 안'} 됐으니 아직 정체는 아니야. 지금처럼 꾸준히 가자!`, ratio].filter(Boolean);
 }
 function coachReply(kind, q = '') {
   /* v1.22: 통계·리포트와 같은 기록(statRecs)만 본다 — 기록이 없을 때 임시 숫자로 채우지 않는다 */
@@ -452,23 +455,71 @@ function coachReply(kind, q = '') {
   const bigSum = big.reduce((a, p) => a + p4[p], 0), allDone = ['등', '가슴', '하체', '어깨'].every(p => wk7[p]);
   const lastDays = last ? Math.round((dOf(TODAY) - dOf(last.date)) / DAY) : null;
   const lesson = [...rs].filter(r => r.v === 'lesson' && !r.ro).sort((a, b) => b.date.localeCompare(a.date))[0];
-  return {
-    session: last ? [`${md(last.date)} ${last.summary.split(' · ')[0]} 해냈네!`, `${placeBase(last.place)}에서 ${fmt(last.xp)} XP 쌓였어.`, '다음엔 같은 무게로 1세트만 더 가 보자.'] : ['아직 기록이 없어. 1번만 기록해도 내가 봐 줄게!'],
+  /* v1.24 내 정보 반영 — 모르는 항목은 계산하지 않고 그 줄만 기존 답변. 안내({hint})는 항목마다 1번 */
+  const P = me(), H = k => { const h = hintOnce(k); return h ? { hint: h } : null; }, warm = needWarmup(P) ? WARMUP_LINE : null;
+  const lastTop = ex => { const r = rs.filter(x => (x.items || []).some(it => it.ex === ex && doneSets(it).some(y => y.w > 0))).slice(-1)[0]; return r ? Math.max(...r.items.filter(it => it.ex === ex).flatMap(it => doneSets(it).map(x => x.w || 0))) : 0; };   // 가장 최근 그 운동 세션의 최고 무게
+  const PICK_IDS = { 등: ['lat_pulldown', 'seated_row'], 가슴: ['bench', 'chest_press'], 하체: ['leg_press', 'squat'], 어깨: ['m_shoulder', 'lateral'] }[notYet];
+  const startList = ids => ids.map(id => [id, startRange(id, P)]).filter(x => x[1]);
+  const barNote = l => l.some(([, r]) => r.bar) ? '빈 봉(20kg)도 무거우면 머신부터 해도 좋아.' : '무겁게 느껴지면 바로 한 칸 내려도 돼.';
+  const cardioOf = r => (r.items || []).filter(it => EX[it.ex] && EX[it.ex].mode === 'cardio' && it.min);
+  const kcalLine = it => { const k = kcalOf(it, P); return k ? `${EX[it.ex].name} ${it.min}분은 약 ${k}kcal 쓴 걸로 추정돼(몸무게·시간으로 낸 대략치).` : null; };
+  const nextAns = () => {
+    if (none) { const l = startList(PICK_IDS); if (!l.length) return ['아직 운동 기록이 없어.', `처음이면 ${pick}부터 편한 무게로 3세트씩 어때?`, H('w')];
+      return ['아직 운동 기록이 없어.', `처음이면 ${l.map(([id, r]) => `${EX[id].name} ${rangeTxt(r)}`).join(', ')}부터 10회씩 3세트 어때?`, barNote(l), warm, !P.sex ? H('sex') : null]; }
+    const base = allDone ? ['이번 주 큰 부위 4곳 다 했어!', `오늘은 4주 동안 제일 적게 한 ${jo(lo, '을', '를')} ${pick}로 3세트씩 어때?`] : [`이번 주 아직 ${jo(notYet, '을', '를')} 안 했어.`, `오늘은 ${pick} 3세트씩 어때?`];
+    const fresh = startList(PICK_IDS.filter(id => !lastTop(id)));
+    return [...base, fresh.length ? `${fresh.map(([id, r]) => `${EX[id].name} ${rangeTxt(r)}`).join(', ')} — 처음 하는 거라 이 무게부터 해 봐.` : null, warm, !fresh.length && !P.w && PICK_IDS.some(id => !lastTop(id) && COACH_CFG.BEGIN_1RM[id]) ? H('w') : null];
+  };
+  const safetyAns = () => {
+    const ip = incPair(P); if (!ip) return ['무게는 지난번보다 10% 안쪽으로 올려 줘.', '한 번에 20% 넘게 올리면 내가 알려 줄게. 천천히 가자!', H('w')];
+    const ex = exHit(q) || [...rs].reverse().flatMap(r => (r.items || []).filter(it => EX[it.ex] && EX[it.ex].mode === 'wr' && doneSets(it).some(x => x.w > 0)).map(it => it.ex))[0];
+    const basis = [P.sex === 'm' ? '남' : P.sex === 'f' ? '여' : '', P.w ? kg(P.w) : ''].filter(Boolean).join('·');
+    const lw = ex ? lastTop(ex) : 0;
+    return [`${basis ? basis + ' 기준이면' : '네 정보로 보면'} 한 번에 올리는 폭은 상체 ${kg2(ip.up)}·하체 ${kg2(ip.low)} 정도야.`, lw ? nextStepLine(ex, lw, P) : '처음 하는 운동은 «처음 무게 몇 kg?»이라고 물어봐 줘.', '한 번에 20% 넘게 올리면 내가 알려 줄게. 천천히 가자!', !P.w ? H('w') : null];
+  };
+  const restAns = () => {
+    const rh = restHours(P), old = !last ? ['아직 운동 기록이 없어.', '몸이 괜찮으면 오늘 가볍게 시작해 보자. 아프면 쉬는 게 먼저야.'] : run >= 3 ? [`${run}일 연속 운동했어. 진짜 대단해!`, '오늘은 쉬거나 스트레칭 10분만 하자.'] : [run ? `최근 ${run}일 연속 운동했어.` : (lastDays ? `마지막 운동이 ${lastDays}일 전이야.` : '오늘 운동 기록이 있어.'), '몸이 괜찮으면 오늘 해도 좋아. 같은 부위만 이틀 연속은 피하자.'];
+    if (rh == null) return [...old, H('age')];
+    if (!last) return [old[0], `몸이 괜찮으면 오늘 가볍게 시작해 보자. 같은 부위는 ${rh}시간 쉬고 다시 하자.`, warm];
+    if (run >= 3) return [...old, `같은 부위는 ${rh}시간 쉬는 게 기준이야.`];
+    const recent = {}; for (let d = 0; d * 24 < rh; d++) { const ps = partSets(inRange(rs, addD(TODAY, -d), addD(TODAY, -d))); ['가슴', '등', '하체', '어깨'].forEach(p => { if (ps[p] && recent[p] == null) recent[p] = d; }); }
+    const blocked = Object.keys(recent), free = ['가슴', '등', '하체', '어깨'].filter(p => !blocked.includes(p));
+    return [old[0], blocked.length ? `${jo(blocked.join('·'), '은', '는')} 쉰 지 ${rh}시간이 안 됐어. 오늘은 ${free.length ? free.join('·') : '유산소·스트레칭'} 어때?` : `큰 부위 모두 ${rh}시간 이상 쉬었어. 몸이 괜찮으면 오늘 해도 좋아.`, warm];
+  };
+  const startAns = () => {
+    const ex = exHit(q) || 'bench', e = EX[ex], lw = lastTop(ex);
+    if (lw) return [`${jo(e.name, '은', '는')} 이미 기록이 있어 — 지난번 ${kg(lw)}.`, nextStepLine(ex, lw, P) || '지난번 무게에서 천천히 올려 가자.'];
+    const r = startRange(ex, P);
+    if (r) return [`${e.name} 처음이면 ${rangeTxt(r)}부터 10회씩 3세트 해 보자.`, barNote([[ex, r]]), warm, !P.sex ? H('sex') : null];
+    if (!P.w) return [`${e.name} 처음이면 15회는 거뜬한 편한 무게로 시작하자.`, '자세 먼저 익히고 조금씩 올리면 돼.', H('w')];
+    return [`${jo(e.name, '은', '는')} 아직 기준표가 없어서 kg으로 말하긴 어려워.`, '15회는 거뜬한 편한 무게로 시작하자.'];
+  };
+  const burnAns = () => {
+    const r = [...rs].reverse().find(x => cardioOf(x).length); if (!r) return ['아직 유산소 기록이 없어.', '트레드밀·자전거 같은 유산소를 기록하면 대략 쓴 칼로리를 알려 줄게.'];
+    const it = cardioOf(r)[0], k = kcalLine(it);
+    return k ? [`${md(r.date)} ${k}`, '강도·심박에 따라 꽤 달라지는 추정치야. 먹는 양은 내가 정해 줄 수 없어.'] : [`${md(r.date)} ${EX[it.ex].name} ${it.min}분 했어.`, '몸무게를 알려 주면 대략 쓴 칼로리를 계산해 줄게 · 위 «내 정보»'];
+  };
+  const sessAns = () => {
+    if (!last) return ['아직 기록이 없어. 1번만 기록해도 내가 봐 줄게!'];
+    const cd = cardioOf(last)[0], wr = (last.items || []).find(it => COACH_CFG.BEGIN_1RM[it.ex] && doneSets(it).some(x => x.w > 0));
+    return [`${md(last.date)} ${last.summary.split(' · ')[0]} 해냈네!`, `${placeBase(last.place)}에서 ${fmt(last.xp)} XP 쌓였어.`, '다음엔 같은 무게로 1세트만 더 가 보자.', cd ? (kcalLine(cd) || H('w')) : null, wr ? bwRatioLine(rs, wr.ex, P) : null];
+  };
+  return ({
+    session: sessAns, next: nextAns, safety: safetyAns, rest: restAns, start: startAns, burn: burnAns,
+  }[kind] || (() => ({
     week: !lastWeek.sessions ? ['지난주엔 운동 기록이 없어.', '이번 주에 1번만 기록해도 주간 리포트에 정리해 줄게 📋'] : [`지난주 ${lastWeek.sessions}번 운동했어${lastWeek.sessions >= S.goal ? ', 목표 딱 채웠어!' : '.'}`, lastWeek.missing.length ? `${jo(lastWeek.missing.join('·'), '은', '는')} 비어 있었어.` : '큰 부위 4곳 다 챙겼어.', '자세한 건 주간 리포트에 정리해 뒀어 📋'],
-    next: none ? ['아직 운동 기록이 없어.', `처음이면 ${pick}부터 편한 무게로 3세트씩 어때?`] : allDone ? ['이번 주 큰 부위 4곳 다 했어!', `오늘은 4주 동안 제일 적게 한 ${jo(lo, '을', '를')} ${pick}로 3세트씩 어때?`] : [`이번 주 아직 ${jo(notYet, '을', '를')} 안 했어.`, `오늘은 ${pick} 3세트씩 어때?`],
     plateau: plateauReply(rs, plateauEx(q)),
     balance: !bigSum ? ['최근 4주 근력 기록이 없어서 밸런스를 아직 볼 수 없어.', '2~3번 기록하면 부위별로 정리해 줄게!'] : [`4주 동안 ${jo(hi, '이', '가')} ${p4[hi]}세트로 제일 많았어.`, p4[lo] ? `${jo(lo, '은', '는')} ${p4[lo]}세트뿐이라 이번 주 1번 넣어 보자.` : `${jo(lo, '은', '는')} 한 번도 없어서 이번 주 1번 넣어 보자.`],
-    rest: !last ? ['아직 운동 기록이 없어.', '몸이 괜찮으면 오늘 가볍게 시작해 보자. 아프면 쉬는 게 먼저야.'] : run >= 3 ? [`${run}일 연속 운동했어. 진짜 대단해!`, '오늘은 쉬거나 스트레칭 10분만 하자.'] : [run ? `최근 ${run}일 연속 운동했어.` : (lastDays ? `마지막 운동이 ${lastDays}일 전이야.` : '오늘 운동 기록이 있어.'), '몸이 괜찮으면 오늘 해도 좋아. 같은 부위만 이틀 연속은 피하자.'],
-    safety: ['무게는 지난번보다 10% 안쪽으로 올려 줘.', '한 번에 20% 넘게 올리면 내가 알려 줄게. 천천히 가자!'],
     lesson: lesson ? [`${md(lesson.date)} PT 확인됐어!`, `선생님 확인이라 경험치 2배, ${fmt(lesson.xp)} XP 들어왔어 ⭐`] : ['아직 확인된 레슨이 없어. 수업 끝나면 선생님 확인 1번이면 돼.'],
-  }[kind];
+  }[kind] || [])))().filter(x => x != null);
 }
 function classify(q) {
   if (/아프|아파|통증|어지|답답|부상|다쳤|삐었|저려|저린|쑤셔|붓/.test(q)) return 'pain';
   if (/임신|심장|혈압|당뇨|질환|수술|천식|디스크/.test(q)) return 'disease';
+  if (/칼로리|kcal/i.test(q) && /소모|썼|쓴|태웠|탔|유산소|운동/.test(q) && !/먹|식단|섭취|하루|빼|다이어트/.test(q)) return 'burn';   // v1.24: 운동으로 쓴 양(추정)만 · 먹는 쪽은 아래 고정 안내
   if (/다이어트|살 ?빼|칼로리|식단|보충제|단백질|약 /.test(q)) return 'diet';
   const map = [['plateau', /정체|안 ?늘|제자리|그대로/], ['week', /이번 ?주|지난 ?주|정리|리포트/], ['balance', /밸런스|균형|부위/], ['rest', /쉬|휴식|피곤|연속/],
-    ['safety', /무게|올려|증량|무거/], ['lesson', /PT|피티|레슨|수업|선생님/i], ['next', /뭐 ?하|추천|루틴|오늘/], ['session', /어땠|잘했|기록/]];
+    ['start', /처음.*(무게|kg|키로)|시작 ?무게|몇 ?(kg|키로)/i], ['safety', /무게|올려|증량|무거/], ['lesson', /PT|피티|레슨|수업|선생님/i], ['next', /뭐 ?하|뭐 ?해|처음|추천|루틴|오늘/], ['session', /어땠|잘했|기록/]];
   const hit = map.find(([, re]) => re.test(q)); return hit ? hit[0] : 'unknown';
 }
 function ask(q, kind = classify(q)) {
@@ -477,10 +528,12 @@ function ask(q, kind = classify(q)) {
   if (!fixed && c.used >= COACH_MAX) return toast('이번 달 질문 20번을 다 썼어요');
   c.msgs.push({ who: 'me', text: q });
   if (fixed) c.msgs.push({ who: 'bot', lines: MED_FIXED[kind], fixed: true, kind });
-  else { c.used++; c.msgs.push({ who: 'bot', lines: kind === 'unknown' ? ['그건 내가 잘 모르는 질문이야.', '루틴·휴식·운동 방법이라면 1개씩 물어봐 줘!'] : coachReply(kind, q), kind }); }
+  else { c.used++; const out = kind === 'unknown' ? ['그건 내가 잘 모르는 질문이야.', '루틴·휴식·운동 방법이라면 1개씩 물어봐 줘!'] : coachReply(kind, q);
+    c.msgs.push({ who: 'bot', lines: out.filter(x => typeof x === 'string'), hint: (out.find(x => x && x.hint) || {}).hint || null, kind }); }
   c.msgs = c.msgs.slice(-30);
 }
 function vCoach() {
+  if (typeof ensureMe !== 'function') return '';   // coach_info.js 가 아직 안 읽힘 — 그 파일 끝에서 다시 그림
   ensure2();
   const c = S.coach, t = S.type, left = Math.max(0, COACH_MAX - c.used), nm = CH[t].name;
   const head = `<div class="card coachhead" id="coachHead"><div class="cbox">${charFit(t, S.level, 44)}</div><div><b>${esc(nm)} 코치</b><small>루틴·휴식·운동 방법을 물어봐요</small></div><span class="pill ${left ? 'tier2' : 'tier4'}" id="coachLeft">남은 질문 ${left}/${COACH_MAX}</span></div>`;
@@ -491,12 +544,14 @@ function vCoach() {
     <div class="rline">💊 진단·치료·약·보충제 양·식단 칼로리는 답하지 않아요.</div>
     <div class="rline">💬 질문은 한 달에 ${COACH_MAX}번까지 무료예요.</div>
     <button class="btn" data-act="coachAgree" id="coachAgree">알겠어요, 시작할게요</button><div class="muted" style="text-align:center;margin-top:8px">이 안내는 처음 1번만 · 설정에서 다시 볼 수 있어요</div></div></div>`;
+  ensureMe(); if (!S.me.asked) { if (!S.me.ob) obStart(); return coachObHTML(head, t); }
+  const sum = meSummary(), info = `<button class="card replink tap mibar" data-act="myinfo" data-v="coach" id="coachInfo"><div><b>내 정보</b><small>${esc(sum || '안 적음 · 적으면 무게·쉬는 시간을 더 정확히 말해 줘요')}</small></div><span class="muted">고치기 ›</span></button>`;
   const greet = `<div class="msg bot"><div class="cbox">${charFit(t, S.level, 30)}</div><div><div class="bub">안녕! 운동 습관은 내가 같이 볼게. 궁금한 거 1개씩 물어봐 💬</div></div></div>`;
   const msgs = c.msgs.map(m => m.who === 'me' ? `<div class="msg me"><div class="bub">${esc(m.text)}</div></div>`
-    : `<div class="msg bot"><div class="cbox">${charFit(t, S.level, 30)}</div><div><div class="bub ${m.fixed ? 'fixed' : ''}">${m.lines.map(esc).join('<br>')}</div><small class="mtag">${m.fixed ? '🛡 고정 안내 · AI 호출 안 함 · 횟수 안 씀' : m.kind === 'unknown' ? '예시 응답 · 분류 못 함' : `예시 응답 · ${KINDS[m.kind].label}`}</small></div></div>`).join('');
+    : `<div class="msg bot"><div class="cbox">${charFit(t, S.level, 30)}</div><div><div class="bub ${m.fixed ? 'fixed' : ''}">${m.lines.map(esc).join('<br>')}${m.hint ? `<small class="hintl">${esc(m.hint)}</small>` : ''}</div><small class="mtag">${m.fixed ? '🛡 고정 안내 · AI 호출 안 함 · 횟수 안 씀' : m.kind === 'unknown' ? '예시 응답 · 분류 못 함' : m.kind === 'info' ? '내 정보 저장 · 횟수 안 씀' : `예시 응답 · ${KINDS[m.kind].label}`}</small></div></div>`).join('');
   const full = left <= 0;
   const chips = `<div class="qchips" id="coachChips">${Object.entries(KINDS).map(([k, v]) => `<button class="chip" data-act="coachQ" data-v="${k}" ${full ? 'disabled' : ''}>${v.q}</button>`).join('')}<button class="chip med" data-act="coachQ" data-v="pain">무릎이 아파 (의료 시연)</button><button class="chip med" data-act="coachQ" data-v="disease">고혈압 있는데 괜찮아? (의료 시연)</button></div>`;
-  return `${subHead('코치에게 물어보기')}<div class="sec">${head}
+  return `${subHead('코치에게 물어보기')}<div class="sec">${head}${info}
   <div class="chat" id="chat">${greet}${msgs}</div>
   ${full ? `<div class="notice limit" id="coachFull"><span>이번 달 질문 ${COACH_MAX}번을 다 썼어요. <b>다음 달 1일</b>에 다시 ${COACH_MAX}번 생겨요.<br>아프거나 불편하면 운동을 멈추고 센터 선생님에게 말해 주세요.</span></div>` : ''}
   <div class="h3" style="margin-top:4px">이렇게 물어봐요</div>${chips}
@@ -521,13 +576,13 @@ document.addEventListener('click', e => {
   const H = {
     coach: () => go('workout', 'coach'),
     invite: () => go('workout', 'addFriend'),
-    coachAgree: () => { S.coach.agreed = true; },
+    coachAgree: () => { S.coach.agreed = true; ensureMe(); if (!S.me.asked) obStart(); },
     coachQ: () => ask(KINDS[v] ? KINDS[v].q : v === 'pain' ? '무릎이 아파' : '고혈압 있는데 운동해도 괜찮아?', v),
     coachSend: () => { const el = $('coachQ'); ask(el ? el.value : ''); },
     coachUsed: () => { S.coach.used = +v; },
-    coachClear: () => { S.coach.msgs = []; },
-    coachNewUser: () => { S.records = []; S.hist = {}; S.coach.msgs = []; S.dataDemo = 'normal'; toast('기록 0인 새 사용자로 바꿨어요(시연)'); },
-    coachReset: () => { S.coach.agreed = false; S.coach.msgs = []; if (S.sub !== 'coach') return go('workout', 'coach'); },
+    coachClear: () => { S.coach.msgs = []; S.coach.hinted = {}; },
+    coachNewUser: () => { S.records = []; S.hist = {}; S.coach.msgs = []; S.coach.hinted = {}; S.me = null; S.bodyweight = null; ensureMe(); S.dataDemo = 'normal'; toast('기록 0·내 정보 없는 새 사용자로 바꿨어요(시연)'); },
+    coachReset: () => { S.coach.agreed = false; S.coach.msgs = []; S.coach.hinted = {}; ensureMe(); S.me.asked = false; S.me.ob = null; if (S.sub !== 'coach') return go('workout', 'coach'); },
     report: () => { S.repFrom = v === 'coach' ? 'coach' : 'stats'; S.repWeek = 1; return go('workout', 'report'); },
     repWeek: () => { S.repWeek = Math.max(0, Math.min(8, S.repWeek + dd)); },
     dataDemo: () => { S.dataDemo = v; },

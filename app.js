@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.25';
+const VER = 'v1.26';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -449,7 +449,7 @@ function vSession() {
   return `${subHead('오늘 운동')}<div class="sec"><div class="honest" id="honestTop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg><span>한 만큼만 솔직하게 기록해 주세요. 기록이 정확해야 AI 코칭이 내 몸에 맞게 나와요.</span></div>${head}${empty}
   <button class="btn ghost" data-act="sub" data-v="pick" id="addExBtn" style="margin-top:0">+ 운동 추가</button>
   ${selfieBtn}
-  <div class="card" style="margin-top:12px"><label class="lightrow" style="margin:0;padding:0;border:0"><input type="checkbox" data-act="light" ${s.light ? 'checked' : ''}><span><b>오늘은 가볍게 한 날</b><small>재활·컨디션 조절 날 체크 — 표정 판정에서 빼고, «평소» 계산에도 안 들어가요. 경험치는 그대로예요</small></span></label></div>
+  <div class="card" style="margin-top:12px"><label class="lightrow" style="margin:0;padding:0;border:0"><input type="checkbox" data-act="light" ${s.light ? 'checked' : ''}><span><b>오늘은 살살 한 날</b><small>재활·컨디션 조절로 일부러 가볍게 했다면 체크해요. 경험치는 그대로 받아요.</small></span></label></div>
   <div class="card demo"><div class="h3">🧪 시연 도구 — 저장 시 얻는 경험치</div><div class="chips">${demos.map(([k, l]) => `<button class="chip ${S.demo===k?'on':''}" data-act="demo" data-v="${k}">${l}</button>`).join('')}</div>
   <div class="muted" style="margin-top:8px">현재 Lv.${S.level}${S.demo === 'none' ? '' : ' · 연출 시연은 상한 미적용'}</div>
   <div class="h3" style="margin-top:12px">저장 후 표정 (결정 21)</div><div class="chips">${[['auto','기록대로 판정'],['low','아쉬운'],['normal','평소대로'],['high','신남']].map(([k, l]) => `<button class="chip ${S.moodDemo===k?'on':''}" data-act="mdemo" data-v="${k}">${l}</button>`).join('')}</div>

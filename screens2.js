@@ -428,8 +428,10 @@ const jo = (w, a, b) => { const c = w.charCodeAt(w.length - 1) - 0xAC00; return 
 const PLATEAU_WEEKS = 4;   // 주간 리포트 «N주째 제자리»와 같은 기준
 function plateauEx(q) {
   const n = String(q || '').replace(/\s/g, '');
-  const hit = EX_DICT.filter(e => e.mode === 'wr').find(e => [e.name, ...(e.al || '').split(' ')].filter(w => w.length >= 2).some(w => n.includes(w.replace(/\s/g, ''))));
-  return hit ? hit.id : 'bench';
+  /* v1.23: 사전이 커져 «벤치»가 «스미스 벤치프레스» 별명에도 걸림 → 가장 길게 맞은 낱말(이름 우선)을 고른다 */
+  const score = e => Math.max(0, ...[[e.name, 100], ...(e.al || '').split(' ').map(w => [w, 0])].map(([w, bonus]) => { w = w.replace(/\s/g, ''); return w.length >= 2 && n.includes(w) ? w.length + bonus : 0; }));
+  const hit = EX_DICT.filter(e => e.mode === 'wr').map(e => [e, score(e)]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1])[0];
+  return hit ? hit[0].id : 'bench';
 }
 function plateauReply(rs, ex) {
   const e = EX[ex], nm = e.name, sess = byDate(rs).filter(r => (r.items || []).some(it => it.ex === ex && doneSets(it).some(x => x.w > 0)));

@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.22';
+const VER = 'v1.23';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -108,12 +108,12 @@ const fresh = () => ({ type:'mungchi', chosen:false, onboarded:false, goal:3, go
   owned:{ cap:1 }, equipped:{ cap:true }, inv:{ boost1:0, boost7:0, potion:0, charm:0 }, boostNext:false, boost7Until:null, nextBoosts:[], timedBoosts:[], eatCat:'all', paidLog:[], shields:0,
   records: seedRecords(), hist: seedHist(), streakWeeks: 5, ticketLeft: 1, ticketAuto: true, custom: [],
   session:null, lastResult:null, entryDemo:true, verifyDemo:'auto', holdDemo:false, selfieDemo:'pass', selfieSeen:false, selfieStep:'guide', selfieFor:null, bump:0,
-  tab:'home', sub:null, wseg:'mine', fTab:'week', pureOnly:false, sTab:'effect', pick:null, cur:null, recId:null, editRec:null, part:'all', q:'', placeQ:'',
+  tab:'home', sub:null, wseg:'mine', fTab:'week', pureOnly:false, sTab:'effect', pick:null, cur:null, recId:null, editRec:null, part:'all', gear:'all', q:'', placeQ:'', cx:null,
   calc:null });
 let S;
 try { S = Object.assign(fresh(), JSON.parse(localStorage.getItem(KEY) || '{}')); } catch { S = fresh(); }
 if (S.exLv == null) { S.exLv = S.level; S.exXp = S.xp; }   // v1.18 이전 저장분: 운동 레벨 = 지금 레벨에서 시작
-(S.custom || []).forEach(c => { EX[c.id] = c; });
+(S.custom || []).forEach(c => { if (c.cat === 'custom') c.cat = 'body'; EX[c.id] = c; });   // v1.22 이전 «직접 추가»(분류 없음) = 맨몸
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { toast('저장 공간이 부족해요 — 사진을 몇 장 지워 주세요'); } };
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[c]);
@@ -199,6 +199,10 @@ const bestOf = ex => { const e = EX[ex]; return Math.max(0, ...histOf(ex).flatMa
 const bestW = ex => Math.max(0, ...histOf(ex).flatMap(h => (h.sets || []).map(s => s.w || 0)));
 const freq = () => { const c = {}; [...realRecs().flatMap(r => (r.items || []).map(i => i.ex)), ...Object.entries(S.hist).flatMap(([k, v]) => v.map(() => k))].forEach(x => { c[x] = (c[x] || 0) + 1; });
   return Object.entries(c).filter(([k]) => EX[k] && EX[k].cat !== 'lesson').sort((a, b) => b[1] - a[1]).map(([k]) => k); };
+/* v1.23 «최근 한 운동» = 최근 기록 순(같은 날은 기록 안 순서) · 중복 없이 · 레슨·숨김 제외 */
+const recentEx = (n = 12) => { const rows = [...realRecs().flatMap(r => (r.items || []).map((i, k) => ({ d: r.date, k, ex: i.ex }))),
+  ...Object.entries(S.hist).flatMap(([ex, v]) => v.map(h => ({ d: h.date, k: 99, ex })))].sort((a, b) => b.d.localeCompare(a.d) || a.k - b.k);
+  return [...new Set(rows.map(r => r.ex))].filter(x => EX[x] && EX[x].cat !== 'lesson' && !EX[x].off).slice(0, n); };
 const placeBase = p => p.replace(/ · .*$/, '');
 const placeMem = place => [...new Set(realRecs().filter(r => placeBase(r.place) === place).flatMap(r => (r.items || []).map(i => i.ex)))].filter(x => EX[x] && EX[x].cat !== 'lesson');
 /* 지난번 루틴 = 직전 «같은 요일·같은 장소» 세션, 없으면 같은 장소의 가장 최근 세션 */
@@ -478,28 +482,55 @@ function moodPreviewText() {
   return `기록대로면: ${why} (60% 미만 아쉬운 · 130% 이상 신남) · 레벨·경험치·연속엔 영향 없음`;
 }
 
-/* ===== C4 운동 선택 ===== */
+/* ===== C4 운동 선택 (v1.23 C안: 최근 한 운동 → 기구 종류 탭 → 부위 → 목록) ===== */
 function vPick() {
   const s = S.session; if (!s) return vWorkout();
-  const lr = lastRoutine(s.place.name), f = freq().slice(0, 8), mem = placeMem(s.place.name), pop = CENTER_POP[s.place.name] || [];
-  const chip = id => EX[id].off ? '' : `<button class="chip ${s.items.some(i => i.ex === id) ? 'on' : ''}" data-act="addEx" data-v="${id}">${EX[id].name}</button>`;
+  const lr = lastRoutine(s.place.name), rec = recentEx(), pop = (CENTER_POP[s.place.name] || []).filter(id => EX[id] && !EX[id].off);
+  const chip = id => `<button class="chip ${s.items.some(i => i.ex === id) ? 'on' : ''}" data-act="addEx" data-v="${id}">${esc(EX[id].name)}</button>`;
+  const routine = lr && !s.items.length ? `<button class="chip rtchip" data-act="routine" id="routineChip">↻ 지난번 루틴 ${lr.items.filter(i => EX[i.ex] && EX[i.ex].cat !== 'lesson').length}개</button>` : '';
   return `${subHead('운동 추가', 'session', '오늘 운동')}<div class="sec">
-  <div class="card" style="padding:12px 16px"><div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input id="exQ" placeholder="운동 이름 검색 (예: 벤치, 러닝머신)" value="${esc(S.q)}" autocomplete="off"></div></div>
-  ${lr && !s.items.length ? `<button class="card routine" data-act="routine"><div class="h3">지난번 루틴 그대로</div><b>${md(lr.date)} · ${esc(placeBase(lr.place))}</b><div class="rchips">${lr.items.filter(i => EX[i.ex]).map(i => `<span>${EX[i.ex].name}</span>`).join('')}</div><span class="rgo">한 번에 불러오기 ›</span></button>` : ''}
-  <div class="card"><div class="h3">최근·자주 한 운동</div><div class="chips hscroll" id="freqChips">${f.map(chip).join('')}</div>
-  ${mem.length ? `<div class="h3" style="margin-top:12px">${esc(s.place.name)}에서 내가 했던 운동</div><div class="chips">${mem.map(chip).join('')}</div>` : ''}
-  ${pop.length ? `<div class="h3" style="margin-top:12px">이 센터에서 많이 하는 운동</div><div class="chips">${pop.map(chip).join('')}</div>` : ''}</div>
-  <div class="chips parts" id="partChips">${['all', ...PARTS].map(p => `<button class="chip ${S.part === p ? 'on' : ''}" data-act="part" data-v="${p}">${p === 'all' ? '전체' : p}</button>`).join('')}</div>
+  <div class="card" style="padding:12px 16px"><div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input id="exQ" placeholder="운동 이름 검색 (예: 벤치, 사레레)" value="${esc(S.q)}" autocomplete="off"></div></div>
+  ${rec.length || routine ? `<div class="card recent" id="recentRow"><div class="h3">최근 한 운동</div><div class="chips hscroll gchips" id="recentChips">${routine}${rec.map(chip).join('')}</div></div>` : ''}
+  <div class="seg gear" id="gearTabs">${GEAR_TABS.map(([k, l]) => `<button class="${S.gear === k ? 'on' : ''}" data-act="gear" data-v="${k}">${l}</button>`).join('')}</div>
+  <div class="chips parts" id="partChips">${['all', ...PARTS].map(p => `<button class="chip ${S.part === p ? 'on' : ''}" data-act="part" data-v="${p}">${p === 'all' ? '모든 부위' : p}</button>`).join('')}</div>
   <div class="card" id="exList">${exListHTML()}</div>
+  ${pop.length ? `<div class="card"><div class="h3">이 센터에서 많이 하는 운동</div><div class="chips gchips">${pop.map(chip).join('')}</div></div>` : ''}
   <div class="muted">레슨(PT·필라테스·GX)은 선생님이 진행 확정하면 자동으로 기록돼요</div></div>`;
 }
+/* 검색어가 있으면 탭·부위와 상관없이 전체에서 찾는다(집·야외 장소 제한만 유지) */
 function exListHTML() {
-  const s = S.session, q = S.q.trim().replace(/\s/g, ''), home = s && s.place.kind !== 'center';
-  const list = EX_DICT.concat(S.custom).filter(e => e.cat !== 'lesson' && (S.part === 'all' || e.part === S.part) && (!home || e.home || e.custom)
-    && (!q || (e.name + (e.al || '')).replace(/\s/g, '').includes(q)));
-  const rows = list.map(e => `<button class="prow tap" data-act="addEx" data-v="${e.id}"><div><b>${e.name}</b><small>${CAT_NAME[e.cat] || '내가 추가'} · ${e.part}${e.mode === 'cardio' ? ' · 시간' : e.mode === 'wr' ? ' · 무게×횟수' : e.mode === 't' ? ' · 시간' : ' · 횟수'}</small></div><span class="plus">${s && s.items.some(i => i.ex === e.id) ? '✓' : '+'}</span></button>`).join('');
-  const addCustom = q ? `<button class="prow tap" data-act="customEx" id="customEx"><div><b>«${esc(S.q.trim())}» 직접 추가</b><small>이름만 저장 · 경험치는 맨몸 1세트 기준</small></div><span class="plus">+</span></button>` : '';
-  return (rows || `<div class="muted" style="padding:10px 0">찾는 운동이 없어요.</div>`) + addCustom + (home ? `<div class="muted" style="padding-top:10px">${s.place.name === '집' ? '집' : '야외'}에서 할 수 있는 운동만 보여요</div>` : '');
+  const s = S.session, q = S.q.trim().replace(/\s/g, ''), home = s && s.place.kind !== 'center', place = s ? s.place.name : '';
+  const list = EX_DICT.concat(S.custom).filter(e => e.cat !== 'lesson' && !e.off && (!home || e.home || e.custom) && machineOk(e, place)
+    && (q ? (e.name + (e.al || '')).replace(/\s/g, '').toLowerCase().includes(q.toLowerCase())
+          : (S.gear === 'all' || e.cat === S.gear) && (S.part === 'all' || e.part === S.part)));
+  const kind = e => (e.custom ? '내가 추가 · ' : '') + (CAT_NAME[e.cat] || '맨몸·소도구');
+  const rows = list.map(e => `<button class="prow tap" data-act="addEx" data-v="${e.id}"><div><b>${esc(e.name)}</b><small>${kind(e)} · ${e.part}${e.mode === 'cardio' ? ' · 시간' : e.mode === 'wr' ? ' · 무게×횟수' : e.mode === 't' ? ' · 시간' : ' · 횟수'}</small></div><span class="plus">${s && s.items.some(i => i.ex === e.id) ? '✓' : '+'}</span></button>`).join('');
+  const same = q && EX_DICT.concat(S.custom).some(e => e.name.replace(/\s/g, '') === q);
+  const addCustom = q && !same ? `<button class="prow tap" data-act="customEx" id="customEx"><div><b>«${esc(S.q.trim())}» 직접 추가</b><small>기구 종류를 고르면 무게·횟수로 기록할 수 있어요</small></div><span class="plus">+</span></button>` : '';
+  const empty = !q && S.gear === 'machine' && home ? `${s.place.name === '집' ? '집' : '야외'}에서는 머신 운동이 없어요` : '찾는 운동이 없어요.';
+  const head = q ? `<div class="muted qall">${list.length ? `전체 운동에서 찾았어요 · ${list.length}개` : '전체 운동에서 찾아봤는데 없어요'}</div>` : '';
+  return head + (rows || (q ? '' : `<div class="muted" style="padding:10px 0">${empty}</div>`)) + addCustom
+    + (home ? `<div class="muted" style="padding-top:10px">${s.place.name === '집' ? '집' : '야외'}에서 할 수 있는 운동만 보여요</div>` : '');
+}
+/* 직접 추가(v1.23): 기구 종류에 따라 기록 방식이 정해진다 — 머신·프리웨이트 = 무게×횟수(웨이트 1세트 경험치), 맨몸 = 횟수, 유산소·집·야외 = 시간 */
+const CX_CATS = [['machine', '머신', 'wr'], ['free', '프리웨이트', 'wr'], ['body', '맨몸', 'r'], ['cardio', '유산소', 'cardio'], ['out', '집·야외', 'cardio']];
+const CX_HOW = { wr: '무게(kg)×횟수로 기록 · 세트마다 경험치', r: '횟수로 기록 · 세트마다 경험치', cardio: '시간(분)으로 기록 · 1분마다 경험치' };
+function cxSheet() {
+  const c = S.cx; if (!c) return shClose();
+  const mode = CX_CATS.find(x => x[0] === c.cat)[2];
+  sheet(`<div class="h2" style="margin-bottom:4px">«${esc(c.name)}» 직접 추가</div><div class="muted">나만 보는 운동이에요 · 다음부터 «최근 한 운동»에 나와요</div>
+  <div class="h3" style="margin-top:14px">기구 종류</div><div class="chips gchips" id="cxCat">${CX_CATS.map(([k, l]) => `<button class="chip ${c.cat === k ? 'on' : ''}" data-act="cxCat" data-v="${k}">${l}</button>`).join('')}</div>
+  <div class="h3" style="margin-top:12px">주로 쓰는 부위</div><div class="chips gchips" id="cxPart">${PARTS.map(p => `<button class="chip ${c.part === p ? 'on' : ''}" data-act="cxPart" data-v="${p}">${p}</button>`).join('')}</div>
+  <div class="muted" id="cxHow" style="margin-top:12px">${CX_HOW[mode]}</div>
+  <div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="shClose">취소</button><button class="btn" data-act="cxOk" id="cxOk">추가하고 기록</button></div>`);
+}
+function cxCreate() {
+  const c = S.cx; if (!c) return;
+  const mode = CX_CATS.find(x => x[0] === c.cat)[2], cid = 'custom_' + Date.now().toString(36);
+  const e = { id: cid, name: c.name, cat: c.cat, part: c.part, sub: [], mode, xpk: mode === 'wr' ? 'weight' : mode === 'cardio' ? 'cardio' : 'body', custom: 1,
+    home: c.cat === 'machine' ? undefined : 1, ...(mode === 'wr' ? { w: 10, step: 2.5, bw: 3 } : {}) };
+  S.custom.push(e); EX[cid] = e; S.cx = null; S.q = ''; shClose();
+  toast(`«${e.name}» 추가 · ${CAT_NAME[e.cat]} · ${e.part}`); return addEx(cid);
 }
 
 /* ===== C6 세트 기록 ===== */
@@ -1114,8 +1145,12 @@ document.addEventListener('click', e => {
   if (a === 'addEx') return addEx(v);
   if (a === 'openEx') { S.cur = v; return go('workout', EX[v].mode === 'cardio' ? 'cardio' : EX[v].mode === 'lesson' ? 'session' : 'set'); }
   if (a === 'routine') return loadRoutine();
-  if (a === 'customEx') { const name = S.q.trim().slice(0, 20), cid = 'custom_' + Date.now();
-    const c = { id: cid, name, cat: 'custom', part: '전신', sub: [], mode: 'r', xpk: 'body', custom: 1, home: 1 }; S.custom.push(c); EX[cid] = c; S.q = ''; toast(`«${name}» 추가 · 부위는 전신으로 시작`); return addEx(cid); }
+  if (a === 'customEx') { const name = S.q.trim().replace(/[<>"&]/g, '').slice(0, 20); if (!name) return;
+    const home = S.session && S.session.place.kind !== 'center';
+    S.cx = { name, cat: S.gear !== 'all' && !(home && S.gear === 'machine') ? S.gear : home ? 'body' : 'machine', part: S.part !== 'all' ? S.part : '전신' }; return cxSheet(); }
+  if (a === 'cxCat') { S.cx.cat = v; return cxSheet(); }
+  if (a === 'cxPart') { S.cx.part = v; return cxSheet(); }
+  if (a === 'cxOk') return cxCreate();
   if (a === 'endSession') return endSession();
   if (a === 'discard') { shClose(); S.session = null; save(); toast('기록 없이 운동을 닫았어요'); return go('workout'); }
   if (a === 'setDone') return setDone();
@@ -1175,6 +1210,7 @@ document.addEventListener('click', e => {
   else if (a === 'pure') S.pureOnly = !S.pureOnly;
   else if (a === 'stab') S.sTab = v;
   else if (a === 'part') { S.part = v; }
+  else if (a === 'gear') { S.gear = v; }
   else if (a === 'buy') { const x = ITEMS.find(i => i.id === id); if (S.points < x.price) return toast('포인트가 부족해요 — 니짐 포인트 충전 화면으로 이어져요');
     S.points -= x.price; if (x.use) S.inv[id] = (S.inv[id] || 0) + 1; else S.owned[id] = 1; toast(`${x.name} 구매 완료 · -${x.price}P`); }
   else if (a === 'use') return useItem(id);

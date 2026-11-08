@@ -423,21 +423,40 @@ const MED_FIXED = {
   diet: ['식단·보충제 양은 내가 정해 줄 수 없어.', '영양사나 의사와 상담해 줘. 운동 루틴은 1개씩 같이 짜 보자.'],
 };
 const jo = (w, a, b) => { const c = w.charCodeAt(w.length - 1) - 0xAC00; return w + (c >= 0 && c <= 11171 && c % 28 ? a : b); };   // 받침 있으면 a(을·이·은)
-function coachReply(kind) {
-  const rs = byDate([...S.records, ...histSessions()]), last = [...S.records].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)[0];
+/* 정체 질문(v1.22): 실제 기록만으로 답한다. 기록이 없거나 1번뿐이면 숫자를 지어내지 않고 «아직 판단 못 함»
+   질문에 무게 운동 이름이 있으면 그 운동, 없으면 벤치프레스 */
+const PLATEAU_WEEKS = 4;   // 주간 리포트 «N주째 제자리»와 같은 기준
+function plateauEx(q) {
+  const n = String(q || '').replace(/\s/g, '');
+  const hit = EX_DICT.filter(e => e.mode === 'wr').find(e => [e.name, ...(e.al || '').split(' ')].filter(w => w.length >= 2).some(w => n.includes(w.replace(/\s/g, ''))));
+  return hit ? hit.id : 'bench';
+}
+function plateauReply(rs, ex) {
+  const e = EX[ex], nm = e.name, sess = byDate(rs).filter(r => (r.items || []).some(it => it.ex === ex && doneSets(it).some(x => x.w > 0)));
+  if (!sess.length) return [`${jo(nm, '은', '는')} 아직 기록이 없어서 정체인지 볼 수 없어.`, '2번 이상 기록하면 무게가 늘고 있는지 같이 봐 줄게!'];
+  const topOf = r => Math.max(...r.items.filter(it => it.ex === ex).flatMap(it => doneSets(it).map(x => x.w || 0)));
+  const best = Math.max(...sess.map(topOf)), first = sess.find(r => topOf(r) === best), wks = Math.floor((dOf(TODAY) - dOf(first.date)) / (7 * DAY));
+  if (sess.length < 2) return [`${jo(nm, '은', '는')} ${md(first.date)} ${kg(best)} 1번 기록했어.`, '아직 1번이라 정체인지 판단하긴 일러. 2~3번 더 쌓아 보자!'];
+  if (wks >= PLATEAU_WEEKS) return [`${nm} ${kg(best)}에서 ${wks}주째야.`, `다음엔 ${kg(e.step && e.step < 2.5 ? e.step : 2.5)}만 올려서 8회부터 해 볼까?`, '안 되면 지금 무게로 1세트 더해도 좋아.'];
+  return [`${nm} 최고 무게는 ${kg(best)}, ${md(first.date)}에 찍었어.`, `${wks ? `${wks}주` : '1주도 안'} 됐으니 아직 정체는 아니야. 지금처럼 꾸준히 가자!`];
+}
+function coachReply(kind, q = '') {
+  /* v1.22: 통계·리포트와 같은 기록(statRecs)만 본다 — 기록이 없을 때 임시 숫자로 채우지 않는다 */
+  const rs = byDate(statRecs()), last = [...rs].filter(r => !r.demo).sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)[0], none = !rs.length;
   const p4 = partSets(inRange(rs, addD(TODAY, -27), TODAY)), big = ['가슴', '등', '하체', '어깨'], lo = big.sort((a, b) => p4[a] - p4[b])[0], hi = [...big].sort((a, b) => p4[b] - p4[a])[0];
-  const wk7 = partSets(inRange(rs, addD(TODAY, -6), TODAY)), notYet = ['등', '가슴', '하체', '어깨'].find(p => !wk7[p]) || '어깨';
+  const wk7 = partSets(inRange(rs, addD(TODAY, -6), TODAY)), notYet = ['등', '가슴', '하체', '어깨'].find(p => !wk7[p]) || lo;
   const pick = { 등: '랫풀다운·시티드 로우', 가슴: '벤치프레스·체스트 프레스', 하체: '레그 프레스·스쿼트', 어깨: '숄더 프레스·사이드 레터럴' }[notYet];
   const lastWeek = weekReport(rs, addD(weekStart(TODAY), -7)), run = streakDaysEnding(rs, todayDone() ? TODAY : addD(TODAY, -1));
-  const bench = prEvents(rs).filter(e => e.ex === 'bench').pop(), bw = bestW('bench') || 60, bwks = bench ? Math.max(1, Math.floor((dOf(TODAY) - dOf(bench.date)) / (7 * DAY))) : 4;
-  const lesson = [...S.records].filter(r => r.v === 'lesson').sort((a, b) => b.date.localeCompare(a.date))[0];
+  const bigSum = big.reduce((a, p) => a + p4[p], 0), allDone = ['등', '가슴', '하체', '어깨'].every(p => wk7[p]);
+  const lastDays = last ? Math.round((dOf(TODAY) - dOf(last.date)) / DAY) : null;
+  const lesson = [...rs].filter(r => r.v === 'lesson' && !r.ro).sort((a, b) => b.date.localeCompare(a.date))[0];
   return {
     session: last ? [`${md(last.date)} ${last.summary.split(' · ')[0]} 해냈네!`, `${placeBase(last.place)}에서 ${fmt(last.xp)} XP 쌓였어.`, '다음엔 같은 무게로 1세트만 더 가 보자.'] : ['아직 기록이 없어. 1번만 기록해도 내가 봐 줄게!'],
-    week: [`지난주 ${lastWeek.sessions}번 운동했어${lastWeek.sessions >= S.goal ? ', 목표 딱 채웠어!' : '.'}`, lastWeek.missing.length ? `${jo(lastWeek.missing.join('·'), '은', '는')} 비어 있었어.` : '큰 부위 4곳 다 챙겼어.', '자세한 건 주간 리포트에 정리해 뒀어 📋'],
-    next: [`이번 주 아직 ${jo(notYet, '을', '를')} 안 했어.`, `오늘은 ${pick} 3세트씩 어때?`],
-    plateau: [`벤치 ${kg(bw)}에서 ${bwks}주째야.`, '다음엔 2.5kg만 올려서 8회부터 해 볼까?', '안 되면 지금 무게로 1세트 더해도 좋아.'],
-    balance: [`4주 동안 ${jo(hi, '이', '가')} ${p4[hi]}세트로 제일 많았어.`, p4[lo] ? `${jo(lo, '은', '는')} ${p4[lo]}세트뿐이라 이번 주 1번 넣어 보자.` : `${jo(lo, '은', '는')} 한 번도 없어서 이번 주 1번 넣어 보자.`],
-    rest: run >= 3 ? [`${run}일 연속 운동했어. 진짜 대단해!`, '오늘은 쉬거나 스트레칭 10분만 하자.'] : [run ? `최근 ${run}일 연속 운동했어.` : `마지막 운동이 ${Math.min(lastWorkoutDays(), 99)}일 전이야.`, '몸이 괜찮으면 오늘 해도 좋아. 같은 부위만 이틀 연속은 피하자.'],
+    week: !lastWeek.sessions ? ['지난주엔 운동 기록이 없어.', '이번 주에 1번만 기록해도 주간 리포트에 정리해 줄게 📋'] : [`지난주 ${lastWeek.sessions}번 운동했어${lastWeek.sessions >= S.goal ? ', 목표 딱 채웠어!' : '.'}`, lastWeek.missing.length ? `${jo(lastWeek.missing.join('·'), '은', '는')} 비어 있었어.` : '큰 부위 4곳 다 챙겼어.', '자세한 건 주간 리포트에 정리해 뒀어 📋'],
+    next: none ? ['아직 운동 기록이 없어.', `처음이면 ${pick}부터 편한 무게로 3세트씩 어때?`] : allDone ? ['이번 주 큰 부위 4곳 다 했어!', `오늘은 4주 동안 제일 적게 한 ${jo(lo, '을', '를')} ${pick}로 3세트씩 어때?`] : [`이번 주 아직 ${jo(notYet, '을', '를')} 안 했어.`, `오늘은 ${pick} 3세트씩 어때?`],
+    plateau: plateauReply(rs, plateauEx(q)),
+    balance: !bigSum ? ['최근 4주 근력 기록이 없어서 밸런스를 아직 볼 수 없어.', '2~3번 기록하면 부위별로 정리해 줄게!'] : [`4주 동안 ${jo(hi, '이', '가')} ${p4[hi]}세트로 제일 많았어.`, p4[lo] ? `${jo(lo, '은', '는')} ${p4[lo]}세트뿐이라 이번 주 1번 넣어 보자.` : `${jo(lo, '은', '는')} 한 번도 없어서 이번 주 1번 넣어 보자.`],
+    rest: !last ? ['아직 운동 기록이 없어.', '몸이 괜찮으면 오늘 가볍게 시작해 보자. 아프면 쉬는 게 먼저야.'] : run >= 3 ? [`${run}일 연속 운동했어. 진짜 대단해!`, '오늘은 쉬거나 스트레칭 10분만 하자.'] : [run ? `최근 ${run}일 연속 운동했어.` : (lastDays ? `마지막 운동이 ${lastDays}일 전이야.` : '오늘 운동 기록이 있어.'), '몸이 괜찮으면 오늘 해도 좋아. 같은 부위만 이틀 연속은 피하자.'],
     safety: ['무게는 지난번보다 10% 안쪽으로 올려 줘.', '한 번에 20% 넘게 올리면 내가 알려 줄게. 천천히 가자!'],
     lesson: lesson ? [`${md(lesson.date)} PT 확인됐어!`, `선생님 확인이라 경험치 2배, ${fmt(lesson.xp)} XP 들어왔어 ⭐`] : ['아직 확인된 레슨이 없어. 수업 끝나면 선생님 확인 1번이면 돼.'],
   }[kind];
@@ -456,7 +475,7 @@ function ask(q, kind = classify(q)) {
   if (!fixed && c.used >= COACH_MAX) return toast('이번 달 질문 20번을 다 썼어요');
   c.msgs.push({ who: 'me', text: q });
   if (fixed) c.msgs.push({ who: 'bot', lines: MED_FIXED[kind], fixed: true, kind });
-  else { c.used++; c.msgs.push({ who: 'bot', lines: kind === 'unknown' ? ['그건 내가 잘 모르는 질문이야.', '루틴·휴식·운동 방법이라면 1개씩 물어봐 줘!'] : coachReply(kind), kind }); }
+  else { c.used++; c.msgs.push({ who: 'bot', lines: kind === 'unknown' ? ['그건 내가 잘 모르는 질문이야.', '루틴·휴식·운동 방법이라면 1개씩 물어봐 줘!'] : coachReply(kind, q), kind }); }
   c.msgs = c.msgs.slice(-30);
 }
 function vCoach() {
@@ -483,7 +502,8 @@ function vCoach() {
   <div class="muted" style="margin-top:8px">의학적 조언이 아니에요 · 통증·질환 질문은 규칙이 가로채서 고정 안내로 답해요(AI 호출 안 함)</div>
   <button class="card replink tap" data-act="report" data-v="coach" style="margin-top:12px"><div><b>주간 리포트 보기</b><small>지난주 부위·PR·다음 주 제안</small></div><span class="muted">›</span></button>
   ${demoCard('남은 횟수', 'coachUsed', String(c.used), [['3', '17번 남음'], ['19', '1번 남음'], ['20', '20번 도달']])}
-  <div style="display:flex;gap:8px;margin-top:-4px"><button class="btn sm ghost demochip" data-act="coachClear" style="margin:0">🧪 대화 지우기</button><button class="btn sm ghost demochip" data-act="coachReset" style="margin:0">🧪 첫 진입 고지 다시</button></div></div>`;
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:-4px"><button class="btn sm ghost demochip" data-act="coachClear" style="margin:0">🧪 대화 지우기</button><button class="btn sm ghost demochip" data-act="coachReset" style="margin:0">🧪 첫 진입 고지 다시</button><button class="btn sm ghost demochip" data-act="coachNewUser" id="coachNewUser" style="margin:0">🧪 새 사용자(기록 0)</button></div>
+  <div class="muted" style="margin-top:6px">새 사용자 시연은 지난 기록을 모두 비워요 · 되돌리기는 설정 › 처음 상태로</div></div>`;
 }
 
 /* ===== 연결: 화면 등록 · 기존 화면 보강 · 버튼 ===== */
@@ -504,6 +524,7 @@ document.addEventListener('click', e => {
     coachSend: () => { const el = $('coachQ'); ask(el ? el.value : ''); },
     coachUsed: () => { S.coach.used = +v; },
     coachClear: () => { S.coach.msgs = []; },
+    coachNewUser: () => { S.records = []; S.hist = {}; S.coach.msgs = []; S.dataDemo = 'normal'; toast('기록 0인 새 사용자로 바꿨어요(시연)'); },
     coachReset: () => { S.coach.agreed = false; S.coach.msgs = []; if (S.sub !== 'coach') return go('workout', 'coach'); },
     report: () => { S.repFrom = v === 'coach' ? 'coach' : 'stats'; S.repWeek = 1; return go('workout', 'report'); },
     repWeek: () => { S.repWeek = Math.max(0, Math.min(8, S.repWeek + dd)); },

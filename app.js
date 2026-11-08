@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.21';
+const VER = 'v1.22';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -300,7 +300,21 @@ const vAll = () => vDummy('전체', ['실제 앱 «전체» 메뉴 자리 (마�
 function subHead(title, to = '', label = '운동기록') { return `<div class="subhead"><button data-act="back" data-v="${to}" id="backBtn"><i>‹</i>${label}</button><div class="h2">${title}</div></div>`; }
 const vBadge = k => (k = vk(k)) === 'self' ? '<span class="vb v0">자가 기록</span>' : `<span class="vb ${k}">${VERIFY_LABEL[K2V[k]]}</span>`;
 const sfBadge = on => on ? '<span class="vb selfie">📸 오운완</span>' : '';
-const stepper = (act, val, label, unit = '') => `<div class="ex"><div><b>${label}</b></div><div class="step"><button data-act="${act}" data-d="-1" aria-label="${label} 줄이기">−</button><span>${val}${unit}</span><button data-act="${act}" data-d="1" aria-label="${label} 늘리기">+</button></div></div>`;
+const stepper = (act, val, label, unit = '', mid = null) => `<div class="ex"><div><b>${label}</b></div><div class="step"><button data-act="${act}" data-d="-1" aria-label="${label} 줄이기">−</button>${mid || `<span>${val}${unit}</span>`}<button data-act="${act}" data-d="1" aria-label="${label} 늘리기">+</button></div></div>`;
+/* 무게 직접 입력(v1.22): 숫자를 누르면 숫자 키패드. data-act 를 달지 않는다 — 전역 click 이 render() 해서 포커스가 날아가므로 */
+const W_MAX = 500;
+const wWidth = v => { const t = String(v); return `${Math.max(1, t.length - (t.match(/[.,]/g) || []).length * 0.6) + 0.15}ch`; };
+const wInput = (w, attrs) => { const v = +(+w).toFixed(1); return `<label class="wfield"><input class="win" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" maxlength="6" value="${v}" style="width:${wWidth(v)}" ${attrs} aria-label="무게(kg) 직접 입력"><i>kg</i></label>`; };
+/* «22,5»(쉼표 키패드) → 22.5 · 0.5kg 단위로 맞춤 · 빈칸·음수·문자·500 초과는 거절(이전 값 유지) */
+function parseW(raw) {
+  const t = String(raw).trim().replace(/\s/g, '').replace(',', '.').replace(/kg$/i, '');
+  if (!t) return { ok: false, msg: '무게를 적어 주세요 · 이전 값으로 돌려놨어요' };
+  if (!/^\d{1,3}(\.\d*)?$|^\.\d+$/.test(t)) return { ok: false, msg: /^-/.test(t) ? '0kg보다 작은 무게는 적을 수 없어요' : '숫자로만 적어 주세요 (예: 22.5)' };
+  const v = +t;
+  if (v > W_MAX) return { ok: false, msg: `${W_MAX}kg까지만 적을 수 있어요` };
+  const w = Math.round(v * 2) / 2;
+  return { ok: true, w, snapped: Math.abs(w - v) > 1e-9 };
+}
 const sw = (act, on, id = '') => `<button class="sw ${on ? 'on' : ''}" data-act="${act}" ${id ? `id="${id}"` : ''}></button>`;
 const obProg = n => `<div class="obprog" aria-label="3단계 중 ${n}단계">${[1, 2, 3].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}<span>${n}/3</span></div>`;
 const LOCK = '<svg class="ico" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>';
@@ -501,11 +515,11 @@ function vSet() {
   <div class="card"><div class="muted">${e.part}${e.sub.length ? ` · ${e.sub.join('·')}` : ''} · ${CAT_NAME[e.cat] || '내가 추가'}</div>
   <div class="prevrec" id="prevRec">${prev ? `지난번 ${md(prev.date)} · ${setsTxt(e, prev.sets)}` : '이 운동은 처음이에요 · 편한 무게로 시작해요'}</div>
   ${best ? `<div class="muted">최고 기록 ${setTxt(e, best)}</div>` : ''}
-  <div class="setsteps">${e.mode === 'wr' ? stepper('stw', kg(d.w).replace('kg', ''), '무게', 'kg') : ''}${e.mode === 't' ? stepper('sts', d.s, '시간', '초') : stepper('str', d.r, '횟수', '회')}</div>
+  <div class="setsteps">${e.mode === 'wr' ? stepper('stw', kg(d.w).replace('kg', ''), '무게', 'kg', wInput(d.w, 'id="wIn" data-w="draft"')) : ''}${e.mode === 't' ? stepper('sts', d.s, '시간', '초') : stepper('str', d.r, '횟수', '회')}</div>
   ${chk.jump && !chk.unreal ? `<div class="warn" id="safetyWarn">지난번보다 ${chk.jumpPct}% 무거워요. 처음 1~2회는 가볍게 몸을 풀고, 보조자와 함께 무리하지 마세요</div>` : ''}
   ${(e.mode === 'wr' || e.mode === 'r') && d.r < CFG.MIN_REPS ? `<div class="minreps" id="minReps">${CFG.MIN_REPS}회 이상부터 경험치</div>` : ''}
   <button class="btn big" data-act="setDone" id="setDone">${ds.length + 1}세트 완료</button>
-  <div class="muted" style="text-align:center;margin-top:6px">다음 세트는 같은 무게·횟수로 미리 채워져요</div></div>
+  <div class="muted" style="text-align:center;margin-top:6px">${e.mode === 'wr' ? '무게 숫자를 누르면 직접 적을 수 있어요(0.5kg 단위) · ' : ''}다음 세트는 같은 무게·횟수로 미리 채워져요</div></div>
   <div class="card rest ${restLeft ? '' : 'idle'}" id="restBox">${restHTML(restLeft)}</div>
   ${ds.length ? `<div class="card" id="doneSets"><div class="h3">오늘 한 세트</div>${ds.map((x, i) => `<div class="setrow"><span>${i + 1}세트</span><b>${setTxt(e, x)}</b><span class="srtags">${xpEligible(e, x) ? '' : '<small class="noxp">경험치 제외</small>'}${x.pr ? '<span class="prtag">PR</span>' : ''}</span></div>`).join('')}
     <button class="linkbtn" data-act="undoSet" style="margin-top:8px">마지막 세트 지우기</button></div>` : ''}
@@ -772,7 +786,7 @@ function vRec() {
   const E = S.editRec, items = E ? E.items : (r.items || []), lesson = r.v === 'lesson';
   const itemHTML = (it, ii) => { const e = EX[it.ex]; if (!e) return '';
     if (e.mode === 'cardio' || e.mode === 'lesson') return `<div class="ritem"><b>${e.name}</b>${E && e.mode === 'cardio' ? `<div class="step"><button data-act="eMin" data-i="${ii}" data-d="-1">−</button><span>${it.min}분</span><button data-act="eMin" data-i="${ii}" data-d="1">+</button></div>` : `<small>${it.min}분${it.km ? ` · ${it.km}km` : ''}${it.level ? ` · ${({ light: '가벼움', normal: '보통', hard: '힘듦' })[it.level]}` : ''}</small>`}</div>`;
-    return `<div class="ritem"><b>${e.name}</b>${(it.sets || []).filter(s => s.done).map((s, si) => E ? `<div class="setrow edit"><span>${si + 1}세트</span>${e.mode === 'wr' ? `<div class="step"><button data-act="eSet" data-i="${ii}" data-s="${si}" data-k="w" data-d="-1">−</button><span>${kg(s.w)}</span><button data-act="eSet" data-i="${ii}" data-s="${si}" data-k="w" data-d="1">+</button></div>` : ''}<div class="step"><button data-act="eSet" data-i="${ii}" data-s="${si}" data-k="${e.mode === 't' ? 's' : 'r'}" data-d="-1">−</button><span>${e.mode === 't' ? s.s + '초' : s.r + '회'}</span><button data-act="eSet" data-i="${ii}" data-s="${si}" data-k="${e.mode === 't' ? 's' : 'r'}" data-d="1">+</button></div><button class="del" data-act="eDel" data-i="${ii}" data-s="${si}" aria-label="세트 지우기">×</button></div>`
+    return `<div class="ritem"><b>${e.name}</b>${(it.sets || []).filter(s => s.done).map((s, si) => E ? `<div class="setrow edit"><span>${si + 1}세트</span>${e.mode === 'wr' ? `<div class="step"><button data-act="eSet" data-i="${ii}" data-s="${si}" data-k="w" data-d="-1">−</button>${wInput(s.w, `data-w="edit" data-i="${ii}" data-s="${si}"`)}<button data-act="eSet" data-i="${ii}" data-s="${si}" data-k="w" data-d="1">+</button></div>` : ''}<div class="step"><button data-act="eSet" data-i="${ii}" data-s="${si}" data-k="${e.mode === 't' ? 's' : 'r'}" data-d="-1">−</button><span>${e.mode === 't' ? s.s + '초' : s.r + '회'}</span><button data-act="eSet" data-i="${ii}" data-s="${si}" data-k="${e.mode === 't' ? 's' : 'r'}" data-d="1">+</button></div><button class="del" data-act="eDel" data-i="${ii}" data-s="${si}" aria-label="세트 지우기">×</button></div>`
       : `<div class="setrow"><span>${si + 1}세트</span><b>${setTxt(e, s)}</b>${s.pr ? '<span class="prtag">PR</span>' : '<span></span>'}</div>`).join('')}</div>`; };
   const ed = E ? editCalc(r, E.items) : null;
   return `${subHead(md(r.date) + ' 기록', S.recFrom || '', S.recFrom === 'stats' ? '통계' : S.recFrom === 'settings' ? '설정' : '운동기록')}<div class="sec">
@@ -843,6 +857,7 @@ function loadRoutine() {
   toast(`지난번 루틴 ${lr.items.length}개를 불러왔어요`); go('workout', 'session');
 }
 function setDone(force = false) {
+  if (!commitWeightField()) return;
   const it = curItem(), e = EX[it.ex], d = it.draft, prev = histOf(it.ex).find(h => h.sets && h.sets.length);
   const chk = checkWeight(e, d.w, { bodyweight: S.bodyweight, bestW: bestW(it.ex), lastTopW: prev ? Math.max(...prev.sets.map(x => x.w || 0)) : 0 });
   if (chk.unreal && !force) return sheet(`<div class="h2">정말 ${kg(d.w)} 맞아요? 🙂</div><div class="muted">${bestW(it.ex) ? `지난 최고 무게(${kg(bestW(it.ex))})의 1.5배가 넘어요.` : '체중에 비해 아주 무거운 무게예요.'} 숫자가 맞으면 그대로 저장돼요.</div>
@@ -1115,7 +1130,7 @@ document.addEventListener('click', e => {
     if (res && res.level > res.from) return afterGain(res, { toast: `셀카 반영 +${fmt(S.selfieGot)} XP` });
     go('workout', 'result'); S.bump = 0; if (S.selfieGot) toast(`셀카 반영 +${fmt(S.selfieGot)} XP`); return; }
   else if (a === 'sdemo') { S.selfieDemo = v; drawSim(); document.querySelectorAll('[data-act="sdemo"]').forEach(x => x.classList.toggle('on', x.dataset.v === v)); save(); return; }
-  else if (a === 'stw') { it.draft.w = clampStep(it.draft.w, dd, EX[it.ex].step || 2.5, 0, 500); }
+  else if (a === 'stw') { if (!commitWeightField()) return; it.draft.w = clampStep(it.draft.w, dd, EX[it.ex].step || 2.5, 0, 500); }
   else if (a === 'str') { it.draft.r = clampStep(it.draft.r, dd, 1, 1, 100); }
   else if (a === 'sts') { it.draft.s = clampStep(it.draft.s, dd, 10, 10, 1800); }
   else if (a === 'undoSet') { const x = it.sets.pop(); if (x && x.pr) s.prCount--; S.rest = null; }
@@ -1187,10 +1202,11 @@ document.addEventListener('click', e => {
   else if (a === 'editStart') { const r = S.records.find(x => x.id === S.recId); S.editRec = { items: JSON.parse(JSON.stringify(r.items || [])) }; }
   else if (a === 'editCancel') S.editRec = null;
   else if (a === 'eSet') { const st = S.editRec.items[+b.dataset.i].sets.filter(x => x.done)[+b.dataset.s], k = b.dataset.k, e2 = EX[S.editRec.items[+b.dataset.i].ex];
+    if (!commitWeightField()) return;
     st[k] = k === 'w' ? clampStep(st.w, dd, e2.step || 2.5, 0, 500) : k === 'r' ? clampStep(st.r, dd, 1, 1, 100) : clampStep(st.s, dd, 10, 10, 1800); }
   else if (a === 'eDel') { const x = S.editRec.items[+b.dataset.i]; const done = x.sets.filter(q => q.done); x.sets.splice(x.sets.indexOf(done[+b.dataset.s]), 1); }
   else if (a === 'eMin') { const x = S.editRec.items[+b.dataset.i]; x.min = clampStep(x.min, dd, 5, 5, CFG.LIM.cardioMaxMin); }
-  else if (a === 'editSave') { const r = S.records.find(x => x.id === S.recId), items = S.editRec.items.filter(x => (x.sets || []).some(q => q.done) || x.min > 0), ed = editCalc(r, items), diff = ed.xp + (r.xpCenter || 0) - r.xp;
+  else if (a === 'editSave') { if (!commitWeightField()) return; const r = S.records.find(x => x.id === S.recId), items = S.editRec.items.filter(x => (x.sets || []).some(q => q.done) || x.min > 0), ed = editCalc(r, items), diff = ed.xp + (r.xpCenter || 0) - r.xp;
     Object.assign(r, { items, summary: summaryOf(items), xp: ed.xp + (r.xpCenter || 0), raw: ed.br.raw, v: 'self', br: ed.br, cut: ed.cap.cut, cutReason: ed.cap.reason, selfieXP: 0, edited: true });
     const res = applyXP({ level: S.level, xp: S.xp }, diff); gainEx(diff); S.level = res.level; S.xp = res.xp; S.editRec = null;
     toast(diff < 0 ? `수정 저장 · ${fmt(-diff)} XP 줄었어요(레벨은 그대로)` : `수정 저장 · ${diff ? '+' + fmt(diff) + ' XP' : '경험치 변화 없음'}`);
@@ -1226,6 +1242,38 @@ document.addEventListener('change', e => {
   const img = new Image(); img.onload = () => { const c = document.createElement('canvas'); c.width = 240; c.height = 320; const g = c.getContext('2d'), r = Math.min(img.width / 3, img.height / 4);
     g.drawImage(img, (img.width - r * 3) / 2, (img.height - r * 4) / 2, r * 3, r * 4, 0, 0, 240, 320); URL.revokeObjectURL(img.src); judgeShot(c.toDataURL('image/jpeg', .72)); };
   img.src = URL.createObjectURL(e.target.files[0]);
+});
+/* 무게 칸 → 상태. 입력 중(input)엔 맞는 숫자만 조용히 반영, 확정(change·완료 키)에 정리·경고 다시 그림 */
+function wTarget(el) {
+  if (el.dataset.w === 'draft') { const it = curItem(); return it && it.draft; }
+  if (el.dataset.w === 'edit' && S.editRec) { const x = S.editRec.items[+el.dataset.i]; return x && x.sets.filter(q => q.done)[+el.dataset.s]; }
+  return null;
+}
+function applyWeight(el, final) {
+  const o = wTarget(el); if (!o) return true;
+  const r = parseW(el.value);
+  if (!r.ok) { if (final) { const back = el.dataset.prev != null ? +el.dataset.prev : o.w; o.w = back; toast(r.msg); el.value = +(+back).toFixed(1); el.style.width = wWidth(el.value); } return false; }
+  o.w = r.w;
+  if (final) { if (r.snapped) toast(`0.5kg 단위로 맞췄어요 · ${kg(r.w)}`); el.value = +r.w.toFixed(1); el.style.width = wWidth(el.value); }
+  return true;
+}
+/* 버튼을 누르기 직전까지 칸에 포커스가 있었으면(iOS 는 버튼 탭에 blur 가 안 남) 그 값을 먼저 확정. 잘못된 값이면 동작 멈춤 */
+function commitWeightField() {
+  const el = document.activeElement; if (!el || !el.classList || !el.classList.contains('win')) return true;
+  const ok = applyWeight(el, true); el.dataset.done = '1'; el.blur(); save(); return ok;
+}
+let ptrDown = false;
+document.addEventListener('pointerdown', () => { ptrDown = true; }, true);
+document.addEventListener('pointerup', () => { setTimeout(() => { ptrDown = false; }, 80); }, true);
+document.addEventListener('focusin', e => { if (e.target.classList && e.target.classList.contains('win')) { delete e.target.dataset.done; const o = wTarget(e.target); if (o) e.target.dataset.prev = o.w; setTimeout(() => e.target.select(), 0); } });
+document.addEventListener('input', e => { if (e.target.classList && e.target.classList.contains('win')) { e.target.style.width = wWidth(e.target.value); applyWeight(e.target, false); save(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.classList && e.target.classList.contains('win')) { e.preventDefault(); e.target.blur(); } });
+document.addEventListener('change', e => {
+  const el = e.target; if (!el.classList || !el.classList.contains('win') || el.dataset.done) return;
+  applyWeight(el, true); save();
+  /* 다른 버튼을 누르다 blur 된 경우 지금 다시 그리면 그 버튼이 사라져 탭이 씹힘 → 손 뗀 뒤 그림 */
+  const redraw = () => { if (!document.activeElement || !document.activeElement.classList.contains('win')) render(); };
+  if (ptrDown) setTimeout(redraw, 160); else redraw();
 });
 function playPending() { const ev = S.events.find(x => x.id === S.pending); if (!ev) { S.pending = null; save(); return render(); } play(ev, { onDone: backToTab }); }
 

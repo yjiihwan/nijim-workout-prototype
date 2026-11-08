@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.24';
+const VER = 'v1.25';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -446,7 +446,7 @@ function vSession() {
     : selfieClaims() ? `<div class="muted sfnote" id="sfSess">오늘 오운완 인증 완료 ✓ · 셀카 보너스는 하루 1번이에요</div>`
     : `<button class="btn ghost camb" data-act="selfie" data-v="session" id="sfSessBtn">${CAM}오운완 셀카 <span class="muted">찍으면 경험치 +${sfPct}% · 하루 1번 · 나만 봐요</span></button>`;
   const demos = [['none','실제 기록대로'],['next','다음 레벨까지 (짧은 연출)'],['boundary','10레벨 경계 넘기 (큰 연출)'],['multi','+5레벨 한꺼번에 (묶음)']];
-  return `${subHead('오늘 운동')}<div class="sec"><div class="honest" id="honestTop">한 만큼만 솔직하게 기록해 주세요. 기록이 정확해야 AI 코칭이 내 몸에 맞게 나와요.</div>${head}${empty}
+  return `${subHead('오늘 운동')}<div class="sec"><div class="honest" id="honestTop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg><span>한 만큼만 솔직하게 기록해 주세요. 기록이 정확해야 AI 코칭이 내 몸에 맞게 나와요.</span></div>${head}${empty}
   <button class="btn ghost" data-act="sub" data-v="pick" id="addExBtn" style="margin-top:0">+ 운동 추가</button>
   ${selfieBtn}
   <div class="card" style="margin-top:12px"><label class="lightrow" style="margin:0;padding:0;border:0"><input type="checkbox" data-act="light" ${s.light ? 'checked' : ''}><span><b>오늘은 가볍게 한 날</b><small>재활·컨디션 조절 날 체크 — 표정 판정에서 빼고, «평소» 계산에도 안 들어가요. 경험치는 그대로예요</small></span></label></div>
@@ -845,6 +845,7 @@ function render() {
   autoEndCheck();
   const v = (S.tab === 'workout' && S.sub && (S.chosen || S.sub.startsWith('onb'))) ? (SUB[S.sub] || vWorkout) : (MAIN[S.tab] || vHome);
   $('view').innerHTML = v();
+  document.body.classList.toggle('wk', S.tab === 'workout');
   eatMount();
   document.querySelectorAll('.tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
   if (S.tab === 'workout' && S.sub === 'selfie' && S.selfieStep === 'cam') camStart();

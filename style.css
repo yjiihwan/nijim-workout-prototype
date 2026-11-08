@@ -554,3 +554,22 @@ select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--g2)
 .mirow .mival{display:flex;align-items:center;gap:6px}.mirow .obfield{width:116px;flex:none}.mirow .obfield input{text-align:right}
 .mix{border:0;background:var(--g1);border-radius:50%;width:28px;height:28px;font-size:16px;color:#6B7280;flex:none}
 .mirow .chips{justify-content:flex-end}
+
+/* v1.25 운동기록 탭 안내 글씨 — 형 지적(작고 연해 잘못 읽음): 크기·굵기·색만. :where 로 낮춰서 기존 개별 규칙(.camb .muted 등)은 그대로 이김 */
+body.wk{--g5:#5E5E69}
+body.wk .ver{color:#8A8A95}
+body.wk .honest{display:flex;gap:9px;align-items:flex-start;background:#EAF6FF;color:#1F2A37;font-size:15px;font-weight:600;line-height:1.5;padding:11px 14px;border-radius:14px;margin:0 0 12px}
+body.wk .honest svg{flex:none;width:18px;height:18px;margin-top:2px;fill:none;stroke:#1E90E0;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+body.wk .honest.end{display:block;background:none;padding:0;color:#3F3F48;font-weight:500;margin:16px 2px 0;text-align:center}
+:where(.wk) .muted{font-size:14px;line-height:1.45}
+body.wk .autoend{font-size:14px;line-height:1.45}
+:where(.wk) :is(.prow,.ex,.rec,.lightrow,.replink,.coachhead,.tile,.entry,.pk,.selfiecta,.opt,.ritem,.privacy,.donec,.rejectc) small{font-size:14px;line-height:1.4}
+:where(.wk) .h3{font-size:14px}
+body.wk .setrow span:first-child{font-size:14px}
+body.wk .minreps{font-size:13px}
+body.wk .noxp{font-size:12px}
+body.wk .mtag{font-size:12px}
+body.wk .msg .bub small.hintl,body.wk .msg .bub small.later{font-size:13px}
+body.wk .camb .muted,body.wk .ptline .muted{font-size:13px}
+:where(.wk) small,:where(.wk) .muted{word-break:keep-all}
+body.wk .replink>span.muted,body.wk .replink>span:last-child{flex:none;white-space:nowrap;margin-left:10px}

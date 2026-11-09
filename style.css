@@ -143,8 +143,8 @@ select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--g2)
 .subhead button i{font-style:normal;font-size:22px;line-height:1;margin-top:-2px}
 .subhead .h2{margin:0;font-size:17px}
 .wseg{margin:0 16px 2px}
-.stage{display:grid;grid-template-columns:140px 1fr;gap:12px;align-items:center}
-.stage .cbox{height:150px}
+.stage{display:grid;grid-template-columns:160px 1fr;gap:12px;align-items:center}
+.stage .cbox{height:128px}
 .eqs{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
 .eqs .pill{background:var(--g1);color:var(--ink);font-weight:600}
 .eqs .pill.none{color:var(--g5);font-weight:500}

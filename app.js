@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.28';
+const VER = 'v1.29';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -382,7 +382,7 @@ function vWorkout() {
   };
   const ex = exprNow();
   return `${seg}<div class="sec" style="padding-top:8px">${pend}
-  <div class="card" id="stageCard"><div class="stage"><div class="cwrap ${ex}">${charHTML(t, lv, 150, true, ex, false, 140)}</div>
+  <div class="card" id="stageCard"><div class="stage"><div class="cwrap ${ex}">${charHTML(t, lv, 128, true, ex, false, 160)}</div>
     <div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span class="name">${esc(CH[t].name)}</span><span class="pill lvpill">Lv.${lv}</span><span class="pill tier${tr}">${TIER_NAME[tr]}</span>${moodPill(moodToday(), true)}${exprPill(ex, true)}</div>
     <div class="bar"><i style="width:${lv>=99?100:Math.round(S.xp/need(lv)*100)}%"></i></div>
     <div class="muted">${lv>=99?'최고 레벨':`Lv.${lv+1}까지 ${toNext.toLocaleString()} XP`} · ${nextEvo}</div>

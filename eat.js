@@ -55,24 +55,28 @@ async function eatCell(t, cut) {
   for (let i = 0; i < Wt.length; i++) { const v = wd[i * 4] / 255; Wt[i] = v; if (v > 0) { const y = (i / d.W) | 0; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
   return (EATC[key] = { d, rest, eat, mo, cl, cr, arm, restData: rg.getImageData(0, 0, d.W, d.H), Wt, y0, y1, work: cv(d.W, d.H) });
 }
-/* 손으로 쥐는 7종(design nijim_eat_grip_12_20261107 6단계): 음식이 칸에 미리 놓인 레이어 → eat_rig.draw_order 대로 eat → 입 → f_<음식> → fist(손가락 앞판).
-   나머지 14종은 위 10-26 레이어(음식을 변환해 끼움) 그대로 */
-const GRIP7 = new Set(['food_chicken_bite', 'food_egg_white', 'food_muscle_jelly', 'food_triple_chicken_burger', 'drink_gym_water', 'drink_ion_drink', 'drink_rainbow_muscle_juice']);
+/* 손으로 쥐는 그림(design 11-09 최종본: nijim_eat_grip_v2_20261108 7종 · nijim_eat_grip_14_20261108 14종 · nijim_eat_resync_20261109 레벨 수정 13칸 · nijim_resync_final_20261108 도트 70~99 체형):
+   음식마다 몸+팔+손+음식 «한 장»(e_<음식>) 위에 입(음식이 입을 가리는 칸은 그 음식용 입판 m_<입>__<음식>). 손가락 앞판·따로 끼우는 음식 레이어 없음 → 음식은 먹는 동안 그대로, 입만 움직임.
+   새 그림이 없는 칸(14종 × Lv.50·코아 밖의 1,540칸)은 10-26 레이어(assets/eat, 음식을 변환해 끼움) 그대로 */
+async function eat2Data(t) { if (!window.EAT2_DATA || !EAT2_DATA[t]) await loadScript(`assets/eat2/${t}/data.js?v=${VER}`); return EAT2_DATA[t]; }
 async function eatCell2(t, cut, fid) {
-  const key = 'g' + t + cut;
+  const key = 'g' + t + cut, base = `assets/eat2/${t}/lv${cut}/`;
   if (!EATC[key]) {
-    if (!window.EAT2_DATA || !EAT2_DATA[t]) await loadScript(`assets/eat2/${t}/data.js?v=${VER}`);
-    const d = EAT2_DATA[t][cut], base = `assets/eat2/${t}/lv${cut}/`;
-    const [rest, eat, mo, cl, cr, fist, w] = await Promise.all(['rest.webp', 'eat.webp', 'mo.webp', 'cl.webp', 'cr.webp', 'fist.webp', 'w.png'].map(f => loadImg(`${base}${f}?v=${VER}`)));
+    const d = (await eat2Data(t))[cut];
+    const [rest, mo, cl, cr, w] = await Promise.all(['rest.webp', 'mo.webp', 'cl.webp', 'cr.webp', 'w.png'].map(f => loadImg(`${base}${f}?v=${VER}`)));
     const cv = (W, H) => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; };
     const rc = cv(d.W, d.H), rg = rc.getContext('2d'); rg.drawImage(rest, d.crop.rest[0], d.crop.rest[1]);
     const wc = cv(d.W, d.H), wg = wc.getContext('2d'); wg.drawImage(w, d.crop.w[0], d.crop.w[1]);
     const wd = wg.getImageData(0, 0, d.W, d.H).data, Wt = new Float32Array(d.W * d.H); let y0 = d.H, y1 = 0;
     for (let i = 0; i < Wt.length; i++) { const v = wd[i * 4] / 255; Wt[i] = v; if (v > 0) { const y = (i / d.W) | 0; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
-    EATC[key] = { v2: 1, d, rest, eat, mo, cl, cr, fist, fl: {}, restData: rg.getImageData(0, 0, d.W, d.H), Wt, y0, y1, work: cv(d.W, d.H) };
+    EATC[key] = { v2: 1, d, rest, mo, cl, cr, el: {}, ml: {}, restData: rg.getImageData(0, 0, d.W, d.H), Wt, y0, y1, work: cv(d.W, d.H) };
   }
   const C = EATC[key];
-  if (fid && !C.fl[fid]) C.fl[fid] = await loadImg(`assets/eat2/${t}/lv${cut}/f_${fid}.webp?v=${VER}`);
+  if (fid && !C.el[fid]) {
+    const ml = C.d.food[fid].ml || {}, keys = Object.keys(ml);
+    const [e, ...ms] = await Promise.all([loadImg(`${base}e_${fid}.webp?v=${VER}`), ...keys.map(k => loadImg(`${base}${ml[k]}.webp?v=${VER}`))]);
+    C.el[fid] = e; C.ml[fid] = Object.fromEntries(keys.map((k, i) => [k, ms[i]]));
+  }
   return C;
 }
 const FOODIMG = {};
@@ -192,13 +196,10 @@ function frame(F) {
     const te = t - ET.eat0; let kind = 'mo', bites = 0, squash = 1;
     if (te >= 0) { const i = Math.min(2, Math.floor(te / ET.BITE)), ph = te % ET.BITE; kind = ph < 200 ? 'mo' : (ph < 400 || ph >= 600) ? 'cl' : 'cr'; bites = i + (ph >= 200 ? 1 : 0);
       if (t >= ET.eat1) { kind = 'cl'; bites = 3; } else if (ph < 200) squash = 1 - .04 * Math.sin(Math.PI * ph / 200); }
-    if (C.v2) {   // anim.py Scene.char: 뒤판 → 입 → 음식(벌림 구간에 입 쪽으로 살짝·사라질 때 흐려짐) → 손가락 앞판
-      const fade = t >= ET.poof0 ? 1 - c01((t - ET.poof0) / (ET.poof1 - ET.poof0 - 60)) : 1, ph = te % ET.BITE;
-      wg.drawImage(C.eat, d.crop.eat[0], d.crop.eat[1]); wg.drawImage(C[kind], d.crop[kind][0], d.crop[kind][1]);
-      const fk = F.food && 'f_' + F.food.fid, fi = F.food && C.fl[F.food.fid];
-      if (fade > 0 && fi) { const dy = te >= 0 && t < ET.eat1 && ph < 200 ? -.035 * Math.sin(Math.PI * ph / 200) * d.S : 0;
-        wg.globalAlpha = fade; wg.drawImage(fi, d.crop[fk][0], d.crop[fk][1] + dy); wg.globalAlpha = 1; }
-      wg.drawImage(C.fist, d.crop.fist[0], d.crop.fist[1]);
+    if (C.v2) {   // anim2.py Scene2: 먹는 중 한 장(몸+팔+손+음식) → 입(음식이 입을 가리면 그 음식용 입판). 음식 그대로·입만 움직임, 사라짐 반짝 가장 클 때(swapOut) 평소로
+      const fid = F.food && F.food.fid, el = fid && C.el[fid], mk = el && (C.d.food[fid].ml || {})[kind];
+      if (el) wg.drawImage(el, d.crop['e_' + fid][0], d.crop['e_' + fid][1]); else wg.drawImage(C.rest, d.crop.rest[0], d.crop.rest[1]);
+      if (mk) wg.drawImage(C.ml[fid][kind], d.crop[mk][0], d.crop[mk][1]); else wg.drawImage(C[kind], d.crop[kind][0], d.crop[kind][1]);
     } else {
     const pop = t < ET.raise1 + 120 ? .6 + .4 * eob(c01(t / (ET.raise1 + 120))) : 1, fade = t >= ET.poof0 ? 1 - c01((t - ET.poof0) / (ET.poof1 - ET.poof0 - 60)) : 1;
     wg.drawImage(C.eat, d.crop.eat[0], d.crop.eat[1]); wg.drawImage(C[kind], d.crop[kind][0], d.crop[kind][1]);
@@ -269,7 +270,7 @@ async function eatNext() {
   EAT.cur = { id, f, R, from, fromXP, res, ev, label, sparks, t0: 0, skip: false, toLv: res ? res.level : from, toXP: res ? res.xp : fromXP };
   render();
   try {
-    if (GRIP7.has(f.fid)) { EAT.cur.C = await eatCell2(S.type, cut, f.fid); EAT.cur.food = { fid: f.fid }; }
+    if ((await eat2Data(S.type))[cut].food[f.fid]) { EAT.cur.C = await eatCell2(S.type, cut, f.fid); EAT.cur.food = { fid: f.fid }; }
     else { const [C, img] = await Promise.all([eatCell(S.type, cut), foodImg(f.fid)]); EAT.cur.C = C; EAT.cur.food = { fid: f.fid, img }; }
   } catch (e) { console.error(e); EAT.cur = null; return eatFinish(ev); }
   if (S.sound) { tone(520, 0, .08, 'triangle', .06); tone(660, .8, .08, 'triangle', .05); tone(780, 1.6, .08, 'triangle', .05); }

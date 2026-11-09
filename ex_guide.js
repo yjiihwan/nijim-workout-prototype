@@ -1,10 +1,6 @@
 'use strict';
-/* v1.27 운동 예시 그림 + 요령 한 줄. 그림은 assets/ex/t(목록 42px)·z(확대, 시작→끝 두 장) — 출처·라이선스는 assets/ex/credits.json.
-   그림 없는 운동은 회색 빈 칸(나중에 디자인 보충). 요령은 «어디 운동 + 몸 쓰는 느낌» 한 줄, 쉬운 말만. */
-const EX_IMG = new Set(['chest_press', 'pec_deck', 'm_shoulder', 'seated_row', 'leg_press', 'leg_ext', 'leg_curl', 'hip_abd', 'hip_add', 'calf_raise', 'back_ext',
-  'smith_bench', 'tbar_row', 'seated_calf', 'bicep_m', 'cable_curl', 'tricep_m', 'bench', 'squat', 'deadlift', 'barbell_row', 'db_press', 'incline_db', 'db_shoulder',
-  'db_lunge', 'db_curl', 'lateral', 'smith_squat', 'cable_cross', 'tricep_pd', 'rdl', 'incline_bench', 'db_fly', 'barbell_curl', 'hammer_curl', 'skull', 'oh_ext',
-  'front_raise', 'shrug', 'pushup', 'pullup', 'crunch', 'leg_raise', 'glute_bridge']);
+/* v1.28 운동 예시 그림(니짐 그림체 자체 제작 87종, 출처 표기 불필요) + 요령 한 줄. 그림은 assets/ex/t(목록 42px)·z(확대, 시작 _a·끝 _b 두 장).
+   그림 없음(회색 아이콘)은 직접 추가한 운동만. 요령은 «어디 운동 + 몸 쓰는 느낌» 한 줄, 쉬운 말만. */
 const EX_TIP = {
   treadmill: '걷거나 뛰는 기계, 손잡이에 기대지 말고 팔을 자연스럽게 흔들어요',
   bike_up: '세워 앉아 타는 실내 자전거, 무릎이 다 펴지기 직전 높이로 안장을 맞춰요',
@@ -94,7 +90,8 @@ const EX_TIP = {
   run: '달리기, 대화가 가능한 속도부터 시작해요',
   cycle: '밖에서 자전거 타기, 안전모를 꼭 써요',
 };
-/* 목록 썸네일: 그림 있으면 그림, 없으면(직접 추가 포함) 회색 기본 아이콘. 누르면 확대(data-act=exImg) — 행 전체 누르기(추가)와 분리 */
+const EX_IMG = new Set(Object.keys(EX_TIP));
+/* 목록 썸네일: 그림 있으면 그림, 없으면(직접 추가) 회색 기본 아이콘. 누르면 확대(data-act=exImg) — 행 전체 누르기(추가)와 분리 */
 const EX_ICON = '<svg viewBox="0 0 24 24"><path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"/></svg>';
 function exThumb(e) {
   const img = !e.custom && EX_IMG.has(e.id);
@@ -103,8 +100,7 @@ function exThumb(e) {
 function exImgSheet(id) {
   const e = EX[id]; if (!e) return;
   const img = !e.custom && EX_IMG.has(id), tip = !e.custom && EX_TIP[id];
-  sheet(`<div class="exzoom">${img ? `<img src="assets/ex/z/${id}.png" alt="${esc(e.name)} 시작 자세와 끝 자세">` : `<div class="exnone">${EX_ICON}<span>${e.custom ? '직접 추가한 운동은 그림이 없어요' : '그림 준비 중이에요'}</span></div>`}</div>
+  sheet(`<div class="exzoom${img ? '' : ' empty'}">${img ? `<figure><img src="assets/ex/z/${id}_a.png" alt="${esc(e.name)} 시작 자세"><figcaption>시작</figcaption></figure><span class="exarrow" aria-hidden="true">→</span><figure><img src="assets/ex/z/${id}_b.png" alt="${esc(e.name)} 끝 자세"><figcaption>끝</figcaption></figure>` : `<div class="exnone">${EX_ICON}<span>${e.custom ? '직접 추가한 운동은 그림이 없어요' : '그림 준비 중이에요'}</span></div>`}</div>
   <div class="extip"><b>${esc(e.name)}</b>${tip ? ` — ${esc(tip)}` : ''}</div>
-  ${img ? '<div class="excred">왼쪽 시작 → 오른쪽 끝 자세 · 그림 Everkinetic (CC BY-SA)</div>' : ''}
   <div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="shClose" style="margin-top:0">닫기</button><button class="btn" data-act="exImgAdd" data-v="${id}" style="margin-top:0">이 운동 기록하기</button></div>`);
 }

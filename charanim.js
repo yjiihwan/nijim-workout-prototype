@@ -83,7 +83,7 @@ function animMount() {
 function evoClipFor(t, ev) {
   if (!window.ANIM || !ANIM.evo[t] || !ev.big) return null;
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return null;   // 동작 줄이기: 기존 천천히 교차 연출
-  const to = ev.to >= 99 ? 99 : Math.floor(ev.to / 10) * 10, key = to === 99 ? '98to99' : `${to - 1}to${to}`;
+  const to = ev.to >= 99 ? 99 : Math.floor(ev.to / 10) * 10, key = to === 99 ? '98to99' : `${String(to - 1).padStart(2, '0')}to${to}`;
   const c = ANIM.evo[t][key]; if (!c || to <= ev.from) return null;
   return { ...c, key, src: `assets/anim/evo/${t}/${key}.gif?v=${VER}`, last: `assets/anim/evo/${t}/${key}_last.png?v=${VER}` };
 }

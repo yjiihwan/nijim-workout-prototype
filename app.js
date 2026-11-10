@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.33';
+const VER = 'v1.34';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -131,18 +131,15 @@ function placeholderSrc(lv) {
    v1.10(형 시정): 9종 모두 v1.8 크기 그대로 두고, 밤톨·뚝비·영차만 같은 컷에서 나머지 6종(릴라·샛별·이무·코아·삐약·카피)의 «몸 높이»(머리 윗면~발끝, 가는 장식 제외) 중앙값까지 줄인다(키우지 않음).
    BODY = scripts/measure_v19.py 로 잰 컷별 몸 높이(웹 px, 컷 순서 01·10…90·99). 납작한 3종(뭉치·도트·섀도)은 v1.8 그대로 */
 const CUTS = ['01','10','20','30','40','50','60','70','80','90','99'];
-const BODY = {"rilla":[282,298,313,326,331,334,388,396,402,415,417],"ttukbi":[293,313,342,346,359,349,393,394,397,403,402],"youngcha":[278,283,299,314,323,328,350,356,368,391,384],"saetbyeol":[307,333,350,357,366,353,381,398,402,408,408],"imu":[305,321,360,359,373,370,382,384,396,405,405],"koa":[283,299,306,317,329,348,382,390,403,410,396],"ppiyak":[279,315,342,362,370,355,402,404,409,414,395],"capy":[301,332,338,369,379,372,403,405,413,422,407],"bamtol":[319,338,355,371,372,376,416,415,417,426,403]};
-const SHRINK = ['bamtol','ttukbi','youngcha'], REF = ['rilla','saetbyeol','imu','koa','ppiyak','capy'];
-const MAX01 = Math.max(...Object.values(CHARS).map(c => c.dims['01'][1] / c.k));
-/* 줄임 비율은 원본 배율(선택 화면과 같은 기준)에서 컷마다 한 번 구해 모든 화면에 똑같이 곱한다 → 화면마다 따로 줄지 않고, 3종 성장은 6종 성장 곡선을 따른다 */
-const SHRINK_F = Object.fromEntries(SHRINK.map(t => [t, CUTS.map((c, i) => { const n = u => BODY[u][i] / CHARS[u].k; return Math.min(1, median(REF.map(n)) / n(t)); })]));
-const shrinkF = (t, cut) => SHRINK_F[t]?.[CUTS.indexOf(cut)] ?? 1;
-const k18 = (t, boxH, same, boxW, ringW) => { const C = CHARS[t]; return same ? boxH / (MAX01 * C.k) : Math.min(boxH / C.dims['99'][1], boxW / (ringW * C.dims['99'][0])); };
-const scaleOf = (t, lv, boxH, same, boxW, ringW = 1.1) => k18(t, boxH, same, boxW, ringW) * shrinkF(t, cutOf(lv));
+/* v1.34: 크기 = 디자인 배율표 render_scale_160x128(ANIM.rs, 160×128 칸 기준 원본 px × render). 다른 높이의 칸은 boxH/128 비율로.
+   v1.10 몸 높이 측정(BODY)·밤톨/뚝비/영차 축소(SHRINK)는 배율표가 캐릭터 간 크기를 정하므로 쓰지 않는다 */
+const RS = (t, cut) => (window.ANIM && ANIM.rs[t] && ANIM.rs[t][cut]) || 0.1;
+const scaleOf = (t, lv, boxH, same = false, boxW = boxH, ringW = 1.1) => RS(t, cutOf(lv)) * (boxH / 128) / CHARS[t].k;
 function charImg(t, lv, boxH, same = false, boxW = boxH) {
-  if (S.placeholder) { const h = PH_H[stageIdx(lv)]; return { src: placeholderSrc(lv), w: h * 0.9 * boxH / 360, h: h * boxH / 360 }; }
-  const [w, h] = CHARS[t].dims[cutOf(lv)], k = scaleOf(t, lv, boxH, same, boxW);   // 폭도 칸 안(골드 링 폭 1.1배 포함)
-  return { src: `assets/c/${t}/lv${cutOf(lv)}.png`, w: w * k, h: h * k };
+  if (S.placeholder) { const h = PH_H[stageIdx(lv)]; return { src: placeholderSrc(lv), w: h * 0.9 * boxH / 360, h: h * boxH / 360, dx: 0, db: 0, cut: cutOf(lv), s: 1 }; }
+  const cut = cutOf(lv), [w, h] = CHARS[t].dims[cut], k = scaleOf(t, lv, boxH, same, boxW), u = boxH / 128, p = clipPlace(t, cut);
+  /* dx·db: 칸 가운데·바닥 기준 치우침(px) — 포즈 클립 첫 프레임과 같은 자리(발바닥 96.4%·가로 가운데) */
+  return { src: `assets/c/${t}/lv${cut}.png`, w: w * k, h: h * k, dx: (p.x + p.w / 2 - 80) * u, db: (128 - (p.y + p.h)) * u, cut, s: k };
 }
 /* Lv.99 골드 링(README_for_dev 1절): 타원 선 #E5B158 · 폭 ≈ 캐릭터 폭×1.1 · 높이 ≈ 폭×0.24 · 바닥선에 중심. 그 아래 단계는 기존 티어 링 */
 function ringHTML(c, lv, boxH) {
@@ -150,9 +147,11 @@ function ringHTML(c, lv, boxH) {
   if (lv >= 99) { const w = c.w * 1.1, h = w * 0.24; return `<div class="ring gold" style="width:${w}px;height:${h}px;bottom:${-h / 2}px"></div>`; }
   return tr > 1 ? `<div class="ring t${tr}" style="width:${Math.max(c.w*1.05, boxH*0.6)}px;height:${boxH*0.13}px"></div>` : '';
 }
-function charHTML(t, lv, boxH, withRing = true, expr = null, same = false, boxW = boxH) {
+function charHTML(t, lv, boxH, withRing = true, expr = null, same = false, boxW = boxH, opts = {}) {
   const c = charImg(t, lv, boxH, same, boxW), gold = withRing && lv >= 99 && !S.placeholder ? c.w * 1.1 * 0.12 : 0;   // 골드 링 아래 반쪽만큼 자리를 비워 아래 글자와 안 겹치게
-  return `<div class="cbox" style="height:${boxH}px${gold ? `;margin-bottom:${Math.round(gold)}px` : ''}">${withRing ? ringHTML(c, lv, boxH) : ''}<span class="cimg" style="width:${c.w}px;height:${c.h}px"><img src="${c.src}" style="width:${c.w}px;height:${c.h}px" alt="${esc(CH[t].name)} Lv.${lv}">${S.placeholder ? '' : faceLayer(t, lv, expr)}</span></div>`;
+  const r1 = n => Math.round(n * 10) / 10;
+  const inner = (opts.rig && !S.placeholder && rigLayers(t, c.cut, c.s)) || `<img src="${c.src}" style="width:${c.w}px;height:${c.h}px" alt="">`;   // opts.rig: 4단계 부품 레이어(팔 ±5°)
+  return `<div class="cbox" style="height:${boxH}px${gold ? `;margin-bottom:${Math.round(gold)}px` : ''}">${withRing ? ringHTML(c, lv, boxH) : ''}<span class="cimg${opts.rig ? ' rig' : ''}" style="width:${c.w}px;height:${c.h}px;left:${r1(c.dx)}px;bottom:${r1(c.db)}px">${inner}${faceLayer(t, lv, expr)}</span></div>`;
 }
 /* 작은 칸(홈 축소 카드·코치·랭킹): 같은 배율 규칙으로 Lv.99 가 box 높이에 맞게 → 레벨이 낮으면 작게 보인다 */
 function charFit(t, lv, box, expr = null) {
@@ -382,7 +381,7 @@ function vWorkout() {
   };
   const ex = exprNow();
   return `${seg}<div class="sec" style="padding-top:8px">${pend}
-  <div class="card" id="stageCard"><div class="stage"><div class="cwrap ${ex}">${charHTML(t, lv, 128, true, ex, false, 160)}</div>
+  <div class="card" id="stageCard"><div class="stage"><div class="cwrap stagewrap ${ex}" data-act="pose" id="stageWrap">${charHTML(t, lv, 128, true, ex, false, 160, { rig: true })}${sigClipHTML(t, lv)}</div>
     <div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span class="name">${esc(CH[t].name)}</span><span class="pill lvpill">Lv.${lv}</span><span class="pill tier${tr}">${TIER_NAME[tr]}</span>${moodPill(moodToday(), true)}${exprPill(ex, true)}</div>
     <div class="bar"><i style="width:${lv>=99?100:Math.round(S.xp/need(lv)*100)}%"></i></div>
     <div class="muted">${lv>=99?'최고 레벨':`Lv.${lv+1}까지 ${toNext.toLocaleString()} XP`} · ${nextEvo}</div>
@@ -691,7 +690,7 @@ function vFriends() {
 function vMe() {
   const t = S.type, looks = ITEMS.filter(i => i.kind === 'look');
   return `${subHead('내 캐릭터')}<div class="sec">
-  <div class="card" style="text-align:center">${charHTML(t, S.level, 170, true, exprNow())}<div style="margin-top:14px"><span class="name">${esc(CH[t].name)}</span> <span class="pill lvpill">Lv.${S.level}</span> <span class="pill tier${tierOf(S.level)}">${TIER_NAME[tierOf(S.level)]}</span></div>
+  <div class="card" style="text-align:center">${charHTML(t, S.level, 170, true, exprNow(), false, 212, { rig: true })}<div style="margin-top:14px"><span class="name">${esc(CH[t].name)}</span> <span class="pill lvpill">Lv.${S.level}</span> <span class="pill tier${tierOf(S.level)}">${TIER_NAME[tierOf(S.level)]}</span></div>
   <div class="muted" style="margin-top:4px">칭호 «${stageName(t, S.level)}» · 운동 레벨 Lv.${S.exLv} · 포인트 ${S.points.toLocaleString()}P</div>
   <div class="slots">${looks.map(i => `<div class="slot ${S.equipped[i.id]?'on':''}">${S.equipped[i.id] ? i.name : '빈 슬롯'}</div>`).slice(0, 3).join('')}${ITEMS.filter(i => i.kind === 'effect' && S.equipped[i.id]).map(i => `<div class="slot on">${i.name}</div>`).join('')}</div>
   <button class="btn" data-act="sub" data-v="shop" id="shopBtn">🛍️ 아이템 상점</button>
@@ -699,6 +698,7 @@ function vMe() {
   ${centerCard()}
   <div class="card" id="exprCard"><div class="h2" style="font-size:16px">컨디션 표정 5종</div><div class="muted" style="margin-bottom:8px">얼굴만 바뀌어요 · 레벨·경험치와 무관 · 지금: <b style="color:var(--ink)">${EXPR[exprNow()].label}</b></div>
   <div class="exprs">${EXPR_KEYS.map(ex => `<div class="ex5 ${exprNow()===ex?'on':''}">${charHTML(t, S.level, 64, false, ex)}<small>${EXPR[ex].label}</small></div>`).join('')}</div></div>
+  ${sigCard(t, S.level)}${flexCard(t)}
   <div class="card"><div class="h2" style="font-size:16px">업적</div><div class="muted">업적 24개 잠김/달성 목록 자리 (프로토타입 범위 밖)</div></div></div>`;
 }
 
@@ -840,7 +840,7 @@ function render() {
   const v = (S.tab === 'workout' && S.sub && (S.chosen || S.sub.startsWith('onb'))) ? (SUB[S.sub] || vWorkout) : (MAIN[S.tab] || vHome);
   $('view').innerHTML = v();
   document.body.classList.toggle('wk', S.tab === 'workout');
-  eatMount();
+  eatMount(); animMount();
   document.querySelectorAll('.tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
   if (S.tab === 'workout' && S.sub === 'selfie' && S.selfieStep === 'cam') camStart();
   S.bump = 0;
@@ -1053,7 +1053,7 @@ function play(ev, { replay = false, onDone } = {}) {
   P = { ev, replay, onDone, timers, done: false, phase: 'run' };
   el.className = `evo on ${ev.big ? 'big' : 'short'} tier${tr}`; el.setAttribute('aria-hidden', 'false');
   [old, nw].forEach(i => { i.className = i.id === 'evoOld' ? 'evo-old' : 'evo-new'; i.style.opacity = 0; i.style.transform = ''; });
-  ring.className = 'evo-ring'; $('evoFlash').className = 'evo-flash'; $('evoParts').innerHTML = '';
+  ring.className = 'evo-ring'; $('evoFlash').className = 'evo-flash'; $('evoParts').innerHTML = ''; $('evoClip').style.display = 'none';
   $('evoOk').classList.remove('show');
   $('evoSound').textContent = S.sound ? '🔊' : '🔇';
   $('evoTag').textContent = replay ? '다시 보기' : (ev.to - ev.from > 1 ? `${ev.to - ev.from}레벨 한꺼번에` : '');
@@ -1066,8 +1066,9 @@ function play(ev, { replay = false, onDone } = {}) {
     for (let k = 1; k <= steps; k++) at(each * k, () => { lvNum.textContent = `Lv.${from + k}`; lvNum.classList.remove('roll'); void lvNum.offsetWidth; lvNum.classList.add('roll'); }); };
   P.finish = () => {   // 결과 상태(건너뛰기도 여기로)
     timers.forEach(clearTimeout); timers.length = 0;
-    old.style.opacity = 0; nw.className = 'evo-new' + (evolved ? '' : ' glow'); nw.style.opacity = 1;
-    ringStyle(nc); ring.classList.add('show'); lvNum.textContent = `Lv.${ev.to}`;
+    old.style.opacity = 0; lvNum.textContent = `Lv.${ev.to}`;
+    if (P.clip) { $('evoClipImg').src = P.clip.last; nw.style.opacity = 0; }   // v1.34 디자인 클립: 끝 프레임(링·빛 포함) 그대로 둔다
+    else { nw.className = 'evo-new' + (evolved ? '' : ' glow'); nw.style.opacity = 1; ringStyle(nc); ring.classList.add('show'); }
     $('evoTitle').textContent = ev.to === 99 ? `${name}${CH[t].josa} 최고 레벨에 도달했다!` : evolved ? `${name}${CH[t].josa} «${stageName(t, ev.to)}»${ro(stageName(t, ev.to))} 진화했다!` : '레벨 업!';
     $('evoSub').textContent = ev.to === 99 ? '최고 레벨 달성 · 골드 아우라' : `칭호 «${stageName(t, ev.to)}» · ${TIER_NAME[tr]}`;
     el.classList.remove('p1', 'p2'); el.classList.add('p3');
@@ -1083,6 +1084,16 @@ function play(ev, { replay = false, onDone } = {}) {
     rollTo(ev.from, ev.to, 700);
     at(800, () => { $('evoSub').textContent = `칭호 «${stageName(t, ev.to)}»`; });
     at(1900, close);
+    return;
+  }
+  const clip = evoClipFor(t, ev), me = P;
+  if (clip) {   // v1.34 5단계 디자인 진화 클립(다크 GIF, 캐릭터 뒤 효과·링·반짝이 포함) → 앱 광선·링·실루엣 교차는 끄고 배경을 클립 바탕색으로
+    P.clip = clip; el.classList.add('clip', 'p1'); el.style.setProperty('--clipbg', clip.bg);
+    const box = $('evoClip'), img = $('evoClipImg'); box.style.cssText = `display:block;width:${clip.w * 2}px;height:${clip.h * 2}px;background:${clip.bg}`; img.removeAttribute('src');
+    $('evoTitle').textContent = evolved ? `어? ${name}의 몸이…!` : ev.to === 99 ? `${name}에게서 빛이…!` : '레벨 업!';
+    sfxRise();
+    clipPlay(img, clip.src).then(() => { if (P !== me || me.done) return; rollTo(ev.from, ev.to, Math.max(600, clip.ms - 900)); at(clip.ms, () => { if (P === me && !me.done) { sfxReveal(); me.finish(); } }); })
+      .catch(e => { console.error(e); if (P !== me || me.done) return; me.clip = null; box.style.display = 'none'; me.finish(); });
     return;
   }
   // 큰 연출: 이전 모습 → 실루엣 깜빡임(크기 보간) → 번쩍 → 새 모습
@@ -1104,7 +1115,7 @@ function play(ev, { replay = false, onDone } = {}) {
 }
 function close() {
   if (!P || P.done) return; P.done = true; P.timers.forEach(clearTimeout);
-  const el = $('evo'); el.className = 'evo'; el.setAttribute('aria-hidden', 'true');
+  const el = $('evo'); el.className = 'evo'; el.setAttribute('aria-hidden', 'true'); $('evoClip').style.display = 'none';
   const ev = S.events.find(e => e.id === P.ev.id);
   if (ev) { if (P.replay) ev.replays = (ev.replays || 0) + 1; else { ev.watched = true; ev.skipped = !!P.skipped; } }
   if (!P.replay && S.pending === P.ev.id) S.pending = null;
@@ -1127,6 +1138,9 @@ document.addEventListener('click', e => {
   if (b.dataset.tab) return go(b.dataset.tab);
   const a = b.dataset.act, id = b.dataset.id, v = b.dataset.v, dd = +b.dataset.d || 0;
   const s = S.session, it = curItem();
+  if (a === 'pose') { sigPlayHome(); return; }
+  if (a === 'sigSeg') { sigSegPlay(v); return; }
+  if (a === 'flexPlay') { flexPlay(v); return; }
   if (a === 'shClose') return shClose();
   if (a === 'sub') { if (v === 'calc') S.calc = null; return go('workout', v); }
   if (a === 'back') { S.editRec = null; return go('workout', v || null); }

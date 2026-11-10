@@ -33,7 +33,7 @@ const CFG = {
   /* 결정 38: 운동·레벨업·진화·업적 포인트 지급 없음(POINT 키 삭제). 캐릭터 쪽 포인트는 구매적립(실결제)·상점 쓰기만.
      ⑦-1 B — 입점 보너스는 운동 레벨·[운동만 보기]·친구 리그·주간 리그(xp_week)·DID 랭킹판에 전부 들어간다. 빠지는 건 아이템 장부뿐 */
   /* 결정 37(SPEC §3-2b): 오운완 셀카 = round(기본 경험치 × pct%) 고정 가산 — 인증·연속·×1.2 안 곱함 · 장소 무관 · 하루 perDay회 ·
-     앱 안 카메라만 · 운동 장부(하루 600·V0 200·주 1,800 안, 잘릴 땐 셀카 몫부터) · 입점 보너스와 서로 안 곱함 */
+     카메라·앨범 모두(11-10 형: 사진 판정 없음) · 운동 장부(하루 600·V0 200·주 1,800 안, 잘릴 땐 셀카 몫부터) · 입점 보너스와 서로 안 곱함 */
   SELFIE_BONUS: { pct: 20, perDay: 1 },
 };
 /* ----- 운영자 설정(H2·H1) — 본사가 바꾼 값은 전부 여기로만 들어온다. 화면은 CFG·need 를 통해서만 읽는다 ----- */
@@ -112,7 +112,7 @@ function potionGain(L) {
 
 /* ----- 세션 경험치 (PLAN §2-3 · 결정 35 = XP_ENGINE_SPEC v1.10 §3-1) -----
    세션 XP = (Σ 운동별 기본 × 평소 대비(1.0|1.2) + 첫 세트 20 + 완료 50) × 검증 × 연속(복귀면 ×1.5) [× 부스터] + 고정(새 부위·PR·주간 목표)
-   s = { verify:'V0'|'V1'|'V3', selfie: null | { src:'camera'|'gallery', dup, ai:'ok'|'reject', past }, items:[{ ex, sets:[{w,r,s,done,pr}], min }], prCount }
+   s = { verify:'V0'|'V1'|'V3', selfie: null | { src:'camera'|'gallery', dup, past }, items:[{ ex, sets:[{w,r,s,done,pr}], min }], prCount }
    c = { firstToday, weekParts[], streakWeeks, lastDays, prToday, goal, weekCountBefore, todayCounted, boost, selfieToday(그날 셀카 보너스 이미 받음),
          xpBase:{ex: 평소 양|null}, todayQ:{ex: 오늘 앞 세션 대상 양}, todayPrev:[{ex, cnt, bonus, mul}] } */
 /* 결정 37 ②·SPEC 단위 32: 옛 V1b·V2(또는 모르는 값)는 V0 로 — 0.7·1.0 배율은 어디서도 안 씀. 셀카는 등급을 바꾸지 않는다 */
@@ -121,8 +121,6 @@ const effVerify = s => CFG.VERIFY[s.verify] != null ? s.verify : 'V0';
 function selfieBonus(s, c, baseXP, any) {
   const p = s.selfie; if (!p) return { sf: 0, why: null };
   if (!any || !(baseXP > 0)) return { sf: 0, why: 'norecord' };   // 5회 미만 세트를 뺀 뒤 대상 기록 0 → 셀카만으론 0
-  if (p.src !== 'camera') return { sf: 0, why: 'gallery' };
-  if (p.ai && p.ai !== 'ok') return { sf: 0, why: 'ai' };
   if (p.dup) return { sf: 0, why: 'dup' };
   if (p.past) return { sf: 0, why: 'past' };
   if ((c.selfieToday || 0) >= CFG.SELFIE_BONUS.perDay) return { sf: 0, why: 'today' };

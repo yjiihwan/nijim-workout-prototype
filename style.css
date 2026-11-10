@@ -337,17 +337,14 @@ select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--g2)
 .cam{position:relative;width:100%;aspect-ratio:3/4;border-radius:20px;overflow:hidden;background:#22252C}
 .cam video,.cam canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .cam video{display:none;transform:scaleX(-1)}.cam video.on{display:block}
-.camguide{position:absolute;left:12px;right:12px;top:12px;background:rgba(0,0,0,.45);color:#fff;font-size:13px;border-radius:10px;padding:8px 10px;text-align:center;word-break:keep-all}
-.shutterrow{display:flex;justify-content:center;margin:14px 0 8px}
+.shutterrow{display:flex;justify-content:center;align-items:center;gap:36px;margin:14px 0 8px}
 .shutter{width:72px;height:72px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px var(--rose) inset,0 2px 8px rgba(0,0,0,.12)}
 .shutter:active{transform:scale(.94)}
-.filesim{display:block;margin-top:10px;font-size:12px;color:var(--g5);cursor:pointer}
-.filesim input{display:block;margin-top:6px;font-size:12px}
+.shutterrow>.albumb,.shutterrow>span{width:72px}
+.albumb{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px;font-weight:700;color:var(--g5);cursor:pointer}
+.albumb>i{width:48px;height:48px;border-radius:14px;background:#fff;border:1px solid var(--g2);display:flex;align-items:center;justify-content:center;color:var(--ink)}
 .shot{position:relative;width:72%;margin:0 auto;border-radius:18px;overflow:hidden;aspect-ratio:3/4;background:#22252C}
 .shot img{width:100%;height:100%;object-fit:cover;display:block}
-.judging{position:absolute;inset:0;background:rgba(10,12,24,.45);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#fff;font-weight:700}
-.judging i{width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;animation:spin .8s linear infinite}
-.rejectc{margin-top:12px}.rejectc b{display:block;font-size:16px;color:var(--rose)}.rejectc small{display:block;color:var(--g5);font-size:13px;margin-top:4px}
 .donec{margin-top:12px;display:flex;gap:12px;align-items:flex-start}.donec b{display:block;font-size:16px}.donec small{display:block;color:var(--g5);font-size:13px;margin-top:3px;word-break:keep-all}
 /* 설정·기록 상세 */
 .thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:4px}
@@ -374,7 +371,6 @@ select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--g2)
 .prburst{animation:none}.prburst.anim{animation:prin .5s cubic-bezier(.2,1.5,.4,1)}
 .chips.white .chip{background:#fff}
 .notice.hold .btn.sm{white-space:nowrap;flex:none}
-.shot.reject img{filter:grayscale(1) brightness(.55)}
 /* ===== v1.12 — 결정 33: 아이템 경험치 한도 없음 표시 ===== */
 .notice.nolimit{display:block;background:#FFF6E3;color:#6B4700;margin:10px 0 0;line-height:1.45;word-break:keep-all}
 .wxp.itm{margin-top:6px}.wxp.itm span,.wxp.itm b{color:#B07D1F;font-size:12px}
@@ -563,7 +559,7 @@ body.wk .honest svg{flex:none;width:18px;height:18px;margin-top:2px;fill:none;st
 body.wk .honest.end{display:block;background:none;padding:0;color:#3F3F48;font-weight:500;margin:16px 2px 0;text-align:center}
 :where(.wk) .muted{font-size:14px;line-height:1.45}
 body.wk .autoend{font-size:14px;line-height:1.45}
-:where(.wk) :is(.prow,.ex,.rec,.lightrow,.replink,.coachhead,.tile,.entry,.pk,.selfiecta,.opt,.ritem,.privacy,.donec,.rejectc) small{font-size:14px;line-height:1.4}
+:where(.wk) :is(.prow,.ex,.rec,.lightrow,.replink,.coachhead,.tile,.entry,.pk,.selfiecta,.opt,.ritem,.privacy,.donec) small{font-size:14px;line-height:1.4}
 :where(.wk) .h3{font-size:14px}
 body.wk .setrow span:first-child{font-size:14px}
 body.wk .minreps{font-size:13px}

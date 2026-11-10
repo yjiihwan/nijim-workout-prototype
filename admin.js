@@ -30,7 +30,7 @@ function fraudQueue() {
     ['share', '계정 공유 의심', '같은 날 신림점 07:12 입장 → 사당점 07:31 입장(이동 불가 19분)'],
     ['gap', '세트 간격 20초 미만 3연속', '레그프레스 6세트를 1분 40초에 완료'],
     ['unreal', '비현실 무게', '데드리프트 260kg × 8 (체중 64kg · 직전 최고 120kg)'],
-    ['selfie_reuse', '셀카 재사용', '같은 이미지 해시 3회 · 갤러리 불러오기'],
+    ['selfie_reuse', '셀카 재사용', '같은 이미지 해시 3회'],
     ['lesson_sets', '레슨 세션 세트 과다', '50분 PT 세션에 세트 41개 덧붙임'],
     ['league_rush', '친구 리그 몰아치기', '일요일 V0 세션 6개(리그 집계 제외됨)'],
     ['alt_accounts', '부계정 레벨 양산', '같은 기기 3계정 · V0 비율 92%'],
@@ -250,17 +250,13 @@ function vShopAdm() {
 function vH3() {
   const Q = fraudQueue(), dec = D.fraud = ADM.fraud, list = Q.filter(f => AV.fraudF === 'all' || (AV.fraudF === 'open' ? !dec[f.id] : !!dec[f.id]));
   const byRule = {}; Q.forEach(f => { byRule[f.rule] = (byRule[f.rule] || 0) + 1; });
-  const SR = [['사람 2명 이상 찍힘', 212], ['헬스장·운동 장면 아님', 148], ['같은 사진 재사용(해시)', 61], ['갤러리 불러오기', 97], ['촬영 시각 ≠ 세션 시간', 38]], srT = SR.reduce((a, x) => a + x[1], 0), shots = 9840;
-  const wkRate = [6.8, 6.1, 5.9, 5.4, 5.6, 5.0, 4.7, 4.9];
   return `<div class="ahead"><div><h2>부정 검토 목록 (V5) <span class="atag">자동 감지 · 조용히</span></h2><p>감지돼도 계정 정지·레벨 하락·경고문은 하지 않아요(VERIFICATION §4). 운영자가 보고 경험치 인정 여부만 정해요.</p></div>
     <div class="aflt">${seg('fraudF', AV.fraudF, [['all', '전체'], ['open', '검토 대기'], ['done', '처리함']])}</div></div>
-  <div class="akrow">${kpi('최근 9일 감지', Q.length + '건')}${kpi('검토 대기', Q.filter(f => !dec[f.id]).length + '건')}${kpi('셀카 반려율(이번 주)', wkRate[7] + '%', `셀카 ${nf(shots)}장 중 반려 ${nf(srT)}장(누적 8주)`)}${kpi('보류 경험치', nf(Q.filter(f => !dec[f.id]).reduce((a, f) => a + f.xp, 0)) + ' XP')}</div>
+  <div class="akrow">${kpi('최근 9일 감지', Q.length + '건')}${kpi('검토 대기', Q.filter(f => !dec[f.id]).length + '건')}${kpi('보류 경험치', nf(Q.filter(f => !dec[f.id]).reduce((a, f) => a + f.xp, 0)) + ' XP')}</div>
   ${sec('검토 목록', tbl(['감지 시각', '회원', '센터', '규칙', '근거', '보류 XP', '결정'], list.map(f => { const d = dec[f.id];
     return `<tr><td class="num">${md(f.date)} ${f.hh}</td><td>${f.who}</td><td>${f.center.replace('니짐 ', '')}</td><td><b>${f.rule}</b></td><td>${esc(f.ev)}</td><td class="num">${f.xp}</td>
       <td>${d ? `<span class="${d === 'ok' ? 'agood' : 'abad'}">${d === 'ok' ? '✓ 인정(지급)' : '✕ 불인정'}</span> <button class="alink" data-aact="fraudUndo" data-v="${f.id}">되돌리기</button>`
         : `<button class="abtn sm" data-aact="fraudOk" data-v="${f.id}">인정</button> <button class="abtn sm ghost" data-aact="fraudNo" data-v="${f.id}">불인정</button>`}</td></tr>`; }), 'h3t'), '<span class="amut">회원 이름은 가려서 보여요 · 시연 결정은 이 브라우저에만 저장</span>')}
-  <div class="agrid2">${sec('셀카 반려 사유 (최근 8주)', tbl(['사유', '건수', '비중'], SR.map(([k, v]) => `<tr><td>${k}</td><td class="num">${v}</td><td class="wbar">${hshare(v, SR[0][1], pct(v, srT) + '%')}</td></tr>`)))}
-    ${sec('셀카 반려율 추이', vbars(wkRate, wkRate.map((_, i) => i === 7 ? '이번 주' : `${7 - i}주 전`), { unit: '%', h: 190, fmt: v => v.toFixed(1) }))}</div>
   ${sec('규칙별 감지 (최근 9일)', tbl(['규칙', '건수'], Object.entries(byRule).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<tr><td>${k}</td><td class="num">${v}</td></tr>`)))}`;
 }
 

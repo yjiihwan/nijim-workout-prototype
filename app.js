@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.36.1';
+const VER = 'v1.37';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -139,7 +139,7 @@ function charImg(t, lv, boxH, same = false, boxW = boxH) {
   if (S.placeholder) { const h = PH_H[stageIdx(lv)]; return { src: placeholderSrc(lv), w: h * 0.9 * boxH / 360, h: h * boxH / 360, dx: 0, db: 0, cut: cutOf(lv), s: 1 }; }
   const cut = cutOf(lv), [w, h] = CHARS[t].dims[cut], k = scaleOf(t, lv, boxH, same, boxW), u = boxH / 128, p = clipPlace(t, cut);
   /* dx·db: 칸 가운데·바닥 기준 치우침(px) — 포즈 클립 첫 프레임과 같은 자리(발바닥 96.4%·가로 가운데) */
-  return { src: `assets/c/${t}/lv${cut}.png`, w: w * k, h: h * k, dx: (p.x + p.w / 2 - 80) * u, db: (128 - (p.y + p.h)) * u, cut, s: k };
+  return { src: `assets/c/${t}/lv${cut}.png?v=${VER}`, w: w * k, h: h * k, dx: (p.x + p.w / 2 - 80) * u, db: (128 - (p.y + p.h)) * u, cut, s: k };
 }
 /* Lv.99 골드 링(README_for_dev 1절): 타원 선 #E5B158 · 폭 ≈ 캐릭터 폭×1.1 · 높이 ≈ 폭×0.24 · 바닥선에 중심. 그 아래 단계는 기존 티어 링 */
 function ringHTML(c, lv, boxH) {
@@ -157,12 +157,12 @@ function charHTML(t, lv, boxH, withRing = true, expr = null, same = false, boxW 
 function charFit(t, lv, box, expr = null) {
   if (S.placeholder) return `<img src="${placeholderSrc(lv)}" style="max-width:${box}px;max-height:${box}px" alt="">`;
   const k = scaleOf(t, lv, box, false, box, 1), [w, h] = CHARS[t].dims[cutOf(lv)], dw = Math.round(w*k), dh = Math.round(h*k);
-  return `<span class="cimg" style="width:${dw}px;height:${dh}px"><img src="assets/c/${t}/lv${cutOf(lv)}.png" style="width:${dw}px;height:${dh}px" alt="">${faceLayer(t, lv, expr)}</span>`;
+  return `<span class="cimg" style="width:${dw}px;height:${dh}px"><img src="assets/c/${t}/lv${cutOf(lv)}.png?v=${VER}" style="width:${dw}px;height:${dh}px" alt="">${faceLayer(t, lv, expr)}</span>`;
 }
 /* 랭킹 아바타(40px 아이콘): v1.8처럼 컷마다 칸에 꽉 맞추고, 밤톨·뚝비·영차만 다른 화면과 같은 비율로 줄인다 */
 function charAvatar(t, lv, box) {
   const c = cutOf(lv), [w, h] = CHARS[t].dims[c], k = box / Math.max(w, h) * shrinkF(t, c);
-  return `<img src="assets/c/${t}/lv${c}.png" style="width:${Math.round(w*k)}px;height:${Math.round(h*k)}px" alt="">`;
+  return `<img src="assets/c/${t}/lv${c}.png?v=${VER}" style="width:${Math.round(w*k)}px;height:${Math.round(h*k)}px" alt="">`;
 }
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2400); }
 
@@ -251,7 +251,7 @@ const exprOfMood = m => !m ? 'happy' : m.verdict === 'high' ? 'excited' : m.verd
 function faceLayer(t, lv, expr) {
   const e = expr && CHARS[t].expr[expr]; if (!e) return '';
   const cut = cutOf(lv), [x, y, w, h] = e[cut], [W, H] = CHARS[t].dims[cut], pc = n => (Math.round(n * 1000) / 10) + '%';
-  return `<img class="face art ${expr}" src="assets/c/${t}/e_${expr}_${cut}.png" style="left:${pc(x / W)};top:${pc(y / H)};width:${pc(w / W)};height:${pc(h / H)}" alt="">`;
+  return `<img class="face art ${expr}" src="assets/c/${t}/e_${expr}_${cut}.png?v=${VER}" style="left:${pc(x / W)};top:${pc(y / H)};width:${pc(w / W)};height:${pc(h / H)}" alt="">`;
 }
 const exprPill = (ex, small = false) => (ex === 'sleepy' || ex === 'sad') ? `<span class="pill moodpill ${ex} ${small ? 'sm' : ''}">${EXPR[ex].label}</span>` : '';
 const moodPill = (m, small = false) => m ? `<span class="pill moodpill ${m.verdict} ${small ? 'sm' : ''}">${m.verdict === 'high'

@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.35';
+const VER = 'v1.36';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -441,7 +441,7 @@ function vSession() {
       const sub = e.mode === 'cardio' ? (it.min ? `${it.min}분 · ${({ light: '가벼움', normal: '보통', hard: '힘듦' })[it.level || 'normal']}${it.km ? ` · ${it.km}km` : ''}` : '아직 기록 전')
         : e.mode === 'lesson' ? `${it.min}분 · 선생님 확인` : ds.length ? setsTxt(e, ds) : (it.plan ? `지난번 ${it.plan}` : '아직 0세트');
       return `<button class="prow tap" data-act="openEx" data-v="${it.ex}"><div><b>${e.name}${ds.some(x => x.pr) ? ' <span class="prtag">PR</span>' : ''}</b><small>${esc(sub)}</small></div><span class="cnt">${e.mode === 'cardio' || e.mode === 'lesson' ? (it.min ? '✓' : '') : `${ds.length}세트`}</span></button>`; }).join('')}</div>`;
-  const sfPct = CFG.SELFIE_BONUS.pct, selfieBtn = s.selfie ? `<div class="muted sfnote" id="sfSess">오운완 셀카 찍음 · 저장하면 경험치 +${sfPct}%${r.selfieXP ? ` (+${fmt(r.selfieXP)})` : ''}가 들어가요</div>`
+  const sfPct = CFG.SELFIE_BONUS.pct, selfieBtn = s.selfie ? sfCard('sfSess', s.photo, '오운완 셀카 찍음', `저장하면 경험치 +${sfPct}%${r.selfieXP ? ` (+${fmt(r.selfieXP)})` : ''}가 들어가요`, 'session')
     : selfieClaims() ? `<div class="muted sfnote" id="sfSess">오늘 오운완 인증 완료 ✓ · 셀카 보너스는 하루 1번이에요</div>`
     : `<button class="btn ghost camb" data-act="selfie" data-v="session" id="sfSessBtn">${CAM}오운완 셀카 <span class="muted">찍으면 경험치 +${sfPct}% · 하루 1번 · 나만 봐요</span></button>`;
   const demos = [['none','실제 기록대로'],['next','다음 레벨까지 (짧은 연출)'],['boundary','10레벨 경계 넘기 (큰 연출)'],['multi','+5레벨 한꺼번에 (묶음)']];
@@ -629,7 +629,8 @@ function vResult() {
     ${ev ? `<div class="ptline" id="ptLine">Lv.${ev.from} → ${ev.to} 레벨업</div>` : ''}
     <div class="muted" style="margin-top:6px" id="resultNote">${note}</div>
     ${m && m.ratio != null && S.moodDemo === 'auto' ? `<div class="muted" style="margin-top:4px">평소 대비 ${Math.round(m.ratio * 100)}% (오늘 한 종목만 · 지난 10회 기준)</div>` : ''}</div>
-  ${canSelfie ? selfieCta(rec) : sfDone ? `<div class="card sfdone" id="sfDone">${CAM}<div><b>오운완 인증 완료 · +${fmt(rec.selfieIn ?? rec.selfieXP)} XP</b><small>사진은 나한테만 보여요 · 셀카 보너스는 하루 1번</small></div></div>` : ''}
+  ${canSelfie ? selfieCta(rec) : sfDone ? sfCard('sfDone', rec.photo, `오운완 인증 완료 · +${fmt(rec.selfieIn ?? rec.selfieXP)} XP`, rec.photo ? '사진은 나한테만 보여요 · 셀카 보너스는 하루 1번' : '사진은 지웠어요 · 받은 보너스는 그대로예요', 'result')
+    : rec && !rec.demo && rec.photo ? sfCard('sfDone', rec.photo, '오운완 사진 저장됨', '사진은 나한테만 보여요 · 이번엔 보너스 경험치가 붙지 않았어요', 'result') : ''}
   ${rec && rec.br ? `<div class="card" id="xpCard"><div class="h3">경험치 내역</div>${xpRows(rec)}<div class="xrow total"><span>합계</span><b>+${fmt(rec.xp)} XP</b></div></div>` : ''}
   <div class="card demo"><div class="h3">🧪 시연 — 다른 결과로 보기</div><div class="chips">${[['low','아쉬운'],['normal','평소대로'],['high','신남']].map(([k, l]) => `<button class="chip ${v===k?'on':''}" data-act="mset" data-v="${k}">${l}</button>`).join('')}</div>
   <div class="muted" style="margin-top:8px">표정은 캐릭터 얼굴(눈·입·볼) 자체가 바뀜 · 레벨·경험치와 무관</div></div>
@@ -655,6 +656,12 @@ function selfieCta(rec) {
   return `<button class="card selfiecta" data-act="selfie" data-v="result" id="selfieCta">${CAM}<div><b>오운완 셀카 찍기</b><small>${sub}</small></div><span class="rgo">›</span></button>`;
 }
 
+/* 찍은 셀카 카드 — 저장 전(세션)·저장 후(요약) 공통. 사진이 없으면(지운 뒤) 썸네일 없이 «다시 찍기»만 */
+function sfCard(id, photo, title, sub, from) {
+  return `<div class="card sfcard${from === 'result' ? ' done' : ''}" id="${id}">${photo ? `<img class="sfthumb" src="${esc(photo)}" alt="찍은 오운완 셀카">` : `<span class="sfthumb none">${CAM}</span>`}
+    <div class="sfbody"><b>${title}</b><small>${sub}</small><div class="sfbtns"><button class="btn sm ghost" data-act="reshoot" data-v="${from}" id="${id}Retake">다시 찍기</button>${photo ? `<button class="btn sm ghost" data-act="sfDel" data-v="${from}" id="${id}Del">사진 지우기</button>` : ''}</div></div></div>`;
+}
+
 /* ===== C7b 오운완 셀카 ===== */
 const ALBUM = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="9" r="1.8"/><path d="M21 15l-5-5L5 21"/></svg>';
 function vSelfie() {
@@ -663,11 +670,11 @@ function vSelfie() {
   if (st === 'guide') return `${back}<div class="sec"><div class="card selfieguide" id="selfieGuide">${CAM}<div class="h2" style="margin:8px 0 4px">촬영 가이드</div>
     <div class="gl"><b>1</b><span>얼굴 셀카나 거울 셀카로 찍어 주세요</span></div><div class="gl"><b>2</b><span>다른 회원이 나오지 않게 찍어 주세요</span></div><div class="gl"><b>3</b><span>사진은 나한테만 보여요</span></div></div>
     <button class="btn" data-act="selfieGo" id="selfieGo">찍으러 가기</button></div>`;
-  if (st === 'cam') return `${back}<div class="sec"><div class="cam" id="camBox"><video id="camV" autoplay playsinline muted></video><canvas id="camSim" width="300" height="400"></canvas></div>
-    <div class="shutterrow"><label class="albumb" id="albumBtn"><i>${ALBUM}</i>앨범<input type="file" accept="image/*" id="camFile" hidden></label><button class="shutter" data-act="shoot" id="shutter" aria-label="촬영"></button><span></span></div>
+  if (st === 'cam') return `${back}<div class="sec"><div class="cam" id="camBox"><video id="camV" autoplay playsinline muted></video><div class="camoff" id="camOff" hidden>${CAM}<b>카메라를 열 수 없어요</b><span>아래 앨범에서 골라 주세요<br>«카메라 앱»으로 찍어도 돼요</span></div></div>
+    <div class="shutterrow"><label class="albumb" id="albumBtn"><i>${ALBUM}</i>앨범<input type="file" accept="image/*" id="camFile" hidden></label><button class="shutter" data-act="shoot" id="shutter" aria-label="촬영" disabled></button><label class="albumb" id="camAppBtn"><i>${CAM}</i>카메라 앱<input type="file" accept="image/*" capture="user" id="camApp" hidden></label></div>
     <div class="muted" style="text-align:center" id="camState">카메라를 여는 중…</div></div>`;
-  return `${back}<div class="sec"><div class="shot"><img src="${S.shot || ''}" alt="찍은 사진"></div><div class="card donec" id="selfieDone">${LOCK}<div><b>오운완! 나한테만 보여요</b><small>${S.selfieFor === 'session' ? `운동을 끝내고 저장하면 경험치 +${CFG.SELFIE_BONUS.pct}%가 들어가요` : S.selfieGot ? `오운완 보너스 +${fmt(S.selfieGot)} XP` : '사진은 기록에 저장했어요 · 이번엔 보너스 경험치가 붙지 않아요'}</small></div></div>
-    <button class="btn" data-act="selfieOk" id="selfieOk">확인</button></div>`;
+  return `${back}<div class="sec"><div class="shot"><img src="${S.shot || ''}" alt="찍은 사진"></div><div class="card donec" id="selfieDone">${LOCK}<div><b>오운완! 나한테만 보여요</b><small>${S.selfieFor === 'session' ? `운동을 끝내고 저장하면 경험치 +${CFG.SELFIE_BONUS.pct}%가 들어가요` : S.selfieGot ? `오운완 보너스 +${fmt(S.selfieGot)} XP` : S.selfieSwap ? '사진만 바꿨어요 · 오운완 보너스는 그대로예요' : '사진은 기록에 저장했어요 · 이번엔 보너스 경험치가 붙지 않아요'}</small></div></div>
+    <div class="sfdonebtns"><button class="btn ghost" data-act="reshoot" data-v="${S.selfieFor}" id="selfieRetake">다시 찍기</button><button class="btn" data-act="selfieOk" id="selfieOk">확인</button></div></div>`;
 }
 
 /* ===== 랭킹·내 캐릭터 (v1.10 그대로) ===== */
@@ -954,42 +961,54 @@ function autoEndCheck() {
   if (Date.now() - s.lastAt > CFG.AUTO_END_MIN * 60000 && !autoEndCheck.busy) { autoEndCheck.busy = true; setTimeout(() => { autoEndCheck.busy = false; endSession(true); }, 0); }
 }
 
-/* ===== 셀카 (C7b) — 웹 카메라, 안 되면 그림으로 흉내 ===== */
-let STREAM = null;
+/* ===== 셀카 (C7b) — 웹 카메라. 못 열면 흉내 그림 없이 안내만(형 11-10: 흉내 그림이 카메라 화면처럼 보여 헷갈림) → 앨범·카메라 앱 ===== */
+let STREAM = null, CAM_P = null;
+const camMsg = e => e && e.name === 'NotAllowedError' ? '카메라 권한이 꺼져 있어요 · 설정에서 켤 수 있어요'
+  : e && e.name === 'NotFoundError' ? '이 기기에서 쓸 수 있는 카메라가 없어요'
+  : '브라우저에서 카메라를 열 수 없어요';
+function camUI(on, msg) {
+  const v = $('camV'); if (!v) return;
+  v.classList.toggle('on', on); $('camOff').hidden = on; $('shutter').disabled = !on;
+  $('camState').textContent = on ? '얼굴이나 거울 셀카로 · 다른 회원이 안 나오게' : msg;
+}
 async function camStart() {
-  const v = $('camV'), st = $('camState'); drawSim();
-  if (STREAM) { v.srcObject = STREAM; v.classList.add('on'); st.textContent = '얼굴이나 거울 셀카로 · 다른 회원이 안 나오게'; return; }
-  try {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw 0;
-    STREAM = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
-    if (!$('camV')) return camStop();
-    $('camV').srcObject = STREAM; $('camV').classList.add('on'); $('camState').textContent = '얼굴이나 거울 셀카로 · 다른 회원이 안 나오게';
-  } catch { if ($('camState')) $('camState').textContent = '카메라를 열 수 없어 시연 화면으로 보여요 · 앨범에서 골라도 돼요'; }
+  if (CAM_P) return CAM_P;   // render 가 겹쳐 불러도 getUserMedia 는 한 번만
+  CAM_P = (async () => {
+    let v = null;
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw Object.assign(new Error('getUserMedia 미지원'), { name: 'NotSupportedError' });
+      if (!STREAM) STREAM = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+      v = $('camV'); if (!v) return camStop();
+      if (v.srcObject !== STREAM) v.srcObject = STREAM;
+      await v.play();
+      if (v.isConnected) camUI(true); else if ($('camV')) { CAM_P = null; return camStart(); }   // 기다리는 사이 화면이 다시 그려짐 → 새 video 에 붙임
+    } catch (e) {
+      if (STREAM && v && !v.isConnected && $('camV')) { CAM_P = null; return camStart(); }   // 옛 video 의 play 가 끊긴 것뿐
+      console.warn('[selfie] camera', e && e.name, e && e.message);
+      camStop(); camUI(false, camMsg(e));
+    } finally { CAM_P = null; }
+  })();
+  return CAM_P;
 }
 function camStop() { if (STREAM) { STREAM.getTracks().forEach(t => t.stop()); STREAM = null; } }
-function drawSim() {
-  const c = $('camSim'); if (!c) return; const g = c.getContext('2d'), W = c.width, H = c.height;
-  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#3A4152'); bg.addColorStop(.62, '#596276'); bg.addColorStop(.63, '#2B2F38'); bg.addColorStop(1, '#22252C'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
-  g.fillStyle = 'rgba(255,255,255,.08)'; for (let i = 0; i < 4; i++) g.fillRect(20 + i * 72, 40, 52, 190);   // 거울 패널
-  g.strokeStyle = '#9AA3B5'; g.lineWidth = 7; g.beginPath(); g.moveTo(30, 300); g.lineTo(110, 300); g.stroke(); g.fillStyle = '#9AA3B5'; g.fillRect(22, 284, 12, 32); g.fillRect(106, 284, 12, 32);   // 덤벨
-  const person = (x, s, a) => { g.fillStyle = `rgba(236,238,244,${a})`; g.beginPath(); g.arc(x, 150 * s + (1 - s) * 120, 34 * s, 0, 7); g.fill(); g.beginPath(); g.moveTo(x - 62 * s, H); g.quadraticCurveTo(x - 60 * s, 205 * s + (1 - s) * 160, x, 200 * s + (1 - s) * 160); g.quadraticCurveTo(x + 60 * s, 205 * s + (1 - s) * 160, x + 62 * s, H); g.fill(); };
-  person(150, 1, .95);
-  g.fillStyle = '#fff'; g.font = 'bold 15px Pretendard, sans-serif'; g.fillText(`${md(TODAY)} 오운완`, 14, H - 14);
-}
 function shoot() {
-  const c = document.createElement('canvas'); c.width = 240; c.height = 320; const g = c.getContext('2d'), v = $('camV');
-  if (STREAM && v && v.videoWidth) { const r = Math.min(v.videoWidth / 3, v.videoHeight / 4), w = r * 3, h = r * 4; g.translate(240, 0); g.scale(-1, 1); g.drawImage(v, (v.videoWidth - w) / 2, (v.videoHeight - h) / 2, w, h, 0, 0, 240, 320); }
-  else { drawSim(); g.drawImage($('camSim'), 0, 0, 240, 320); }
+  const v = $('camV');
+  if (!(STREAM && v && v.videoWidth)) { toast('카메라가 안 열렸어요 · 앨범이나 카메라 앱으로 골라 주세요'); return; }
+  const c = document.createElement('canvas'); c.width = 240; c.height = 320; const g = c.getContext('2d');
+  const r = Math.min(v.videoWidth / 3, v.videoHeight / 4), w = r * 3, h = r * 4; g.translate(240, 0); g.scale(-1, 1); g.drawImage(v, (v.videoWidth - w) / 2, (v.videoHeight - h) / 2, w, h, 0, 0, 240, 320);
   saveShot(c.toDataURL('image/jpeg', .72));
 }
 function saveShot(url) {
   S.shot = url; S.selfieStep = 'done'; camStop(); tone(1400, 0, .06, 'square', .05); applySelfie(); save(); render();
 }
 function applySelfie() {
-  S.selfieGot = 0;
-  if (S.selfieFor === 'session' && S.session) { S.session.selfie = { ...SELFIE_SHOT }; S.session.photo = S.shot; S.session.lastAt = Date.now(); return; }
+  S.selfieSwap = false;
+  if (S.selfieFor === 'session' && S.session) { S.selfieGot = 0; S.session.selfie = { ...SELFIE_SHOT }; S.session.photo = S.shot; S.session.lastAt = Date.now(); return; }
   const rec = S.records.find(r => r.id === S.lastResult); if (!rec) return;
   rec.photo = S.shot;
+  // 이미 보너스 받은 기록 → 다시 찍기는 사진만 교체(경험치 재부여 없음). 방금 이 흐름에서 받은 보너스(selfieRes)는 확인 전까지 안내 유지
+  if (rec.selfieXP > 0) { if (!S.selfieRes) { S.selfieGot = 0; S.selfieSwap = true; } return; }
+  S.selfieGot = 0;
   const c = selfieCalc(rec); if (!c || !c.r2.selfieXP) return;   // 하루 1회·대상 기록 없음 → 사진만 저장
   const g = c.g; rec.br = c.r2; rec.raw = c.r2.raw; rec.selfieXP = c.r2.selfieXP; rec.selfieIn = Math.max(0, c.r2.selfieXP - c.cut); rec.xp += g; S.selfieGot = g;
   if (c.cut) { rec.cut = (rec.cut || 0) + c.cut; rec.cutReason = rec.cutReason || c.reason; }
@@ -1165,7 +1184,12 @@ document.addEventListener('click', e => {
   if (a === 'discard') { shClose(); S.session = null; save(); toast('기록 없이 운동을 닫았어요'); return go('workout'); }
   if (a === 'setDone') return setDone();
   if (a === 'setForce') return setDone(true);
-  if (a === 'selfie') { S.selfieFor = v; S.selfieStep = S.selfieSeen ? 'cam' : 'guide'; S.shot = null; return go('workout', 'selfie'); }
+  if (a === 'selfie') { S.selfieFor = v; S.selfieStep = S.selfieSeen ? 'cam' : 'guide'; S.shot = null; S.selfieRes = null; return go('workout', 'selfie'); }
+  if (a === 'reshoot') { if (S.sub !== 'selfie') S.selfieRes = null; S.selfieFor = v; S.selfieSeen = true; S.selfieStep = 'cam'; S.shot = null; return go('workout', 'selfie'); }
+  if (a === 'sfDel') {
+    if (v === 'session') { if (S.session) { S.session.selfie = null; S.session.photo = null; } }
+    else { const rec = S.records.find(r => r.id === S.lastResult); if (rec) rec.photo = null; }   // 그날 보너스는 유지(하루 1번 규칙 혼선 방지)
+    save(); render(); return toast('사진을 지웠어요'); }
   if (a === 'selfieGo') { S.selfieSeen = true; S.selfieStep = 'cam'; }
   else if (a === 'shoot') return shoot();
   else if (a === 'selfieOk') { const res = S.selfieRes; S.selfieRes = null; S.shot = null; S.bump = 1;
@@ -1281,7 +1305,7 @@ document.addEventListener('input', e => {
   if (e.target.id === 'placeQ') { S.placeQ = e.target.value; const q = S.placeQ.trim(); $('placeList').innerHTML = placeListHTML(PLACES.filter(p => !q || p.name.includes(q))); }
 });
 document.addEventListener('change', e => {
-  if (e.target.id !== 'camFile' || !e.target.files[0]) return;
+  if ((e.target.id !== 'camFile' && e.target.id !== 'camApp') || !e.target.files[0]) return;
   const img = new Image(); img.onload = () => { const c = document.createElement('canvas'); c.width = 240; c.height = 320; const g = c.getContext('2d'), r = Math.min(img.width / 3, img.height / 4);
     g.drawImage(img, (img.width - r * 3) / 2, (img.height - r * 4) / 2, r * 3, r * 4, 0, 0, 240, 320); URL.revokeObjectURL(img.src); saveShot(c.toDataURL('image/jpeg', .72)); };
   img.src = URL.createObjectURL(e.target.files[0]);

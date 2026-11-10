@@ -335,12 +335,16 @@ select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--g2)
 .gl{display:flex;gap:10px;align-items:flex-start;padding:8px 0;font-size:14px;line-height:1.45;word-break:keep-all}
 .gl>b{flex:none;width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;margin-top:1px}
 .cam{position:relative;width:100%;aspect-ratio:3/4;border-radius:20px;overflow:hidden;background:#22252C}
-.cam video,.cam canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.cam video{display:none;transform:scaleX(-1)}.cam video.on{display:block}
+.cam video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;display:none;transform:scaleX(-1)}.cam video.on{display:block}
+.camoff{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;text-align:center;color:#fff;background:#22252C}
+.camoff[hidden]{display:none}
+.camoff svg{width:40px;height:40px;stroke:#C9CED8;fill:none;opacity:.8}.camoff b{font-size:18px}.camoff span{font-size:14px;line-height:1.5;color:#C9CED8;word-break:keep-all}
+.shutter[disabled]{opacity:.35;box-shadow:0 0 0 4px var(--g4,#9AA3B5) inset}
 .shutterrow{display:flex;justify-content:center;align-items:center;gap:36px;margin:14px 0 8px}
 .shutter{width:72px;height:72px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px var(--rose) inset,0 2px 8px rgba(0,0,0,.12)}
 .shutter:active{transform:scale(.94)}
 .shutterrow>.albumb,.shutterrow>span{width:72px}
+.sfdonebtns{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;margin-top:12px}.sfdonebtns .btn{margin-top:0}
 .albumb{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px;font-weight:700;color:var(--g5);cursor:pointer}
 .albumb>i{width:48px;height:48px;border-radius:14px;background:#fff;border:1px solid var(--g2);display:flex;align-items:center;justify-content:center;color:var(--ink)}
 .shot{position:relative;width:72%;margin:0 auto;border-radius:18px;overflow:hidden;aspect-ratio:3/4;background:#22252C}
@@ -613,3 +617,12 @@ body.wk .replink>span.muted,body.wk .replink>span:last-child{flex:none;white-spa
 .evo.clip .evo-rays,.evo.clip .evo-ring,.evo.clip .evo-old,.evo.clip .evo-new{display:none}
 .evo.clip .evo-bg{background:var(--clipbg,#16161C)}
 @media (prefers-reduced-motion:reduce){.cimg .arm{animation:none}}
+
+/* v1.36 찍은 셀카 카드(저장 전 세션·저장 후 요약) — 썸네일 3:4 + 안내 + 다시 찍기·사진 지우기 */
+.sfcard{display:flex;gap:12px;align-items:flex-start;margin-top:12px;border:1.5px solid #FFC2DA}
+.sfcard.done{border-color:#FFE3EE;background:#FFF9FB}
+.sfthumb{flex:none;width:66px;aspect-ratio:3/4;border-radius:10px;object-fit:cover;background:#22252C;display:block}
+.sfthumb.none{display:flex;align-items:center;justify-content:center;background:var(--g1);color:var(--g5)}
+.sfbody{flex:1;min-width:0}.sfbody b{display:block;font-size:15px}.sfcard.done .sfbody b{color:var(--rose)}
+.sfbody small{display:block;color:var(--g5);font-size:13px;margin-top:2px;word-break:keep-all;line-height:1.4}
+.sfbtns{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.sfbtns .btn.sm{font-size:13px;padding:7px 11px}

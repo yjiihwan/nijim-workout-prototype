@@ -690,3 +690,45 @@ body:not(.demoui) .card.demo,body:not(.demoui) .demochip,body:not(.demoui) .demo
 #myCode .grid2 .btn{white-space:nowrap;padding-left:6px;padding-right:6px}
 @media (max-width:350px){#myCode .grid2 .btn{font-size:14px}
   .setrow.edit{grid-template-columns:30px auto auto 22px;gap:3px}.setrow.edit .step{gap:2px}.setrow.edit .step button{width:26px;height:26px}.setrow.edit .step span{min-width:34px;font-size:13px}.setrow.edit .wfield{width:62px;min-width:62px}.setrow.edit>span:first-child{white-space:nowrap;font-size:12px;letter-spacing:-.3px}}
+
+/* ===== v1.41 (11-11 밤) — 끝내기 고정 막대 · 끝내기 확인 · 세트 줄 고치기 · 숫자 빠른 입력 · 알림 띠 · 기록 지우기 버튼 ===== */
+/* 막대 뒤로 지나가는 글이 막대·아래 메뉴 사이로 비치지 않게 바닥까지 옅은 바탕을 깐다 */
+.endzone{position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:430px;height:calc(164px + env(safe-area-inset-bottom));background:linear-gradient(to bottom,rgba(244,244,246,0),var(--g1) 20px);z-index:9;pointer-events:none}
+.endbar{pointer-events:auto;position:absolute;left:0;right:0;bottom:calc(78px + env(safe-area-inset-bottom));margin:0 auto;width:calc(100% - 28px);max-width:402px;box-sizing:border-box;display:grid;grid-template-columns:auto 1fr;gap:8px;padding:8px;border-radius:20px;background:rgba(255,255,255,.97);border:.6px solid #DCDCE0;box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.endbar .btn{margin:0;padding:13px 14px;font-size:16px;white-space:nowrap;min-height:48px}
+.endbar .btn.ghost{padding-left:14px;padding-right:14px}
+body.hasbar .app{padding-bottom:184px}
+body.hasbar .toast{bottom:164px}
+.endsum{background:var(--g1);border-radius:14px;padding:12px 14px;margin-top:10px;display:grid;gap:8px}
+.endsum>div{display:grid;grid-template-columns:52px 1fr;gap:8px;align-items:baseline;font-size:15px}
+.endsum span{color:var(--g5);font-size:13px}.endsum b{font-weight:700;word-break:keep-all}.endsum em{font-style:normal;font-weight:800;color:var(--rose)}
+.endwarn{margin-top:8px}
+.linkbtn.quiet{display:block;margin:12px auto 0;padding:10px 12px;min-height:44px;color:var(--g5);font-weight:600;font-size:13px}
+.optbtn{display:block;width:100%;text-align:left;margin-top:10px;padding:14px 16px;border-radius:14px;background:#fff;border:1px solid var(--g2);min-height:44px}
+.optbtn b{display:block;font-size:16px;font-weight:800;color:var(--ink);word-break:keep-all}
+.optbtn small{display:block;margin-top:3px;font-size:13px;color:var(--g5);line-height:1.4;word-break:keep-all}
+.optbtn:active{background:var(--g1)}
+.warnlink{display:block;margin:6px 0 0;padding:6px 0;color:#8A5A00;text-decoration:underline;text-underline-offset:3px;font-size:13px;text-align:left}
+.sh{max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overflow-y:auto;box-sizing:border-box}
+.sh.still{animation:none}
+.qrow{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;padding:0 0 10px;border-bottom:1px solid var(--g1);margin-top:-2px}
+.qrow .chip{padding:8px 12px;min-height:36px;font-size:13px;font-weight:700;white-space:nowrap;background:var(--g1)}
+.qrow .chip.on{background:var(--ink);color:#fff}
+.setsteps .ex:has(+ .qrow){border-bottom:0}
+.setsteps .wfield.nf{min-width:92px}
+.step button{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+.h3sub{font-weight:500;font-size:12px;color:var(--g5)}
+button.setrow.tapset{width:100%;text-align:left;min-height:46px;background:none;border-radius:0;color:inherit;font:inherit;font-size:14px;border-bottom:1px solid var(--g1)}
+button.setrow.tapset:last-of-type{border-bottom:0}
+button.setrow.tapset:active{background:var(--g1)}
+.sredit{font-style:normal;font-size:13px;font-weight:700;color:var(--g5);white-space:nowrap}
+.btn.ghost.redtxt{color:#C2333A}
+.btn.ghost.delrec{margin-top:22px;padding:13px;min-height:48px;font-size:15px;font-weight:700;color:#C2333A;border-color:#F0C4C6;background:#fff}
+.edithint{text-align:center;margin-top:6px;font-size:13px;word-break:keep-all}
+.editnote .enline{line-height:1.5}.editnote .enline+.enline{margin-top:4px}
+.editnote .enline.num{font-size:14px;color:#3A2A00}.editnote .enline.sub{font-size:12px}
+.nowrap{white-space:nowrap}
+.notice.flashn{margin:12px 16px 0;justify-content:flex-start;line-height:1.45;word-break:keep-all;font-weight:700}
+.notice.flashn.minus{background:#FFF3DC;color:#6B4700}
+@media (max-width:350px){.endbar{gap:6px;padding:6px}.endbar .btn{font-size:14px;padding:13px 9px}.qrow .chip{padding:8px 10px}.optbtn{padding:12px 13px}.optbtn b{font-size:15px}}
+#qMin{display:grid;grid-template-columns:repeat(5,1fr)}#qMin .chip{padding:8px 0;text-align:center}

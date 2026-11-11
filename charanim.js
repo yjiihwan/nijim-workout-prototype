@@ -55,13 +55,13 @@ function sigClipHTML(t, lv) {
 /* ===== 내 캐릭터 카드 — 시그니처 포즈 16구간 · 알통 Lv.1·50·99 ===== */
 function sigCard(t, lv) {
   const cut = cutOf(lv), segs = ANIM.sig[t] || {};
-  return `<div class="card" id="sigCard"><div class="h2" style="font-size:16px">시그니처 포즈</div><div class="muted" style="margin-bottom:8px">홈 화면에서 8~12초마다 한 번씩 해요 · 캐릭터를 탭하면 바로 · 아래 단계를 누르면 그 단계 포즈를 봐요</div>
+  return `<div class="card" id="sigCard"><div class="h2" style="font-size:16px">시그니처 포즈</div><div class="muted" style="margin-bottom:8px">홈 화면에서 8~12초마다 한 번씩 해요 · 캐릭터를 탭하면 바로 해요 · 아래 단계를 누르면 그 단계 포즈가 나와요</div>
   <button class="sigview" id="sigView" data-act="sigSeg" data-v="${cut}" aria-label="포즈 다시 보기"><img id="sigViewClip" alt=""><span class="pill lvpill sigtag" id="sigViewTag">${segLabel(cut)}</span></button>
   <div class="sigstrip" id="sigStrip">${SEGS.filter(s => segs[s]).map(s => `<button class="sigthumb ${s === cut ? 'on' : ''}" data-act="sigSeg" data-v="${s}"><img src="assets/anim/sig/${t}/lv${s}_base.png?v=${VER}" alt=""><small>${segLabel(s)}</small></button>`).join('')}</div></div>`;
 }
 function flexCard(t) {
   const f = ANIM.flex[t] || {}, segs = ['01', '50', '99'].filter(s => f[s]); if (!segs.length) return '';
-  return `<div class="card" id="flexCard"><div class="h2" style="font-size:16px">알통 자랑 · Lv.1 → 50 → 99</div><div class="muted" style="margin-bottom:8px">같은 캐릭터가 레벨에 따라 얼마나 커지는지 · 탭하면 다시 봐요</div>
+  return `<div class="card" id="flexCard"><div class="h2" style="font-size:16px">알통 자랑 · Lv.1 → 50 → 99</div><div class="muted" style="margin-bottom:8px">레벨이 오르면 같은 캐릭터가 얼마나 커지는지 보여요 · 탭하면 다시 봐요</div>
   <div class="flexrow">${segs.map(s => `<button class="flexcell" data-act="flexPlay" data-v="${s}"><img id="flex_${s}" alt=""><small>Lv.${+s}</small></button>`).join('')}</div></div>`;
 }
 async function sigSegPlay(seg) {

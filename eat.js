@@ -247,7 +247,7 @@ function eatUse(id) {
   if (f.rule === 'recent7d_workout' && lastWorkoutDays() >= 7) return toast('최근 7일 안에 운동 기록이 1번 있어야 쓸 수 있어요');
   if (S.level >= 99 && xpOnlyFood(f)) return toast('최고 레벨이라 경험치는 더 오르지 않아요 · 음식은 그대로 있어요');   // QA 치11
   S.inv[id]--; EAT.q.push(id); S.eatQ = [...EAT.q]; save();   // QA 치10: 대기 줄도 같이 저장 → 앱이 닫혀도 다음에 보유함으로 되돌림(app.js sanitize)
-  if (EAT.cur) { toast(`${f.name} — 앞 연출이 끝나면 이어서 먹어요 (대기 ${EAT.q.length})`); return render(); }
+  if (EAT.cur) { toast(`${f.name} — 지금 먹는 게 끝나면 이어서 먹어요 (대기 ${EAT.q.length})`); return render(); }
   eatNext();
 }
 async function eatNext() {
@@ -300,7 +300,7 @@ function eatBar(E, t) {
 function eatFinish(ev) {
   cancelAnimationFrame(EAT.raf); const E = EAT.cur;
   if (E && E.f.eff.cond) toast(`${E.f.name} — 오늘 컨디션 쌩쌩 유지!`);
-  else if (E && !E.f.eff.xp) toast(`${E.f.name} — ${E.label} 적용 · 다음 운동 기록 때 들어가요`);
+  else if (E && !E.f.eff.xp) toast(`${E.f.name} — ${E.label} · 다음 운동을 기록할 때 들어가요`);
   EAT.cur = null;
   const y = window.scrollY;   // 진화 뒤에도 보던 위치로(연달아 먹기)
   if (ev) return play(ev, { onDone: () => { go('workout', 'shop'); window.scrollTo(0, y); setTimeout(eatNext, 60); } });
@@ -330,11 +330,11 @@ function vEatTab() {
   <div class="chips">${[['all', '전체'], ['food', '먹는 거'], ['drink', '마시는 거']].map(([k, l]) => `<button class="${cat === k ? 'on' : ''}" data-act="eatCat" data-v="${k}">${l}</button>`).join('')}</div>
   <div class="fhead"><b>먹고 마시는 아이템</b><span>쓰면 바로 효과</span></div>
   <div class="fgrid">${list.map(card).join('')}</div>
-  <div class="muted" style="margin-top:10px">즉시 경험치는 유료 경험치(랭킹 💰·«운동만 보기»·주간 리그 제외) · 배율은 가장 큰 것 1개만 적용, 나머지는 다음 운동으로 대기 · 화면 탭하면 연출 건너뛰기</div>`;
+  <div class="muted" style="margin-top:10px">바로 오르는 경험치는 유료 경험치예요(랭킹 💰·«운동만 보기»·주간 리그 제외) · 배율은 가장 큰 것 1개만 붙고, 나머지는 다음 운동으로 넘어가요 · 화면을 탭하면 먹는 장면을 건너뛰어요</div>`;
 }
 function buyFood(id) {
   const f = foodById(id); if (!f) return;
   if (S.level >= 99 && xpOnlyFood(f)) return toast('최고 레벨이라 경험치 음식은 효과가 없어요 · 포인트는 그대로예요');
-  if (S.points < f.price) return toast('포인트가 부족해요 — 니짐 포인트 충전 화면으로 이어져요');
+  if (S.points < f.price) return toast('포인트가 부족해요 — 니짐 포인트 충전 화면으로 넘어가요');
   S.points -= f.price; S.inv[id] = (S.inv[id] || 0) + 1; save(); render(); toast(`${f.name} 구매 완료 · -${f.price.toLocaleString()}P`);
 }

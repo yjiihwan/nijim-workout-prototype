@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.42';
+const VER = 'v1.43';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -30,7 +30,7 @@ const isBigBoundary = lv => lv % 10 === 0 || lv === 99;
 
 /* 효과형은 «사용»(소모) · 외형형은 «장착». 가격·상한 PLAN §2-10 */
 const ITEMS = [
-  { id:'boost1', img:'headband_gold', kind:'effect', use:1, name:'2배 부스터 · 1세션', desc:'다음 운동 1번 2배 · 한도 없음', price:300 },
+  { id:'boost1', img:'headband_gold', kind:'effect', use:1, name:'2배 부스터 · 운동 1번', desc:'다음 운동 1번 2배 · 한도 없음', price:300 },
   { id:'boost7', img:'shaker', kind:'effect', use:1, name:'2배 부스터 · 7일', desc:'7일 동안 운동 2배 · 한도 없음', price:1500 },
   { id:'potion', img:null, kind:'effect', use:1, name:'경험치 물약 +300', desc:'운동 없이 +300 · 한도 없음 · 💰', price:1000 },
   { id:'charm', img:'charm', kind:'effect', use:1, name:'연속 보호권', desc:'운동 못 간 주 1회 보호', price:500 },
@@ -61,8 +61,8 @@ const PLACES = [
 const CENTER_POP = { '니짐 신림점': ['leg_press','lat_pulldown','treadmill','smith_squat','hip_thrust','chest_press'] };
 /* 말풍선 문구(PLAN §2-5 · §4-2 톤) — 템플릿 회전 */
 const MOOD = {
-  low:    { label:'아쉬운', lines:['오늘은 좀 아쉬웠지? 괜찮아, 나온 게 반이야. 다음엔 1세트만 더 같이 해보자','몸이 무거운 날이었나 봐. 그래도 왔잖아! 다음엔 같이 10분만 더 해보자','오늘은 살짝 아쉬움. 그래도 기록은 1칸 늘었어. 내일 컨디션 보고 다시 가자'] },
-  normal: { label:'평소대로', lines:['오늘도 평소만큼 꾸준히! 이런 날이 1주, 1달을 만들어'] },
+  low:    { label:'아쉬운', lines:['오늘은 좀 아쉬웠지? 괜찮아, 나온 게 반이야. 다음엔 1세트만 더 같이 해보자','몸이 무거운 날이었나 봐. 그래도 왔잖아! 다음엔 같이 10분만 더 해보자','오늘은 살짝 아쉬웠어. 그래도 기록은 1칸 늘었어. 내일 컨디션 보고 다시 가자'] },
+  normal: { label:'평소대로', lines:['오늘도 평소만큼 꾸준히! 이런 날이 쌓여 한 달이 돼'] },
   high:   { label:'신남', lines:['오늘 평소보다 훨씬 많이 했어! 나까지 땀 나 💧 내일은 꼭 쉬어줘','와, 지난주의 너를 넘었어! 1단계 더 단단해진 기분이야'] },
 };
 const QUIET_LINE = '요즘 컨디션 어때? 쉬어가도 괜찮아';
@@ -252,7 +252,7 @@ const itemWeek = () => ledger().weekItem;    // 아이템 경험치(한도 없�
 const centerWeek = () => ledger().weekCenter;   // 결정 36 입점 보너스(주 900 · 운동 1,800과 따로)
 const leagueWeek = () => leagueWeekOf(S.records, weekDays());   // 결정 38 리그·랭킹 주간 = 운동 + 입점 보너스(검증 세션만)
 const gainEx = g => { const e = applyXP({ level: S.exLv, xp: S.exXp }, g); S.exLv = e.level; S.exXp = e.xp; };   // 운동 레벨(아이템 장부 제외)
-const CB_TXT = '입점센터 운동 시 경험치 1.5배';
+const CB_TXT = '입점센터에서 운동하면 경험치 1.5배';
 const findCenterBtn = (id = '') => `<button class="linkbtn cfind" data-act="findCenter"${id ? ` id="${id}"` : ''}>센터 찾기 ›</button>`;
 const lastWorkoutDays = () => { const ds = realRecs().map(r => r.date).sort(); if (!ds.length) return 99;
   return Math.round((new Date(TODAY) - new Date(ds[ds.length - 1])) / 864e5); };
@@ -365,7 +365,7 @@ function vHome() {
    배지는 태그 줄 맨 앞(이름 줄에 붙이면 긴 센터 이름이 잘림) · 목록이 전부 입점센터면 배지 대신 맨 위 1줄 */
 function vNearby() {
   const list = PLACES.filter(p => !S.nbOnly || p.linked), allLinked = list.length > 0 && list.every(p => p.linked);
-  const card = p => `<div class="nbc" id="nb_${p.id}"><div class="nbimg"></div><div class="nbt"><b>${esc(p.name)}</b><div class="nbtags">${p.linked && !allLinked ? '<span class="cbbadge">경험치 1.5배</span>' : ''}${p.linked ? '<span>니짐 입점</span><span>헬스</span><span>1일권</span>' : '<span>헬스</span><span>지도 정보</span>'}</div><small>${p.dist} · ${p.linked ? '니짐내짐에서 결제·입장' : '니짐내짐 미입점'}</small></div></div>`;
+  const card = p => `<div class="nbc" id="nb_${p.id}"><div class="nbimg"></div><div class="nbt"><b>${esc(p.name)}</b><div class="nbtags">${p.linked && !allLinked ? '<span class="cbbadge">경험치 1.5배</span>' : ''}${p.linked ? '<span>니짐 입점</span><span>헬스</span><span>1일권</span>' : '<span>헬스</span><span>지도 정보</span>'}</div><small>${p.dist} · ${p.linked ? '니짐내짐에서 결제·입장' : '입점 안 된 센터'}</small></div></div>`;
   return `<div class="dummy nb"><div class="h2">내주변</div><div class="ph">실제 앱 «내주변» 지도 자리</div>
   <div class="nbfilter"><button class="chip ${S.nbOnly ? 'on' : ''}" data-act="nbOnly" id="nbOnly">입점센터만</button><span class="muted">${list.length}곳</span></div>
   ${allLinked ? `<div class="cbtop" id="cbTop">여기 센터는 모두 경험치 1.5배</div>` : ''}
@@ -389,7 +389,7 @@ const N_RULE = { r: { min: 1, max: 100, unit: '회', name: '횟수', ask: '횟�
 const nInput = (k, v, attrs) => `<label class="wfield nf"><input class="win" type="text" inputmode="numeric" enterkeyhint="done" autocomplete="off" maxlength="5" value="${v}" style="width:${wWidth(v)}" data-k="${k}" ${attrs} aria-label="${N_RULE[k].name}(${N_RULE[k].unit}) 직접 입력"><i>${N_RULE[k].unit}</i></label>`;
 function parseN(raw, k) {
   const R = N_RULE[k], t = String(raw).trim().replace(/\s/g, '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/(회|초|분)$/, '');
-  if (!t) return { ok: false, msg: `${R.ask} · 이전 값으로 돌려놨어요` };
+  if (!t) return { ok: false, msg: `${R.ask} · 원래대로 돌려놨어요` };
   if (!/^\d+$/.test(t)) return { ok: false, msg: '숫자로만 적어 주세요' };
   const v = +t;
   if (v < R.min || v > R.max) return { ok: false, msg: `${R.min}${R.unit}부터 ${R.max.toLocaleString()}${R.unit}까지 적을 수 있어요` };
@@ -399,7 +399,7 @@ function parseN(raw, k) {
 function parseW(raw) {
   let t = String(raw).trim().replace(/\s/g, '').replace(/[０-９．，]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/kg$/i, '');
   t = /^\d{1,3}(,\d{3})+(\.\d*)?$/.test(t) ? t.replace(/,/g, '') : t.replace(',', '.');   // «1,000» = 천(1kg 아님) · «22,5» = 22.5
-  if (!t) return { ok: false, msg: '무게를 적어 주세요 · 이전 값으로 돌려놨어요' };
+  if (!t) return { ok: false, msg: '무게를 적어 주세요 · 원래대로 돌려놨어요' };
   if (/^\d{4,}(\.\d*)?$/.test(t)) return { ok: false, msg: `${W_MAX}kg까지만 적을 수 있어요` };
   if (!/^\d{1,3}(\.\d*)?$|^\.\d+$/.test(t)) return { ok: false, msg: /^-/.test(t) ? '0kg보다 작은 무게는 적을 수 없어요' : '숫자로만 적어 주세요 (예: 22.5)' };
   const v = +t;
@@ -428,9 +428,9 @@ function vChoose() {
 function vOnbPerm() {
   const row = (ico, title, desc, k) => `<div class="prow">${ico}<div><b>${title}</b><small>${desc}</small></div><button class="btn sm ${S.perm[k] ? 'ghost' : ''}" data-act="perm" data-v="${k}">${S.perm[k] ? '허용됨' : '허용'}</button></div>`;
   return `<div class="sec">${obProg(2)}<div class="h2">거의 다 됐어요</div><div class="muted" style="margin-bottom:12px">둘 다 나중에 설정에서 바꿀 수 있어요.</div>
-  <div class="card">${row(BELL, '알림', '센터에 들어가면 «입장 확인! 캐릭터가 기다려요» 한 번 · 언제든 끌 수 있어요', 'noti')}
-  ${row(PIN, '위치', '입장 기록이 없는 센터에서 기록할 때 저장 순간 1번만 확인해요. 위치 좌표는 저장하지 않아요', 'loc')}</div>
-  <div class="card privacy" id="photoNote">${LOCK}<div><b>사진은 나만 봐요</b><small>오운완 셀카는 나한테만 보여요. 친구·다른 회원에게 공개되지 않고, 언제든 지울 수 있어요. 찍지 않아도 기록은 그대로 돼요.</small></div></div>
+  <div class="card">${row(BELL, '알림', '센터에 들어가면 «입장 확인! 캐릭터가 기다려요» 한 번 알려요 · 끌 수 있어요', 'noti')}
+  ${row(PIN, '위치', '센터에서 입장 없이 기록하면, 저장할 때 딱 한 번 센터에 있는지만 봐요. 내 위치는 남기지 않아요', 'loc')}</div>
+  <div class="card privacy" id="photoNote">${LOCK}<div><b>사진은 나만 봐요</b><small>오운완 셀카는 나한테만 보여요. 친구나 다른 회원은 볼 수 없고, 언제든 지울 수 있어요. 안 찍어도 기록은 그대로 남아요.</small></div></div>
   <button class="btn" data-act="obDone" id="obDone">${esc(CH[S.type].name)}${wa(S.type)} 시작하기</button>
   <div class="muted demoonly" style="text-align:center;margin-top:8px">시연용: 실제 권한 요청 창은 띄우지 않아요</div></div>`;
 }
@@ -469,7 +469,7 @@ function vWorkout() {
     <div class="eqs">${eqNames || '<span class="pill none">장착 아이템 없음</span>'}</div>
     <button class="linkbtn" data-act="sub" data-v="me" id="goMe">내 캐릭터 자세히 ›</button></div></div>${moodToday() ? `<div class="say moodsay ${moodToday().verdict}" id="stageSay">${esc(moodToday().line)}</div>` : EXPR[ex].line ? `<div class="say moodsay ${ex}" id="stageSay">${esc(EXPR[ex].line)}</div>` : ''}</div>
   <button class="btn" data-act="start" id="goRecord" style="margin-top:0">${S.session ? '운동 이어서 하기' : '오늘 운동 기록하기'}</button>
-  <div class="muted" style="text-align:center;margin:6px 0 12px">${S.session ? `${esc(S.session.place.name)}에서 운동 중 · <span data-clock="sess">${clock(Date.now() - S.session.startedAt)}</span>` : `센터 입장이 확인되면 바로 시작돼요 · ${CB_TXT}`}</div>
+  <div class="muted" style="text-align:center;margin:6px 0 12px">${S.session ? `${esc(S.session.place.name)}에서 운동 중 · <span data-clock="sess">${clock(Date.now() - S.session.startedAt)}</span>` : `센터에 입장하면 바로 시작돼요 · ${CB_TXT}`}</div>
   <div class="card" id="streakCard"><div style="display:flex;justify-content:space-between;align-items:center"><div class="h2" style="margin:0;font-size:16px" id="weekCnt">이번 주 ${wk}회 운동</div><span class="pill ${wk>=1?'tier4':'tier1'}">🔥 ${S.streakWeeks}주 연속</span></div>
     <div class="wsay" id="weekSay"><span class="cbox">${charFit(t, lv, 26, ex)}</span><span>${weekSay(wk)}</span></div>
     <div class="week">${week}</div>
@@ -501,7 +501,7 @@ function vPlace() {
   <div class="muted" id="placeNote">입점 안 된 헬스장은 집·야외와 같은 «자가 기록»(경험치 40%)이에요 · 어디서든 오운완 셀카를 찍으면 +20%</div></div>`;
 }
 const placeListHTML = list => list.length ? list.map(p => p.linked ? `<button class="prow tap plc" data-act="placeLinked" data-v="${esc(p.name)}"><div><b>${esc(p.name)}</b><small><span class="cbtag">1.5배</span>${p.dist} · 니짐 입점센터</small></div><span class="muted">선택</span></button>${S.placeOpen === p.name ? `<div class="cbopen" id="cbOpen"><div>입장하기로 들어오면 경험치 1.5배예요</div><div class="grid2"><button class="btn sm" data-act="placeEnter" data-v="${esc(p.name)}">입장하기</button><button class="btn sm ghost" data-act="place" data-v="${esc(p.name)}">입장 없이 기록</button></div></div>` : ''}`
-  : `<button class="prow tap plc" data-act="place" data-v="${esc(p.name)}"><div><b>${esc(p.name)}</b><small>${p.dist} · 니짐 미연동 센터</small></div><span class="muted">선택</span></button>`).join('')
+  : `<button class="prow tap plc" data-act="place" data-v="${esc(p.name)}"><div><b>${esc(p.name)}</b><small>${p.dist} · 입점 안 된 센터</small></div><span class="muted">선택</span></button>`).join('')
   : `<div class="muted" style="padding:12px 0">찾는 센터가 없어요. 지도에서 찾은 센터만 고를 수 있어요.</div>`;
 
 /* ===== C3 세션 화면 ===== */
@@ -516,7 +516,7 @@ function vSession() {
     ${s.rapid === 'batch' ? `<div class="cbline" id="batchLine"><span>한꺼번에 적는 기록 · <b>자가 기록</b>으로 저장돼요</span></div>` : centerLine(s)}
     ${boostOn() ? `<div class="muted boostline">${boostLabel()} 부스터 적용 중</div>` : ''}
     ${held ? holdWarnHTML(s, true) : ''}
-    <div class="muted autoend" id="autoEnd">마지막 기록 후 3시간 동안 입력이 없으면 자동으로 끝나요 · 마지막 기록 ${new Date(s.lastAt).toTimeString().slice(0, 5)}</div></div>`;
+    <div class="muted autoend" id="autoEnd">마지막 기록 뒤 3시간 동안 아무것도 안 적으면 자동으로 끝나요 · 마지막 기록 ${new Date(s.lastAt).toTimeString().slice(0, 5)}</div></div>`;
   const empty = !s.items.length ? `
   ${lr ? `<button class="card routine" data-act="routine" id="routineCard"><div class="h3">지난번 루틴 그대로</div><b>${md(lr.date)} · ${esc(placeBase(lr.place))}</b><div class="rchips">${lr.items.filter(i => EX[i.ex]).map(i => `<span>${EX[i.ex].name}</span>`).join('')}</div><span class="rgo">한 번에 불러오기 ›</span></button>` : ''}
   <div class="card" id="recoCard"><div class="h3">오늘 추천</div>${recs.map(([id, why]) => `<button class="prow tap" data-act="addEx" data-v="${id}"><div><b>${EX[id].name}</b><small>${why}</small></div><span class="plus">+</span></button>`).join('')}</div>`
@@ -543,7 +543,7 @@ function vSession() {
 /* 결정 36 ⑥ C3 위치별 보너스 줄 — 입점센터 적용 중 / 이번 주 900 다 참 / 그 밖 장소 안내 / 레슨은 줄 없음 */
 function centerLine(s) {
   if (s.verify === 'V3') return '';
-  if (s.verify === 'V1') return centerWeek() >= CFG.CENTER_BONUS.weekCap ? `<div class="cbline full" id="cbLine"><span>이번 주 입점 보너스 다 모았어요</span></div>` : `<div class="cbline on" id="cbLine"><span><b>입점센터</b> · 경험치 1.5배 적용 중</span></div>`;
+  if (s.verify === 'V1') return centerWeek() >= CFG.CENTER_BONUS.weekCap ? `<div class="cbline full" id="cbLine"><span>이번 주 입점센터 보너스 다 모았어요</span></div>` : `<div class="cbline on" id="cbLine"><span><b>입점센터</b> · 경험치 1.5배 적용 중</span></div>`;
   return `<div class="cbline" id="cbLine"><span>입점센터에서 하면 경험치 1.5배</span>${findCenterBtn('cbFind')}</div>`;
 }
 function recommend(s) {
@@ -576,7 +576,7 @@ function vPick() {
   <div class="chips parts" id="partChips">${['all', ...PARTS].map(p => `<button class="chip ${S.part === p ? 'on' : ''}" data-act="part" data-v="${p}">${p === 'all' ? '모든 부위' : p}</button>`).join('')}</div>
   <div class="card" id="exList">${exListHTML()}</div>
   ${pop.length ? `<div class="card"><div class="h3">이 센터에서 많이 하는 운동</div><div class="chips gchips">${pop.map(chip).join('')}</div></div>` : ''}
-  <div class="muted">레슨(PT·필라테스·GX)은 선생님이 진행 확정하면 자동으로 기록돼요</div></div>`;
+  <div class="muted">레슨(PT·필라테스·GX)은 선생님이 확정하면 자동으로 기록돼요</div></div>`;
 }
 /* 검색어가 있으면 탭·부위와 상관없이 전체에서 찾는다(집·야외 장소 제한만 유지) */
 function exListHTML() {
@@ -628,7 +628,7 @@ function vSet() {
   <div class="prevrec" id="prevRec">${prev ? `지난번 ${md(prev.date)} · ${setsTxt(e, prev.sets)}` : '이 운동은 처음이에요 · 편한 무게로 시작해요'}</div>
   ${best ? `<div class="muted">최고 기록 ${setTxt(e, best)}</div>` : ''}
   <div class="setsteps">${e.mode === 'wr' ? stepper('stw', kg(d.w).replace('kg', ''), '무게', 'kg', wInput(d.w, 'id="wIn" data-w="draft"')) + `<div class="qrow" id="qW">${lastTop ? `<button class="chip" data-act="qw" data-v="=${lastTop}">지난번 ${+lastTop.toFixed(1)}kg</button>` : ''}<button class="chip" data-act="qw" data-v="5">+5kg</button><button class="chip" data-act="qw" data-v="10">+10kg</button></div>` : ''}${e.mode === 't' ? stepper('sts', d.s, '시간', '초', nInput('s', d.s, 'id="sIn" data-w="draft"')) + `<div class="qrow" id="qS"><button class="chip" data-act="qs" data-v="30">+30초</button><button class="chip" data-act="qs" data-v="60">+60초</button></div>` : stepper('str', d.r, '횟수', '회', nInput('r', d.r, 'id="rIn" data-w="draft"'))}</div>
-  ${chk.jump && !chk.unreal ? `<div class="warn" id="safetyWarn">지난번보다 ${chk.jumpPct}% 무거워요. 처음 1~2회는 가볍게 몸을 풀고, 보조자와 함께 무리하지 마세요</div>` : ''}
+  ${chk.jump && !chk.unreal ? `<div class="warn" id="safetyWarn">지난번보다 ${chk.jumpPct}% 무거워요. 처음 1~2회는 가볍게 몸을 풀고, 무리하지 말고 보조를 받으세요</div>` : ''}
   ${(e.mode === 'wr' || e.mode === 'r') && d.r < CFG.MIN_REPS ? `<div class="minreps" id="minReps">${CFG.MIN_REPS}회 이상부터 경험치</div>` : ''}
   ${sessHeld(S.session) ? holdWarnHTML(S.session, false) : ''}
   <button class="btn big ${Date.now() - (S.setAt || 0) < SET_LOCK_MS ? 'wait' : ''}" data-act="setDone" id="setDone">${ds.length + 1}세트 완료</button>
@@ -658,7 +658,7 @@ function vCardio() {
   : `<div class="setsteps">${stepper('cmin', c.min, '시간', '분', nInput('min', c.min, 'id="minIn" data-w="draft"'))}<div class="qrow" id="qMin">${[10, 20, 30, 45, 60].map(n => `<button class="chip ${c.min === n ? 'on' : ''}" data-act="qmin" data-v="${n}">${n}분</button>`).join('')}</div></div>${run ? `<div class="warn" id="runNote">타이머가 돌고 있어요. 여기서 저장하면 타이머 시간(<span data-clock="cardio">${clock(el)}</span>) 대신 <b>${c.min}분</b>으로 저장돼요</div>` : ''}<div class="muted" style="margin-top:8px;word-break:keep-all">숫자를 누르면 직접 적을 수 있어요 · 한 번에 최대 ${CFG.LIM.cardioMaxMin}분까지 기록돼요</div>`}
   </div>
   <div class="card"><div class="h3">얼마나 힘들었어요?</div><div class="chips" id="cLevel">${lv.map(([k, l]) => `<button class="chip ${c.level === k ? 'on' : ''}" data-act="clevel" data-v="${k}">${l}</button>`).join('')}</div>
-  <div class="muted" style="margin-top:8px">표정 판정에만 써요 · 경험치는 시간으로만 계산해요</div>
+  <div class="muted" style="margin-top:8px">캐릭터 표정에만 써요 · 경험치는 시간으로만 계산해요</div>
   <details class="more" ${c.open ? 'open' : ''} data-act="cmore"><summary>거리·속도·경사 <span class="muted">(선택)</span></summary>
     ${stepper('ckm', c.km.toFixed(1), '거리', 'km')}${stepper('ckmh', c.kmh.toFixed(1), '속도', 'km/h')}${e.id === 'treadmill' ? stepper('cinc', c.inc, '경사', '%') : ''}
     ${c.kmh > 25 ? '<div class="warn">25km/h 넘는 속도는 25로 계산해요</div>' : ''}</details></div>
@@ -681,7 +681,7 @@ function xpRows(rec) {
   const s0 = (b.base || 0) + (b.first || 0) + (b.complete || 0), afterV = Math.round(s0 * b.vm), vAmt = afterV - Math.round(s0), sAmt = (b.mult ?? afterV) - afterV;
   if (b.vm !== 1) add(`${VERIFY_LABEL[b.v].replace(/ ✓| ★ 2배/, '')} ×${b.vm}`, vAmt, 'mul', 'v');
   if (b.sm !== 1) add(b.comeback ? `복귀 첫 운동 ×${b.sm.toFixed(2)}` : `연속 ${b.streakW ?? S.streakWeeks}주 ×${b.sm.toFixed(2)}`, sAmt, 'mul', 's');
-  if (b.catchUp) add('오늘 앞 기록 차액(오늘 합계로 평소보다 많이 함)', b.catchUp, 'vol');
+  if (b.catchUp) add('오늘 먼저 한 운동과 합쳐 평소보다 많이 함', b.catchUp, 'vol');
   if (b.boostPart) add(`×${b.bm || CFG.BOOST.mul} 부스터 · 한도 없음`, b.boostPart, 'gold');
   if (b.newXP) add(`새 부위 (${b.newParts.join('·')})`, b.newXP); if (b.prXP) add(`개인 기록 ${b.prN}번`, b.prXP);
   if (b.goal) add('주간 보너스(예전 규칙)', b.goal);   // v1.41 이전 기록에만 남아 있음
@@ -691,7 +691,7 @@ function xpRows(rec) {
   if (tgt) tgt.n += fix;
   if (rec.xpCenter || rec.cbCut) { add('입점센터 보너스', rec.xpCenter || 0, 'center');
     note(rec.cbCut ? `이번 주 보너스 ${CFG.CENTER_BONUS.weekCap.toLocaleString()} 다 모았어요 · ${fmt(rec.cbCut)} 빠짐` : `기본 경험치 ${fmt(rec.centerBase)}의 ${CFG.CENTER_BONUS.pct}%`); }
-  if (rec.cut) add(rec.cutReason === 'week' ? '운동 경험치 이번 주 상한' : '운동 경험치 오늘 상한', -rec.cut, 'cut');
+  if (rec.cut) add(rec.cutReason === 'week' ? '운동 경험치 이번 주 한도' : '운동 경험치 오늘 한도', -rec.cut, 'cut');
   if (rec.held) { add('24시간 뒤에 받을 경험치', -rec.held, 'cut'); if (rec.heldCb) note(`입점센터 보너스 ${fmt(rec.heldCb)}도 그때 함께 들어와요`); }
   if (b.selfieXP && rec.cut) note(rec.selfieIn ? `한도에 걸려 셀카 몫은 ${fmt(rec.selfieIn)}만 들어갔어요` : '한도에 걸려 셀카 몫은 안 들어갔어요(오늘 인증은 완료)');
   return R.map(x => `<div class="xrow ${x.cls}"><span>${x.l}</span><b>${x.n == null ? '' : (x.n < 0 ? '−' : '+') + fmt(Math.abs(x.n))}</b></div>`).join('');
@@ -703,33 +703,33 @@ function vResult() {
   const note = { low: '평소보다 가볍게 한 날이라 <b>오늘 하루만</b> 표정이 살짝 아쉬워요. 레벨·경험치·연속은 <b>그대로</b>예요.',
     normal: '평소만큼 했어요. 캐릭터는 평소 표정(쌩쌩) 그대로예요.',
     high: '평소보다 훨씬 많이 했어요! <b>오늘 하루</b> 캐릭터가 신나요. 내일은 회복도 챙겨요.',
-    na: m && m.quiet ? '요즘 아쉬운 날이 이어져서 표정 대신 한마디만 남겨요. 레벨·경험치는 그대로예요.' : `오늘은 표정 판정을 하지 않았어요(${esc(m ? m.why || '기록 없음' : '기록 없음')}). 캐릭터는 평소 표정이에요.` }[v];
+    na: m && m.quiet ? '요즘 아쉬운 날이 이어져서 표정 대신 한마디만 남겨요. 레벨·경험치는 그대로예요.' : `오늘은 평소 표정 그대로예요(${esc(m ? m.why || '기록 없음' : '기록 없음')}).` }[v];
   const show = (m && v !== 'normal' && v !== 'na') ? m : null;
   const ev = rec && rec.lvUp, canSelfie = rec && !rec.held && !rec.demo && !rec.photo && !rec.selfieXP, sfDone = rec && !rec.demo && rec.selfieXP > 0;
   return `${subHead(past ? `${md(rec.date)} 운동 요약` : '오늘 운동 요약')}<div class="sec">
   ${past ? `<div class="notice" id="pastNote"><span>자정을 넘겨 끝냈어요 · 운동을 시작한 날(${md(rec.date)}) 기록으로 저장했어요</span></div>` : ''}
   ${S.savedNote ? `<div class="notice ok" id="savedNote"><span>✓ ${esc(S.savedNote)}</span></div>` : ''}
   ${rec && rec.batch ? `<div class="notice" id="batchNote"><span>운동을 마치고 한꺼번에 적은 기록이라 <b>자가 기록</b>으로 저장했어요</span></div>` : ''}
-  ${rec && rec.auto ? `<div class="notice" id="autoNote"><span>3시간 동안 입력이 없어 자동으로 끝냈어요 · 마지막 기록 시각으로 저장했어요</span></div>` : ''}
+  ${rec && rec.auto ? `<div class="notice" id="autoNote"><span>3시간 동안 적은 게 없어서 자동으로 끝냈어요 · 마지막으로 적은 시각으로 저장했어요</span></div>` : ''}
   <div class="card result ${v}" id="resultCard"><div class="cwrap big ${v}">${charHTML(t, lv, 170, true, exprOfMood(show))}</div>
     <div class="rname"><span class="name">${esc(CH[t].name)}</span><span class="pill lvpill">Lv.${lv}</span>${show ? moodPill(show) : '<span class="pill tier1">평소 표정</span>'}</div>
     <div class="say moodsay ${v}" id="resultSay">${esc(m && m.line ? m.line : coachLine())}</div>
     <div class="est"><span>오늘 얻은 경험치</span><em class="${S.bump ? 'bump' : ''}" id="resultXP">+${(rec ? rec.xp : 0).toLocaleString()} XP</em></div>
     <div class="rmeta">${rec ? vBadge(rec.v) + sfBadge(rec.selfieXP > 0) : ''}<span class="muted">${rec ? esc(rec.summary) : ''}</span></div>
     ${rec && rec.held ? `<div class="notice hold" id="holdNote"><span>세트 사이가 ${CFG.SET_GAP_SEC}초보다 짧아서 경험치 ${fmt(heldAll(rec))} XP는 24시간 뒤에 들어와요. 기록은 그대로 저장됐어요.</span><button class="btn sm ghost demoonly" data-act="release" data-id="${rec.id}">🧪 24시간 뒤</button></div>` : ''}
-    ${rec && rec.cut ? `<div class="muted capline" id="resultCap">${rec.cutReason === 'week' ? `이번 주 운동 경험치 ${CFG.WEEK_CAP.toLocaleString()} 다 모았어요` : `오늘 운동 경험치 ${(rec.v === 'self' ? CFG.DAY_CAP_V0 : CFG.DAY_CAP).toLocaleString()} 다 모았어요`} · ${fmt(rec.cut)} XP는 안 들어갔어요. 기록·연속·주간 목표는 그대로 쌓여요</div>` : ''}
+    ${rec && rec.cut ? `<div class="muted capline" id="resultCap">${rec.cutReason === 'week' ? `이번 주 운동 경험치 ${CFG.WEEK_CAP.toLocaleString()} 다 모았어요` : `오늘 운동 경험치 ${(rec.v === 'self' ? CFG.DAY_CAP_V0 : CFG.DAY_CAP).toLocaleString()} 다 모았어요`} · ${fmt(rec.cut)} XP는 안 들어갔어요. 기록·연속은 그대로 쌓여요</div>` : ''}
     ${rec && rec.xpBoost ? `<div class="muted capline" id="resultBoost">×${(rec.br && rec.br.bm) || CFG.BOOST.mul} 부스터로 늘어난 +${fmt(rec.xpBoost)} XP는 한도 없이 다 들어갔어요 💰</div>` : ''}
     ${rec && !rec.demo && rec.centerIf > 0 ? `<div class="cbif" id="cbIf"><span>입점센터였다면 <b>+${fmt(rec.centerIf)}</b> 경험치</span>${findCenterBtn('cbIfFind')}</div>` : ''}
-    <div class="bar"><i style="width:${lv >= 99 ? 100 : Math.max(0, Math.round(S.xp / need(lv) * 100))}%"></i></div><div class="muted">${lv >= 99 ? '최고 레벨이라 레벨은 더 오르지 않아요 · 받은 경험치는 이번 주 랭킹에 그대로 반영돼요' : `Lv.${lv + 1}까지 ${Math.max(0, need(lv) - S.xp).toLocaleString()} XP`}</div>
+    <div class="bar"><i style="width:${lv >= 99 ? 100 : Math.max(0, Math.round(S.xp / need(lv) * 100))}%"></i></div><div class="muted">${lv >= 99 ? '최고 레벨이라 레벨은 더 오르지 않아요 · 받은 경험치는 이번 주 랭킹에 그대로 들어가요' : `Lv.${lv + 1}까지 ${Math.max(0, need(lv) - S.xp).toLocaleString()} XP`}</div>
     ${ev ? `<div class="ptline" id="ptLine">Lv.${ev.from} → ${ev.to} 레벨업</div>` : ''}
     <div class="muted" style="margin-top:6px" id="resultNote">${note}</div>
-    ${m && m.ratio != null && S.moodDemo === 'auto' ? `<div class="muted" style="margin-top:4px">평소 대비 ${Math.round(m.ratio * 100)}% (오늘 한 종목만 · 지난 10회 기준)</div>` : ''}</div>
+    ${m && m.ratio != null && S.moodDemo === 'auto' ? `<div class="muted" style="margin-top:4px">평소의 ${Math.round(m.ratio * 100)}% (오늘 한 종목만 · 지난 10회 기준)</div>` : ''}</div>
   ${rec && !rec.demo ? `<button class="btn sharebtn" data-act="share" data-id="${rec.id}" id="shareBtn">${NJ_SHARE_ICON_SVG()}자랑하기</button><div class="muted sharecap">오늘 한 운동을 카드로 만들어 자랑해요</div>` : ''}
   ${canSelfie ? selfieCta(rec) : sfDone ? sfCard('sfDone', rec.photo, `오운완 인증 완료 · +${fmt(rec.selfieIn ?? rec.selfieXP)} XP`, rec.photo ? '사진은 나한테만 보여요 · 셀카 보너스는 하루 1번' : '사진은 지웠어요 · 받은 보너스는 그대로예요', 'result')
     : rec && !rec.demo && rec.photo ? sfCard('sfDone', rec.photo, '오운완 사진 저장됨', '사진은 나한테만 보여요 · 이번엔 보너스 경험치가 붙지 않았어요', 'result') : ''}
   ${rec && rec.br ? `<div class="card" id="xpCard"><div class="h3">경험치 내역</div>${xpRows(rec)}<div class="xrow total"><span>합계</span><b>+${fmt(rec.xp)} XP</b></div></div>` : ''}
   <div class="card demo"><div class="h3">🧪 시연 — 다른 결과로 보기</div><div class="chips">${[['low','아쉬운'],['normal','평소대로'],['high','신남']].map(([k, l]) => `<button class="chip ${v===k?'on':''}" data-act="mset" data-v="${k}">${l}</button>`).join('')}</div>
-  <div class="muted" style="margin-top:8px">표정은 캐릭터 얼굴(눈·입·볼) 자체가 바뀜 · 레벨·경험치와 무관</div></div>
+  <div class="muted" style="margin-top:8px">표정은 얼굴(눈·입·볼)만 바뀌어요 · 레벨·경험치와는 상관없어요</div></div>
   <button class="btn ghost" data-act="back" id="resultOk">확인 · 운동기록 탭으로</button>
   <button class="btn ghost" data-tab="home" style="margin-top:8px">홈에서 카드 보기</button></div>`;
 }
@@ -748,7 +748,7 @@ function selfieCta(rec) {
     : why === 'today' ? '오늘은 이미 오운완 보너스를 받았어요 · 사진은 나만 보는 기록으로 남아요'
     : why === 'norecord' ? '5회 이상 세트나 유산소 기록이 있어야 보너스가 붙어요 · 사진은 나만 봐요'
     : c.g ? `찍으면 경험치 +${CFG.SELFIE_BONUS.pct}%! 예상 +${fmt(c.g)} XP · 하루 1번 · 나만 봐요`
-    : '오늘·이번 주 운동 경험치를 다 모아서 경험치는 그대로예요 · 사진은 나만 봐요';
+    : '오늘·이번 주 운동 경험치를 다 모아서 찍어도 더 붙지 않아요 · 사진은 나만 봐요';
   return `<button class="card selfiecta" data-act="selfie" data-v="result" id="selfieCta">${CAM}<div><b>오운완 셀카 찍기</b><small>${sub}</small></div><span class="rgo">›</span></button>`;
 }
 
@@ -788,7 +788,7 @@ function vFriends() {
   <div><b>${esc(f.n)}</b> ${f.paid?'<span title="유료 사용">💰</span>':''}<div class="muted">${esc(CH[f.t].name)} · ${stageName(f.t, f.lv)}</div></div>
   <div class="val">${S.fTab==='week'?`${f.week.toLocaleString()}<small>XP</small>`:`Lv.${S.pureOnly?(f.pure??f.lv):f.lv}<small>${f.paid&&!S.pureOnly&&f.pure!==f.lv?`운동만 Lv.${f.pure}`:TIER_NAME[tierOf(f.lv)]}</small>`}</div></div>`).join('')}</div>
   <button class="btn ghost" data-act="invite">친구 초대</button>
-  <div class="muted" style="margin-top:8px">이번 주 = 이번 주에 얻은 경험치 순 · 검증된 운동만 집계(입점센터 보너스 포함)</div></div>`;
+  <div class="muted" style="margin-top:8px">이번 주 = 이번 주에 얻은 경험치 순 · 자가 기록은 안 들어가요(입점센터 보너스는 들어가요)</div></div>`;
 }
 function vMe() {
   const t = S.type, looks = ITEMS.filter(i => i.kind === 'look');
@@ -799,7 +799,7 @@ function vMe() {
   <button class="btn" data-act="sub" data-v="shop" id="shopBtn">🛍️ 아이템 상점</button>
   <button class="btn ghost" data-act="rechoose" style="margin-top:8px">캐릭터 바꾸기 <span class="muted">(Lv.10 전 1회 무료)</span></button></div>
   ${centerCard()}
-  <div class="card" id="exprCard"><div class="h2" style="font-size:16px">컨디션 표정 5종</div><div class="muted" style="margin-bottom:8px">얼굴만 바뀌어요 · 레벨·경험치와 무관 · 지금: <b style="color:var(--ink)">${EXPR[exprNow()].label}</b></div>
+  <div class="card" id="exprCard"><div class="h2" style="font-size:16px">컨디션 표정 5종</div><div class="muted" style="margin-bottom:8px">얼굴만 바뀌어요 · 레벨·경험치와는 상관없어요 · 지금: <b style="color:var(--ink)">${EXPR[exprNow()].label}</b></div>
   <div class="exprs">${EXPR_KEYS.map(ex => `<div class="ex5 ${exprNow()===ex?'on':''}">${charHTML(t, S.level, 64, false, ex)}<small>${EXPR[ex].label}</small></div>`).join('')}</div></div>
   ${sigCard(t, S.level)}${flexCard(t)}
   <div class="card"><div class="h2" style="font-size:16px">업적</div><div class="muted">업적 24개 잠김/달성 목록 자리 (프로토타입 범위 밖)</div></div></div>`;
@@ -831,13 +831,13 @@ function vSettings() {
   <div class="card" id="locCard"><div class="h2" style="font-size:16px">센터 확인</div>
     <div class="muted">센터 확인은 «입장하기» 기록으로만 해요 · 입장 기록이 없으면 집·야외와 같은 자가 기록(40%)이에요</div>
     <div class="row"><span>센터 확인 안내 그만 보기</span>${sw('hideTips', S.hideTips)}</div>
-    <div class="row"><div><span>체중 <span class="muted">(선택)</span></span><div class="muted">무게 확인에만 써요 · 비우면 70kg 기준</div></div><div class="step"><button data-act="bw" data-d="-1">−</button><span>${S.bodyweight ? S.bodyweight + 'kg' : '—'}</span><button data-act="bw" data-d="1">+</button></div></div></div>
+    <div class="row"><div><span>체중 <span class="muted">(선택)</span></span><div class="muted">무게 오타 확인에만 써요 · 비우면 70kg으로 봐요</div></div><div class="step"><button data-act="bw" data-d="-1">−</button><span>${S.bodyweight ? S.bodyweight + 'kg' : '—'}</span><button data-act="bw" data-d="1">+</button></div></div></div>
   <div class="card" id="photoCard"><div class="h2" style="font-size:16px">내 사진</div><div class="muted" style="margin-bottom:8px">${LOCK.replace('class="ico"', 'class="ico sm"')} 나한테만 보여요 · ${photos.length}장</div>
     ${photos.length ? `<div class="thumbs">${photos.map(r => `<button data-act="rec" data-id="${r.id}"><img src="${r.photo}" alt=""><small>${r.date.slice(5).replace('-', '/')}</small></button>`).join('')}</div>` : '<div class="muted">아직 찍은 오운완 셀카가 없어요</div>'}
     <button class="btn ghost" data-act="delAllPhotos" id="delAll" ${photos.length ? '' : 'disabled'}>내 사진 전체 삭제</button></div>
   <div class="card"><div class="h2" style="font-size:16px">레벨업 연출</div>
   <div class="row"><span>연출 소리</span><button class="sw ${S.sound?'on':''}" data-act="sound" id="soundSw"></button></div>
-  <div class="row"><span class="muted">건너뛰기: 연출 중 화면 아무 곳이나 탭</span></div></div>
+  <div class="row"><span class="muted">연출 중에 화면 아무 데나 누르면 건너뛰어요</span></div></div>
   <div class="card" id="replayCard"><div class="h2" style="font-size:16px">레벨업 다시 보기</div>
   ${evs.length ? evs.map(e => `<div class="row"><div><b>Lv.${e.from} → ${e.to}</b> ${e.big?'<span class="pill tier4">진화</span>':''}<div class="muted">${e.at} · ${e.watched?(e.skipped?'건너뜀':'봤음'):'아직 못 봄'}${e.replays?` · 다시 본 횟수 ${e.replays}`:''}</div></div><button class="btn sm ghost" data-act="replay" data-id="${e.id}">다시 보기</button></div>`).join('') : '<div class="muted">아직 레벨업 기록이 없어요</div>'}</div>
   <div class="card demo"><div class="h3">🧪 시연 도구</div>
@@ -856,16 +856,16 @@ function vSettings() {
 const itemImg = i => i.img ? `<img src="assets/item_${i.img}.png" alt="">` : FLASK;
 function vShop() {
   if (S.sTab === 'food') return `${subHead('아이템 상점')}<div class="sec"><div style="display:flex;justify-content:flex-end;margin-bottom:8px"><b>${S.points.toLocaleString()}P</b></div>
-  <div class="seg"><button data-act="stab" data-v="effect">효과형</button><button data-act="stab" data-v="look">외형형</button><button class="on" data-act="stab" data-v="food" id="stabFood">먹고 마시는</button></div>${vEatTab()}</div>`;
+  <div class="seg"><button data-act="stab" data-v="effect">효과</button><button data-act="stab" data-v="look">꾸미기</button><button class="on" data-act="stab" data-v="food" id="stabFood">먹고 마시는</button></div>${vEatTab()}</div>`;
   const list = ITEMS.filter(i => i.kind === S.sTab && !i.off);
   return `${subHead('아이템 상점')}<div class="sec"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><button class="linkbtn" data-act="sub" data-v="calc" id="goCalc" style="margin:0">부스터·물약 계산기 ›</button><b>${S.points.toLocaleString()}P</b></div>
-  <div class="seg"><button class="${S.sTab==='effect'?'on':''}" data-act="stab" data-v="effect">효과형</button><button class="${S.sTab==='look'?'on':''}" data-act="stab" data-v="look">외형형</button><button class="${S.sTab==='food'?'on':''}" data-act="stab" data-v="food" id="stabFood">먹고 마시는</button></div>
+  <div class="seg"><button class="${S.sTab==='effect'?'on':''}" data-act="stab" data-v="effect">효과</button><button class="${S.sTab==='look'?'on':''}" data-act="stab" data-v="look">꾸미기</button><button class="${S.sTab==='food'?'on':''}" data-act="stab" data-v="food" id="stabFood">먹고 마시는</button></div>
   ${S.sTab === 'effect' ? `<div class="muted wkleft" id="wkLeft">이번 주 운동 경험치 ${weekXP().toLocaleString()}/${CFG.WEEK_CAP.toLocaleString()} · <b>아이템 경험치는 한도 없어요</b>${boostOn() ? ` · <b>${boostLabel()} 부스터 적용 중</b>` : ''}</div>` : ''}
   <div class="grid2">${list.map(i => { const n = i.use ? (S.inv[i.id] || 0) : 0, own = i.use ? n > 0 : S.owned[i.id], eq = S.equipped[i.id];
     return `<div class="item">${i.use ? (n ? `<span class="tag">${n}개</span>` : '') : eq?'<span class="tag">장착중</span>':own?'<span class="tag">보유</span>':''}${itemImg(i)}<b>${i.name}</b><small>${i.desc}</small>
     ${i.use ? (n ? `<div class="grid2 ib"><button class="btn ghost" data-act="buy" data-id="${i.id}">${i.price.toLocaleString()}P</button><button class="btn" data-act="use" data-id="${i.id}">사용</button></div>` : `<button class="btn" data-act="buy" data-id="${i.id}">${i.price.toLocaleString()}P</button>`)
       : own ? `<button class="btn ${eq?'ghost':''}" data-act="equip" data-id="${i.id}">${eq?'해제':'장착'}</button>` : `<button class="btn" data-act="buy" data-id="${i.id}">${i.price.toLocaleString()}P</button>`}</div>`; }).join('')}</div>
-  <div class="muted" style="margin-top:10px">니짐 포인트로 구매 · 가격은 예시값 · 효과형은 사용 후 환불되지 않아요</div></div>`;
+  <div class="muted" style="margin-top:10px">니짐 포인트로 구매 · 가격은 예시값 · 효과 아이템은 쓰고 나면 환불이 안 돼요</div></div>`;
 }
 const avgSession = () => { const rs = realRecs().filter(r => r.v !== 'lesson' && !r.edited).slice(-10).map(r => r.raw || r.xp); return rs.length ? Math.round(median(rs) / 10) * 10 : 260; };
 function calcDefaults() { return { sessions: Math.max(1, usualWeek() - weekCount()), per: avgSession(), booster: 'one', potions: 0 }; }
@@ -874,13 +874,13 @@ const dur = w => !isFinite(w) ? '도달 못 함' : w < 9 ? `${w}주` : w < 104 ?
 function vCalc() {
   const c = S.calc || (S.calc = calcDefaults()), f = forecastWeek({ L: ledger(), ...c });
   const step = (k, v, l, u, act = 'calc') => `<div class="ex"><div><b>${l}</b></div><div class="step"><button data-act="${act}" data-k="${k}" data-d="-1">−</button><span>${v}${u}</span><button data-act="${act}" data-k="${k}" data-d="1">+</button></div></div>`;
-  const bchips = (cur, act) => `<div class="chips">${[['none', '없음'], ['one', '1세션'], ['7d', '7일']].map(([k, l]) => `<button class="chip ${cur === k ? 'on' : ''}" data-act="${act}" data-v="${k}">${l}</button>`).join('')}</div>`;
+  const bchips = (cur, act) => `<div class="chips">${[['none', '없음'], ['one', '1번'], ['7d', '7일']].map(([k, l]) => `<button class="chip ${cur === k ? 'on' : ''}" data-act="${act}" data-v="${k}">${l}</button>`).join('')}</div>`;
   const m = S.cmp || (S.cmp = cmpDefaults());
   const exOnly = weeksToLv99({ level: S.level, xp: S.xp, perWeek: m.perWeek, per: m.per }), withIt = weeksToLv99({ level: S.level, xp: S.xp, perWeek: m.perWeek, per: m.per, booster: m.booster, potionsWeek: m.potions });
   const maxW = Math.max(...[exOnly.weeks, withIt.weeks].filter(isFinite), 1), barW = w => isFinite(w) ? Math.max(4, Math.round(w / maxW * 100)) : 100;
   return `${subHead('부스터·물약 계산기', 'shop', '상점')}<div class="sec">
   <div class="card"><div class="wxp" style="margin-top:0"><span>이번 주 운동 경험치 지금</span><b>${weekXP().toLocaleString()}/${CFG.WEEK_CAP.toLocaleString()}</b></div><div class="bar thin"><i style="width:${Math.min(100, Math.round(weekXP() / CFG.WEEK_CAP * 100))}%"></i></div>
-  ${step('sessions', c.sessions, '이번 주 남은 운동', '번')}${step('per', c.per, '1번 운동 경험치(상한 전)', ' XP')}
+  ${step('sessions', c.sessions, '이번 주 남은 운동', '번')}${step('per', c.per, '운동 1번 경험치(한도 전)', ' XP')}
   <div class="ex"><div><b>부스터</b></div>${bchips(c.booster, 'calcB')}</div>
   ${step('potions', c.potions, '물약', '병')}</div>
   <div class="card" id="calcOut"><div class="xrow"><span>아이템 없이</span><b>+${fmt(f.base)} XP</b></div><div class="xrow"><span>아이템 쓰면</span><b>+${fmt(f.with)} XP</b></div>
@@ -893,9 +893,9 @@ function vCalc() {
   ${step('potions', m.potions, '매주 물약', '병', 'cmp')}
   <div class="cmp"><div class="cmprow"><span>운동만</span><div class="cbar"><i style="width:${barW(exOnly.weeks)}%"></i></div><b>${dur(exOnly.weeks)}</b></div>
   <div class="cmprow it"><span>아이템 쓰면</span><div class="cbar"><i style="width:${barW(withIt.weeks)}%"></i></div><b>${dur(withIt.weeks)}</b></div></div>
-  <div class="muted">한 주 운동 ${fmt(exOnly.exWeek)} XP(주 ${CFG.WEEK_CAP.toLocaleString()} 한도) · 아이템 쓰면 + 아이템 ${fmt(withIt.itemWeek)} XP(한도 없음) · 남은 ${fmt(exOnly.left)} XP 기준 어림값</div>
+  <div class="muted">한 주 운동 ${fmt(exOnly.exWeek)} XP(주 ${CFG.WEEK_CAP.toLocaleString()} 한도) · 아이템 쓰면 + 아이템 ${fmt(withIt.itemWeek)} XP(한도 없음) · 남은 ${fmt(exOnly.left)} XP로 대략 계산했어요</div>
   <div class="muted">주간 랭킹·«운동만 보기»엔 운동 경험치(입점센터 보너스 포함)만 들어가고, 아이템 경험치는 빠져요</div></div>
-  <div class="muted">운동 경험치만 하루 ${CFG.DAY_CAP} · 주 ${CFG.WEEK_CAP.toLocaleString()} XP 한도 · 운동 1번 = 하루 1번으로 셈</div></div>`;
+  <div class="muted">운동 경험치만 하루 ${CFG.DAY_CAP} · 주 ${CFG.WEEK_CAP.toLocaleString()} XP 한도 · 하루에 운동 1번으로 계산했어요</div></div>`;
 }
 
 /* ===== 통계(C11 자리) · C14 기록 상세·수정 ===== */
@@ -917,13 +917,13 @@ function vRec() {
   const ed = E ? editCalc(r, E.items) : null, keepNow = editKeeps(r), isSelf = vk(r.v) === 'self';
   return `${subHead(md(r.date) + ' 기록', S.recFrom || '', S.recFrom === 'stats' ? '통계' : S.recFrom === 'settings' ? '설정' : '운동기록')}<div class="sec">
   <div class="card" id="recHead"><div class="sh1"><div><b>${esc(r.place)}</b>${vBadge(r.v)}</div><em class="xpbig">+${fmt(r.xp)} XP</em></div><div class="muted" style="margin-top:4px">${esc(r.summary)}${r.light ? ' · 가볍게 한 날' : ''}${r.batch ? ' · 한꺼번에 적은 기록' : ''}</div>${r.held ? `<div class="warn" id="recHold" style="margin-top:8px">세트 사이가 ${CFG.SET_GAP_SEC}초보다 짧아서 경험치 ${fmt(heldAll(r))} XP는 24시간 뒤에 들어와요. 기록은 그대로 저장됐어요.</div>` : ''}</div>
-  <div class="card" id="recItems">${items.map(itemHTML).join('') || '<div class="muted">세부 기록이 없어요</div>'}</div>
+  <div class="card" id="recItems">${items.map(itemHTML).join('') || '<div class="muted">자세한 기록이 없어요</div>'}</div>
   ${E ? editNoteHTML(r, ed, E.items) : ''}
   ${E ? `
 <div class="grid2"><button class="btn ghost" data-act="editCancel">취소</button><button class="btn" data-act="editSave" id="editSave">수정 저장</button></div>`
   : ''}
   ${!E && !r.demo ? `<button class="btn sharebtn" data-act="share" data-id="${r.id}" id="recShare">${NJ_SHARE_ICON_SVG()}자랑하기</button>` : ''}
-  ${E ? '' : lesson ? `<div class="muted">레슨 기록은 선생님 확정 기록이라 수정하거나 지울 수 없어요</div>` : `<button class="btn ghost" data-act="editStart" id="editStart">기록 수정</button>${isSelf ? '' : `<div class="muted edithint" id="editHint">${keepNow ? `${keepUntil(r)}까지는 고쳐도 등급이 그대로예요` : '저장한 지 24시간이 지나서, 고치면 자가 기록으로 다시 계산돼요'}</div>`}`}
+  ${E ? '' : lesson ? `<div class="muted">레슨 기록은 선생님이 확정한 기록이라 고치거나 지울 수 없어요</div>` : `<button class="btn ghost" data-act="editStart" id="editStart">기록 수정</button>${isSelf ? '' : `<div class="muted edithint" id="editHint">${keepNow ? `${keepUntil(r)}까지는 고쳐도 자가 기록으로 바뀌지 않아요` : '저장한 지 24시간이 지나서, 고치면 자가 기록으로 다시 계산돼요'}</div>`}`}
   ${!E && r.br ? `<div class="card" style="margin-top:12px"><div class="h3">경험치 내역</div>${xpRows(r)}<div class="xrow total"><span>합계</span><b>+${fmt(r.xp)} XP</b></div></div>` : ''}
   ${!E && r.photo ? `<div class="card" id="recPhoto"><div class="h3">오운완 셀카 <span class="muted" style="font-weight:500">${LOCK.replace('class="ico"', 'class="ico sm"')} 나만 봐요</span></div><img class="recphoto" src="${r.photo}" alt=""><button class="btn ghost" data-act="delPhoto" data-id="${r.id}" id="delPhoto">사진 삭제</button></div>` : ''}
   ${!E && !lesson ? `<button class="btn ghost delrec" data-act="delRec" id="delRec">이 기록 지우기</button>` : ''}</div>`;
@@ -975,7 +975,7 @@ function viewHTML() {
 }
 function vBroken() {
   return `<div class="sec"><div class="card" id="brokenCard" style="text-align:center;padding:28px 18px"><div class="h2" style="margin-top:0">저장된 기록을 열 수 없어요</div>
-  <div class="muted" style="line-height:1.6;word-break:keep-all">기록에 문제가 생겨 화면을 그릴 수 없어요.<br>처음부터 다시 시작하면 쓸 수 있어요.<br>지금까지의 기록과 레벨은 지워져요.</div>
+  <div class="muted" style="line-height:1.6;word-break:keep-all">기록에 문제가 생겨 화면을 열 수 없어요.<br>처음부터 다시 시작하면 쓸 수 있어요.<br>지금까지의 기록과 레벨은 지워져요.</div>
   <button class="btn" data-act="hardResetAsk" id="hardResetAsk">처음 상태로 시작</button></div></div>`;
 }
 /* v1.41: 수정·삭제 결과는 아래 검은 알림 대신 화면 맨 위 띠로 — 달력·버튼을 덮지 않고, 다른 화면으로 가면 사라진다 */
@@ -990,7 +990,7 @@ function render() {
     try { html = vWorkout(); if (was) setTimeout(() => toast('화면을 여는 중 문제가 생겨 운동기록 첫 화면으로 돌아왔어요'), 0); save(); }
     catch (err2) { console.error('[render:fallback]', err2); html = vBroken(); } }
   const nPhoto = S.records.filter(r => r.photo).length;
-  $('view').innerHTML = (SAVE_OK ? '' : `<div class="notice savefail" id="saveFail"><span>지금은 기록이 저장되지 않아요. ${nPhoto ? '오운완 사진을 몇 장 지워 주세요.' : '휴대폰 저장 공간을 비워 주세요.'}</span>${nPhoto && S.sub !== 'settings' ? '<button class="btn sm" data-act="goPhotos">사진 정리</button>' : ''}</div>`)
+  $('view').innerHTML = (SAVE_OK ? '' : `<div class="notice savefail" id="saveFail"><span>지금은 기록 저장이 안 돼요. ${nPhoto ? '오운완 사진을 몇 장 지워 주세요.' : '휴대폰 저장 공간을 비워 주세요.'}</span>${nPhoto && S.sub !== 'settings' ? '<button class="btn sm" data-act="goPhotos">사진 정리</button>' : ''}</div>`)
     + (FLASH ? `<div class="notice flashn ${FLASH.cls}" id="flashNote"><span>${FLASH.cls === 'ok' ? '✓ ' : ''}${esc(FLASH.msg)}</span></div>` : '') + html;
   if (FLASH) FLASH.fresh = false;
   document.body.classList.toggle('wk', S.tab === 'workout');
@@ -1053,7 +1053,7 @@ function rapidAsk() {
   const s = S.session; if (!s || s.rapid) return;
   if (!batchLeft(s)) { s.rapid = 'hold'; save(); render();
     return sheet(`<div class="h2">세트 사이가 너무 짧았어요</div><div class="muted" style="line-height:1.6;word-break:keep-all">이번 운동 경험치는 24시간 뒤에 들어와요. 기록은 그대로 저장돼요.<br>한꺼번에 적기는 하루에 한 번만 쓸 수 있어요.</div><button class="btn" data-act="shClose" style="margin-top:14px" id="rapidOk">확인</button>`); }
-  sheet(`<div class="h2" id="rapidTitle">운동을 마치고 한꺼번에 적는 중인가요?</div><div class="muted" style="line-height:1.6;word-break:keep-all">세트를 ${CFG.SET_GAP_SEC}초도 안 돼서 연달아 완료했어요.</div>
+  sheet(`<div class="h2" id="rapidTitle">운동을 마치고 한꺼번에 적는 중인가요?</div><div class="muted" style="line-height:1.6;word-break:keep-all">세트를 ${CFG.SET_GAP_SEC}초도 안 쉬고 연달아 완료했어요.</div>
     <button class="optbtn" data-act="rapidBatch" id="rapidBatch"><b>네, 한꺼번에 적고 있어요</b><small>자가 기록(×${CFG.VERIFY.V0})으로 바로 받아요 · 하루 한 번</small></button>
     <button class="optbtn" data-act="rapidHold" id="rapidHold"><b>아니요, 지금 운동 중이에요</b><small>등급은 그대로 · 경험치는 24시간 뒤에 들어와요</small></button>
     <div class="muted" style="margin-top:10px;text-align:center;font-size:12px">한 번 고르면 이 운동이 끝날 때까지 바꿀 수 없어요</div>`);
@@ -1129,8 +1129,8 @@ function endAsk() {
     const sum = [`${w.length}종목`, nSets ? `${nSets}세트` : '', cMin ? `유산소 ${cMin}분` : ''].filter(Boolean).join(' · ');
     const notes = [];
     s.items.forEach(it => { const e = EX[it.ex]; if (e.mode === 'lesson') return;
-      if (it.run) notes.push(`${esc(e.name)} 타이머가 돌고 있어요 · 지금까지 시간으로 저장돼요`);
-      else if (!worked(it)) notes.push(`${esc(e.name)} · 기록이 없어 저장에서 빠져요`);
+      if (it.run) notes.push(`${esc(e.name)} 타이머가 돌고 있어요 · 지금까지 잰 시간으로 저장해요`);
+      else if (!worked(it)) notes.push(`${esc(e.name)} · 적은 게 없어서 저장 안 해요`);
       else if (it.dirty && e.mode !== 'cardio') notes.push(`${esc(e.name)}에 «완료» 안 누른 세트가 있어요 (${setTxt(e, it.draft)})`); });
     sheet(`<div class="h2" id="endTitle">오늘 운동을 끝낼까요?</div>
       <div class="endsum" id="endSum"><div><span>기록</span><b>${sum}</b></div><div><span>경험치</span><em>${held ? `24시간 뒤 +${fmt(est)} XP` : `+${fmt(est)} XP`}</em></div></div>
@@ -1153,7 +1153,7 @@ function endSession0(s, auto) {
   const hasWork = s.items.some(it => (it.sets || []).some(x => x.done) || it.min > 0);
   if (!hasWork && S.demo === 'none' && !auto) return sheet(`<div class="h2">기록한 운동이 없어요</div><div class="muted">세트를 1개 이상 완료하거나 유산소 시간을 기록하면 경험치가 쌓여요.</div>
     <div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="discard">기록 없이 끝내기</button><button class="btn" data-act="shClose">계속 운동하기</button></div>`);
-  if (!hasWork && auto) { S.session = null; save(); toast('3시간 동안 입력이 없어 운동을 닫았어요'); go('workout'); return null; }
+  if (!hasWork && auto) { S.session = null; save(); toast('3시간 동안 적은 게 없어서 운동을 끝냈어요'); go('workout'); return null; }
   const batch = s.rapid === 'batch', ctx = sessCtx(), r = sessionXP(effSess(s), ctx), L = ledger(), isDemo = S.demo !== 'none';
   const cap = capGain(r, L, r.v === 'V0');
   let gained = isDemo ? demoXP() : cap.gained, held = 0;
@@ -1189,7 +1189,7 @@ function releaseHeld(r) {
 function releaseDue() {
   const due = S.records.filter(r => r.held > 0 && typeof r.id === 'number' && Date.now() - r.id >= 864e5); if (!due.length) return;
   let from = S.level, sum = 0; due.forEach(r => { sum += releaseHeld(r).g; });
-  save(); setTimeout(() => afterGain({ from, level: S.level, xp: S.xp }, { toast: `보류됐던 ${fmt(sum)} XP가 반영됐어요`, to: null }), 400);
+  save(); setTimeout(() => afterGain({ from, level: S.level, xp: S.xp }, { toast: `기다리던 ${fmt(sum)} XP가 들어왔어요`, to: null }), 400);
 }
 /* v1.40(형 11-11 승인 · QA 치7): 기록 수정·삭제 = 그 기록의 경험치를 통째로 다시 계산해 «차이»만 화면 레벨·운동 레벨에 반영(내려가는 것 포함).
    입점 보너스·부스터 몫도 같이 다시 센다. 수정으로 레벨이 올라도 레벨업 연출은 다시 틀지 않는다(연출 반복 방지) */
@@ -1256,7 +1256,7 @@ function autoEndCheck() {
 
 /* ===== 셀카 (C7b) — 웹 카메라. 못 열면 흉내 그림 없이 안내만(형 11-10: 흉내 그림이 카메라 화면처럼 보여 헷갈림) → 앨범·카메라 앱 ===== */
 let STREAM = null, CAM_P = null;
-const camMsg = e => e && e.name === 'NotAllowedError' ? '카메라 권한이 꺼져 있어요 · 설정에서 켤 수 있어요'
+const camMsg = e => e && e.name === 'NotAllowedError' ? '카메라 권한이 꺼져 있어요 · 설정에서 켜 주세요'
   : e && e.name === 'NotFoundError' ? '이 기기에서 쓸 수 있는 카메라가 없어요'
   : '브라우저에서 카메라를 열 수 없어요';
 function camUI(on, msg) {
@@ -1286,7 +1286,7 @@ async function camStart() {
 function camStop() { if (STREAM) { STREAM.getTracks().forEach(t => t.stop()); STREAM = null; } }
 function shoot() {
   const v = $('camV');
-  if (!(STREAM && v && v.videoWidth)) { toast('카메라가 안 열렸어요 · 앨범이나 카메라 앱으로 골라 주세요'); return; }
+  if (!(STREAM && v && v.videoWidth)) { toast('카메라가 안 열렸어요 · 앨범에서 고르거나 카메라 앱으로 찍어 주세요'); return; }
   const c = document.createElement('canvas'); c.width = 240; c.height = 320; const g = c.getContext('2d');
   const r = Math.min(v.videoWidth / 3, v.videoHeight / 4), w = r * 3, h = r * 4; g.translate(240, 0); g.scale(-1, 1); g.drawImage(v, (v.videoWidth - w) / 2, (v.videoHeight - h) / 2, w, h, 0, 0, 240, 320);
   saveShot(c.toDataURL('image/jpeg', .72));
@@ -1318,8 +1318,8 @@ function shClose() { const el = $('sheet'); el.classList.remove('on'); el.innerH
 /* ===== 효과형 아이템 사용 — 계산기와 같은 함수로 효과 미리 보여 주기(결정 33: 아이템 경험치는 한도 없음) ===== */
 function useItem(id) {
   const it = ITEMS.find(i => i.id === id), L = ledger();
-  if (id === 'charm') { S.inv.charm--; S.shields++; save(); render(); return toast('연속 보호권 1장 보관 · 설정 › 쉬어가기 티켓에서 확인'); }
-  const nolimit = `<div class="notice nolimit" id="useNoLimit">💰 아이템 경험치는 <b>한도 없음</b><br>이번 주 운동 한도(${fmt(weekXP())}/${CFG.WEEK_CAP.toLocaleString()})와 따로 세요</div>`;
+  if (id === 'charm') { S.inv.charm--; S.shields++; save(); render(); return toast('연속 보호권 1장 생겼어요 · 설정 › 쉬어가기 티켓에 있어요'); }
+  const nolimit = `<div class="notice nolimit" id="useNoLimit">💰 아이템 경험치는 <b>한도 없음</b><br>이번 주 운동 한도(${fmt(weekXP())}/${CFG.WEEK_CAP.toLocaleString()})와는 따로 계산해요</div>`;
   if (id === 'potion' && S.level >= 99) return toast('최고 레벨이라 경험치는 더 오르지 않아요 · 물약은 그대로 있어요');
   if (id === 'potion') {
     const g = potionGain(L);
@@ -1329,7 +1329,7 @@ function useItem(id) {
   }
   const f = forecastWeek({ L, sessions: Math.max(1, usualWeek() - weekCount()), per: avgSession(), booster: id === 'boost1' ? 'one' : '7d', potions: 0 });
   sheet(`<div class="h2">${it.name}을 쓸까요?</div>
-    <div class="xrow"><span>예상으로 더 받는 경험치</span><b>+${fmt(f.extra)} XP</b></div>${nolimit}
+    <div class="xrow"><span>더 받을 경험치(예상)</span><b>+${fmt(f.extra)} XP</b></div>${nolimit}
     <div class="muted">이번 주 운동 ${Math.max(1, usualWeek() - weekCount())}번 더 · 1번 ${fmt(avgSession())} XP 기준 · 2배로 늘어난 몫은 운동 한도를 다 채운 주에도 그대로 들어가요</div>
     <div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="shClose">취소</button><button class="btn" data-act="useBoost" data-id="${id}">사용</button></div>`);
 }
@@ -1483,7 +1483,7 @@ document.addEventListener('click', e => {
   if (a === 'endSession' || a === 'endOk') { shClose(); return endSession(); }
   if (a === 'endAsk') return endAsk();
   if (a === 'discardAsk') { const n = s ? s.items.filter(i => (i.sets || []).some(x => x.done) || i.min > 0 || i.run).length : 0;
-    return sheet(`<div class="h2" id="discTitle">저장하지 않고 끝낼까요?</div><div class="muted" style="line-height:1.6;word-break:keep-all">오늘 적은 운동 ${n}종목이 사라지고, 되돌릴 수 없어요. 경험치도 받지 않아요.</div>
+    return sheet(`<div class="h2" id="discTitle">저장하지 않고 끝낼까요?</div><div class="muted" style="line-height:1.6;word-break:keep-all">오늘 적은 운동 ${n}종목이 사라지고, 되돌릴 수 없어요. 경험치도 못 받아요.</div>
       <div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="shClose" id="discNo">계속 운동하기</button><button class="btn danger" data-act="discard" id="discOk">그만두기</button></div>`); }
   if (a === 'rapidAsk') return rapidAsk();
   if (a === 'rapidBatch' || a === 'rapidHold') { if (!s || s.rapid) return shClose();
@@ -1501,7 +1501,7 @@ document.addEventListener('click', e => {
     else { x.sets.splice(E.i, 1); if (S.rest && S.rest.ex === x.ex) S.rest = null; }
     rePR(x); s.lastAt = Date.now(); S.setEdit = null; shClose(); save(); render();
     return toast(a === 'seSave' ? `${E.i + 1}세트를 고쳤어요` : `${E.i + 1}세트를 지웠어요`); }
-  if (a === 'discard') { shClose(); S.session = null; save(); toast('기록 없이 운동을 닫았어요'); return go('workout'); }
+  if (a === 'discard') { shClose(); S.session = null; save(); toast('기록 없이 운동을 끝냈어요'); return go('workout'); }
   if (a === 'setDone') return setDone();
   if (a === 'setForce') return setDone(true);
   if (a === 'selfie') { S.selfieFor = v; S.selfieStep = S.selfieSeen ? 'cam' : 'guide'; S.shot = null; S.selfieRes = null; return go('workout', 'selfie'); }
@@ -1514,8 +1514,8 @@ document.addEventListener('click', e => {
   else if (a === 'shoot') return shoot();
   else if (a === 'selfieOk') { const res = S.selfieRes; S.selfieRes = null; S.shot = null; S.bump = 1;
     if (S.selfieFor === 'session') return go('workout', 'session');
-    if (res && res.level > res.from) return afterGain(res, { toast: `셀카 반영 +${fmt(S.selfieGot)} XP` });
-    go('workout', 'result'); S.bump = 0; if (S.selfieGot) toast(`셀카 반영 +${fmt(S.selfieGot)} XP`); return; }
+    if (res && res.level > res.from) return afterGain(res, { toast: `오운완 보너스 +${fmt(S.selfieGot)} XP` });
+    go('workout', 'result'); S.bump = 0; if (S.selfieGot) toast(`오운완 보너스 +${fmt(S.selfieGot)} XP`); return; }
   else if (a === 'stw') { if (!commitWeightField()) return; it.draft.w = clampStep(it.draft.w, dd, EX[it.ex].step || 2.5, 0, 500); it.dirty = true; }
   else if (a === 'str') { if (!commitWeightField()) return; it.draft.r = clampStep(it.draft.r, dd, 1, 1, 100); it.dirty = true; }
   else if (a === 'sts') { if (!commitWeightField()) return; it.draft.s = clampStep(it.draft.s, dd, 10, 10, 1800); it.dirty = true; }
@@ -1534,7 +1534,7 @@ document.addEventListener('click', e => {
   else if (a === 'cinc') { it.draft.inc = clampStep(it.draft.inc, dd, 1, 0, 15); it.draft.open = true; }
   else if (a === 'cSave') { if (!commitWeightField()) return; if (it.draft.mode === 'input') { it.min = it.draft.min; it.run = null; }   // QA 중13: 직접 입력으로 저장하면 버튼에 적힌 시간 그대로(돌던 타이머는 버림)
     if (it.run) { const ms = Date.now() - it.run.startAt + it.run.offset; it.min = Math.min(CFG.LIM.cardioMaxMin, (it.min || 0) + Math.max(1, Math.round(ms / 60000))); it.run = null; }
-    if (!it.min) return toast('시간을 기록해 주세요 — 시작을 누르거나 직접 입력해요');
+    if (!it.min) return toast('시간을 적어 주세요 — 시작을 누르거나 직접 적으면 돼요');
     it.level = it.draft.level; it.km = it.draft.km || undefined; it.kmh = it.draft.kmh ? Math.min(25, it.draft.kmh) : undefined; it.inc = it.draft.inc || undefined; it.draft.min = it.min; s.lastAt = Date.now();
     toast(`${EX[it.ex].name} ${it.min}분 저장`); return go('workout', 'session'); }
   else if (a === 'demo') S.demo = v;
@@ -1543,7 +1543,7 @@ document.addEventListener('click', e => {
   else if (a === 'autoEndDemo') { s.lastAt = Date.now() - (CFG.AUTO_END_MIN + 1) * 60000; save(); return render(); }
   else if (a === 'holdDemo') S.holdDemo = !S.holdDemo;
   else if (a === 'release') { const r = S.records.find(x => x.id === +id); if (!r || !r.held) return; const { res, g } = releaseHeld(r);
-    return afterGain(res, { toast: `보류됐던 ${fmt(g)} XP가 반영됐어요` }); }
+    return afterGain(res, { toast: `기다리던 ${fmt(g)} XP가 들어왔어요` }); }
   else if (a === 'mset') { const mm = MOOD[v]; S.mood = { verdict: v, ratio: null, date: TODAY, line: mm.lines[0] }; }
   else if (a === 'wseg') S.wseg = v;
   else if (a === 'pick') S.pick = v;
@@ -1561,7 +1561,7 @@ document.addEventListener('click', e => {
   else if (a === 'stab') S.sTab = v;
   else if (a === 'part') { S.part = v; }
   else if (a === 'gear') { S.gear = v; }
-  else if (a === 'buy') { const x = ITEMS.find(i => i.id === id); if (id === 'potion' && S.level >= 99) return toast('최고 레벨이라 경험치 물약은 효과가 없어요 · 포인트는 그대로예요'); if (S.points < x.price) return toast('포인트가 부족해요 — 니짐 포인트 충전 화면으로 이어져요');
+  else if (a === 'buy') { const x = ITEMS.find(i => i.id === id); if (id === 'potion' && S.level >= 99) return toast('최고 레벨이라 경험치 물약은 효과가 없어요 · 포인트는 그대로예요'); if (S.points < x.price) return toast('포인트가 부족해요 — 니짐 포인트 충전 화면으로 넘어가요');
     S.points -= x.price; if (x.use) S.inv[id] = (S.inv[id] || 0) + 1; else S.owned[id] = 1; toast(`${x.name} 구매 완료 · -${x.price}P`); }
   else if (a === 'use') return useItem(id);
   else if (a === 'eatUse') return eatUse(id);
@@ -1705,5 +1705,5 @@ if (S.fixNote) { const f = S.fixNote; S.fixNote = 0;
   const kept = (f.total || 0) - (f.lost || 0), lvLine = f.lvOk ? `<br>레벨(Lv.${S.level})과 포인트는 그대로예요.` : '';
   setTimeout(() => sheet(plainObj(f) && !f.all ? `<div class="h2" id="fixTitle">운동 기록 ${f.lost}건을 불러오지 못했어요</div><div class="muted" style="line-height:1.6;word-break:keep-all" id="fixBody">저장된 기록 ${f.total}건 중 ${f.lost}건에 문제가 있어 그 기록만 뺐어요. 나머지 ${kept}건은 그대로 있어요.${lvLine}</div><button class="btn" data-act="shClose" style="margin-top:14px" id="fixOk">확인</button>`
     : `<div class="h2" id="fixTitle">운동 기록을 불러오지 못했어요</div><div class="muted" style="line-height:1.6;word-break:keep-all" id="fixBody">저장된 기록에 문제가 있어 운동 기록을 비우고 시작했어요.${lvLine}<br>오늘부터 다시 기록하면 돼요.</div><button class="btn" data-act="shClose" style="margin-top:14px" id="fixOk">확인</button>`), 300); }
-if (S.eatBack) { const n = S.eatBack; S.eatBack = 0; save(); setTimeout(() => toast(`먹으려던 음식 ${n}개를 보유함에 되돌려 놨어요`), 900); }
-if (S.pending) setTimeout(() => { toast('지난번에 못 본 레벨업 연출을 재생해요'); playPending(); }, 700);
+if (S.eatBack) { const n = S.eatBack; S.eatBack = 0; save(); setTimeout(() => toast(`먹으려던 음식 ${n}개는 다시 넣어 놨어요`), 900); }
+if (S.pending) setTimeout(() => { toast('지난번에 못 본 레벨업 연출을 보여 드릴게요'); playPending(); }, 700);

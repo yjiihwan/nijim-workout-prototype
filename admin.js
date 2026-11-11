@@ -27,10 +27,10 @@ function centerStats(c, weeks = 12) {
 const NICK = ['김*현', '이*아', '박*준', '최*린', '정*우', '강*희', '조*호', '윤*서', '장*민', '임*연', '한*수', '오*진', '서*은', '신*훈', '권*지', '황*율'];
 function fraudQueue() {
   const r = rng(7), RULES = [
-    ['share', '계정 공유 의심', '같은 날 신림점 07:12 입장 → 사당점 07:31 입장(이동 불가 19분)'],
+    ['share', '계정 공유 의심', '같은 날 신림점 07:12 입장 → 사당점 07:31 입장(19분 만에 이동 불가)'],
     ['gap', '세트 간격 20초 미만 3연속', '레그프레스 6세트를 1분 40초에 완료'],
     ['unreal', '비현실 무게', '데드리프트 260kg × 8 (체중 64kg · 직전 최고 120kg)'],
-    ['selfie_reuse', '셀카 재사용', '같은 이미지 해시 3회'],
+    ['selfie_reuse', '셀카 재사용', '같은 사진 3번 올림'],
     ['lesson_sets', '레슨 세션 세트 과다', '50분 PT 세션에 세트 41개 덧붙임'],
     ['league_rush', '친구 리그 몰아치기', '일요일 V0 세션 6개(리그 집계 제외됨)'],
     ['alt_accounts', '부계정 레벨 양산', '같은 기기 3계정 · V0 비율 92%'],
@@ -85,13 +85,13 @@ function diffs() {   // 저장된 값(ADM)과 초안(D)의 차이 목록
   const cmp = (a, b, name) => { const A = new Map(flat(a)), B = new Map(flat(b)), out = [];
     new Set([...A.keys(), ...B.keys()]).forEach(k => { if (A.get(k) !== B.get(k)) out.push(`${name} ${k}`); }); return out; };
   return [...cmp(ADM.cfg, D.cfg, '설정'), ...cmp(ADM.levels, D.levels, '레벨표'), ...cmp(ADM.ex, D.ex, '운동'), ...cmp({ a: ADM.exAdd }, { a: D.exAdd }, '운동 추가'),
-    ...cmp(ADM.shop, D.shop, '상점'), ...cmp(ADM.shop82, D.shop82, '상점82'), ...cmp(ADM.rewards, D.rewards, '보상')];
+    ...cmp(ADM.shop, D.shop, '상점'), ...cmp(ADM.shop82, D.shop82, '상점 82개'), ...cmp(ADM.rewards, D.rewards, '보상')];
 }
 const persist = o => localStorage.setItem(ADMIN_KEY, JSON.stringify(o));
 function admSave() {
   const ch = diffs(); if (!ch.length) return admToast('바뀐 값이 없어요');
   D.log = [{ at: new Date().toLocaleString('ko-KR'), what: ch.slice(0, 6).join(', ') + (ch.length > 6 ? ` 외 ${ch.length - 6}건` : '') }, ...(D.log || [])].slice(0, 20);
-  persist(D); sessionStorage.setItem('adm_toast', `저장했어요 · ${ch.length}건 · 고객 앱 계산에 반영됨`); location.reload();
+  persist(D); sessionStorage.setItem('adm_toast', `저장했어요 · ${ch.length}건 · 회원 앱에 반영됐어요`); location.reload();
 }
 function admReset(scope) {
   if (scope === 'all') { D = { ...clone(D), cfg: {}, levels: {}, ex: {}, exAdd: [], shop: {}, shop82: {}, rewards: {} }; }
@@ -121,7 +121,7 @@ function vA4() {
   <div class="akrow">${kpi('운동 세션', nf(sess) + '회', chg == null ? '' : `직전 ${n}주 대비 ${chg >= 0 ? '+' : ''}${chg}%`)}${kpi('활성 회원', nf(act) + '명', `기록 1회 이상 · 회원 ${nf(c.members)}명 중 ${pct(act, c.members)}%`)}
     ${kpi('회원당 주 평균', (sess / n / (act || 1)).toFixed(1) + '회')}${kpi('레슨 연계 세션', nf(les) + '회', `전체의 ${pct(les, sess)}% · 선생님 확정 = 경험치 2배`)}</div>
   <div class="agrid2">
-    ${sec('주별 세션 수', vbars(st.wk.map(w => w.sessions), st.wk.map(w => md(w.start).replace(/\(.\)/, '')), { unit: '회', h: 200, every: 2 }), '<span class="amut">최근 12주 · 막대에 마우스를 올리면 값</span>')}
+    ${sec('주별 세션 수', vbars(st.wk.map(w => w.sessions), st.wk.map(w => md(w.start).replace(/\(.\)/, '')), { unit: '회', h: 200, every: 2 }), '<span class="amut">최근 12주 · 막대에 마우스를 올리면 값이 보여요</span>')}
     ${sec('시간대별 세션 (최근 4주)', vbars(st.hours, st.hours.map((_, i) => i + '시'), { unit: '회', h: 200, every: 3 }), `<span class="amut">가장 붐비는 시간 ${peak}시</span>`)}
   </div>
   ${sec('많이 하는 운동 TOP 10 (최근 4주)', tbl(['순위', '운동', '부위', '세션', '회원', '비중'], st.top.map((x, i) => `<tr><td class="num">${i + 1}</td><td><b>${esc(EX[x.id].name)}</b></td><td>${EX[x.id].part}</td><td class="num">${nf(x.n)}</td><td class="num">${nf(x.users)}명</td><td class="wbar">${hshare(x.n, maxTop)}</td></tr>`), 'top10'),
@@ -136,7 +136,7 @@ function vA5() {
   ${sec('오늘 레슨', tbl(['시간', '회원', '수업', '선생님', '출석', ''], L.map(([id, t, who, kind, tch]) => { const ok = AV.a5[id];
     return `<tr class="${ok ? 'aok' : ''}"><td class="num">${t}</td><td>${who}</td><td>${kind}</td><td>${tch}</td><td>${ok ? '<b class="agood">✓ 출석 확정</b>' : '<span class="amut">대기</span>'}</td>
       <td>${ok ? `<div class="a5line" id="a5line_${id}">⭐ 회원 캐릭터에 경험치 ${CFG.VERIFY.V3}배 지급됨</div>` : `<button class="abtn sm" data-aact="a5ok" data-v="${id}">출석 확정</button>`}</td></tr>`; })), '<span class="amut">시연 · 버튼을 누르면 한 줄이 붙어요</span>')}
-  ${note(`회원 앱에서는 이 레슨이 «선생님 확인 ★ ${CFG.VERIFY.V3}배»(V3) 세션으로 자동 생성돼요. 배수는 H2 «경험치·한도 › 검증 배율 V3» 값을 그대로 씁니다. 센터가 따로 할 일 없음. 금액·결제 정보는 이 줄에 나오지 않아요.`)}`;
+  ${note(`회원 앱에서는 이 레슨이 «선생님 확인 ★ ${CFG.VERIFY.V3}배»(V3) 세션으로 자동으로 만들어져요. 배수는 H2 «경험치·한도 › 검증 배율 V3» 값을 그대로 써요. 센터가 따로 할 일은 없어요. 금액·결제 정보는 이 줄에 나오지 않아요.`)}`;
 }
 
 /* ===== H1 운동 사전 ===== */
@@ -177,7 +177,7 @@ function h2Preview() {   // 바꾼 값(초안)과 지금 값(저장됨)을 같�
     return { sess: g.gained, raw: r.raw, day: CFG.DAY_CAP, week: CFG.WEEK_CAP, per, lv10: lv(10), lv99: lv(99), w99: w99.weeks, low: Math.round(CFG.MOOD.low * 100), high: Math.round(CFG.MOOD.high * 100), boost: CFG.BOOST.mul, pot: CFG.POTION.xp }; };
   const a = withCfg(ADM, calc), b = withCfg(D, calc);
   const row = (k, l, f = nf) => `<tr class="${a[k] !== b[k] ? 'chg' : ''}"><td>${l}</td><td class="num">${f(a[k])}</td><td class="num"><b>${f(b[k])}</b></td></tr>`;
-  return `<div class="aprev" id="h2prev"><h4>바꾼 값으로 미리 계산 <span class="amut">engine.js 같은 함수</span></h4>${tbl(['예시', '지금', '바꾸면'], [
+  return `<div class="aprev" id="h2prev"><h4>바꾼 값으로 미리 계산 <span class="amut">회원 앱과 같은 계산식</span></h4>${tbl(['예시', '지금', '바꾸면'], [
     row('raw', '예시 세션 경험치 ①'),
     row('sess', '① 한도 적용 뒤'), row('day', '하루 운동 한도'), row('week', '주 운동 한도'),
     row('lv10', 'Lv.10 누적 경험치'), row('lv99', 'Lv.99 누적 경험치'), row('w99', 'Lv.99까지(① 주 3회)', v => v === Infinity ? '—' : `${nf(v)}주 ≈ ${(v / 52).toFixed(1)}년`),
@@ -191,16 +191,16 @@ function vH2() {
     xp: () => `<div class="agrid3">
       ${sec('경험치 단위 (PLAN §2-3)', [['XP.weight', '웨이트·머신 1세트'], ['XP.body', '맨몸 1세트'], ['XP.cardio', '유산소 1분'], ['XP.lesson', '레슨 1회'], ['XP.firstSet', '첫 세트 보너스'], ['XP.complete', '세션 완료 보너스'], ['XP.newPart', '이번 주 새 부위'], ['XP.pr', 'PR 1개'], ['XP.dayDone', '운동 완료 고정분(배율 없음)']].map(([p, l]) => fr(l, numIn(p), 'XP')).join(''))}
       ${sec('한도 (결정 32·33)', fr('하루 운동 경험치', numIn('DAY_CAP'), 'XP') + fr('하루 · 전부 자가 기록이면', numIn('DAY_CAP_V0'), 'XP') + fr('주 운동 경험치', numIn('WEEK_CAP', { w: 90 }), 'XP')
-        + note('하루·주 한도는 <b>운동 경험치에만</b> 걸려요. 아이템 경험치 한도는 «부스터·물약» 탭.'))}
+        + note('하루·주 한도는 <b>운동 경험치에만</b> 걸려요. 아이템 경험치 한도는 «부스터·물약» 탭에 있어요.'))}
       ${sec('검증 배율·연속 배율', [['VERIFY.V0', '자가 기록 V0 (집·야외·입점 안 된 헬스장)'], ['VERIFY.V1', '입점센터 입장 V1'], ['VERIFY.V3', '레슨 확정 V3']].map(([p, l]) => fr(l, numIn(p, { step: '0.05' }), '×')).join('')
         + `<div class="afr"><span>연속 주 0·1·2·3·4·5·6+</span></div><div class="astreak">${CFG_DEFAULT.STREAK.map((_, i) => numIn('STREAK.' + i, { step: '0.05', w: 66 })).join('')}</div>`
         + fr('복귀 기준(쉰 날)', numIn('COMEBACK_DAYS'), '일') + fr('복귀 첫 세션 배율', numIn('COMEBACK_MUL', { step: '0.05' }), '×')
-        + fr('입점센터 보너스(기본 경험치의)', numIn('CENTER_BONUS.pct'), '%') + fr('입점 보너스 주 한도', numIn('CENTER_BONUS.weekCap', { w: 90 }), 'XP') + note('결정 36 · 입점 보너스는 운동 하루·주 한도와 <b>따로</b> 세요. 운동량 ×1.2 전 기본 경험치 기준 · 아이템 배율 안 붙음.')
-        + fr('오운완 셀카 보너스(기본 경험치의)', numIn('SELFIE_BONUS.pct'), '%') + fr('셀카 보너스 하루 횟수', numIn('SELFIE_BONUS.perDay'), '회') + note('결정 37 · 장소 무관 · 인증·연속·×1.2 안 곱한 고정값 · 운동 하루·주 한도 <b>안</b>(잘릴 땐 셀카 몫부터) · 앱 안 카메라만.'))}</div>`,
-    mood: () => `<div class="agrid3">${sec('표정 판정 (결정 21 · 경험치와 무관)', fr('«아쉬운» — 평소 대비 미만', numIn('MOOD.low', { mul: 100 }), '%') + fr('«신남» — 평소 대비 이상', numIn('MOOD.high', { mul: 100 }), '%')
+        + fr('입점센터 보너스(기본 경험치의)', numIn('CENTER_BONUS.pct'), '%') + fr('입점 보너스 주 한도', numIn('CENTER_BONUS.weekCap', { w: 90 }), 'XP') + note('결정 36 · 입점 보너스는 운동 하루·주 한도와 <b>따로</b> 세요. 운동량 ×1.2를 곱하기 전 기본 경험치로 계산해요 · 아이템 배율은 안 붙어요.')
+        + fr('오운완 셀카 보너스(기본 경험치의)', numIn('SELFIE_BONUS.pct'), '%') + fr('셀카 보너스 하루 횟수', numIn('SELFIE_BONUS.perDay'), '회') + note('결정 37 · 어디서 찍든 받아요 · 인증·연속·×1.2 배율은 안 곱하는 고정값 · 운동 하루·주 한도 <b>안</b>에 들어가요(넘치면 셀카 몫부터 잘려요) · 앱 안 카메라로 찍은 것만.'))}</div>`,
+    mood: () => `<div class="agrid3">${sec('표정 판정 (결정 21 · 경험치와 무관)', fr('«아쉬운» — 평소의 몇 % 미만', numIn('MOOD.low', { mul: 100 }), '%') + fr('«신남» — 평소의 몇 % 이상', numIn('MOOD.high', { mul: 100 }), '%')
         + fr('«평소» = 최근 몇 회 중앙값', numIn('MOOD.baseN'), '회') + fr('«평소» 기간', numIn('MOOD.baseDays', { mul: 1 / 7 }), '주') + fr('판정에 필요한 최소 기록', numIn('MOOD.minBase'), '회')
         + fr('«아쉬운» 몇 번 연속이면 표정 대신 한마디', numIn('MOOD.quietAfter'), '번'))}
-      ${sec('어떻게 쓰이나', note('세션을 저장할 때 종목별 «평소»와 비교해 그날 얼굴만 바뀌어요. 경험치·포인트·랭킹 계산에는 들어가지 않아요(PLAN §5-2 강도 4열 = 표정 전용).') + note('«가볍게 한 날» 체크 · 복귀 첫 세션 · 평소 기록 부족 종목이 절반 넘음 → 판정 안 함.'))}</div>`,
+      ${sec('어떻게 쓰이나요', note('세션을 저장할 때 종목별 «평소»와 비교해 그날 얼굴만 바뀌어요. 경험치·포인트·랭킹 계산에는 들어가지 않아요(PLAN §5-2 강도 4열 = 표정 전용).') + note('«가볍게 한 날» 체크 · 복귀 첫 세션 · 평소 기록이 모자란 종목이 절반을 넘으면 판정하지 않아요.'))}</div>`,
     lv: () => vLevels(),
     ach: () => { const L = achieveList(true);
       return sec('업적 24개 (PLAN §2-5 · 보상 = 업적 전용 꾸미기)', tbl(['사용', '분류', '업적', '조건', '목표', '보상'], L.map(a => { const o = (D.cfg.ACH || {})[a.name] || {};
@@ -218,7 +218,7 @@ function vH2() {
         return fr(b.name.replace(/^2배/, CFG.BOOST.mul + '배').replace('+300', '+' + CFG.POTION.xp), `<input class="ain num ${o.price != null ? 'chg' : ''}" style="width:90px" type="number" data-shop="${id}" value="${o.price ?? b.price}" title="기본 ${b.price}">`, 'P'); }).join(''))}
       ${sec('메모', note('결정 33으로 «잠정 A안»(부스터·물약 하루 개수·경험치 상한)은 폐기됐어요. 지금 값 = 부스터 ×2 · 물약 +300 · 아이템 한도 없음. 한도를 다시 걸 일이 생기면 위 두 칸에만 넣어요 — 운동 한도(600·1,800)와 합치거나 나눠 쓰지 않아요.'))}</div>`,
   }[t]();
-  return `<div class="ahead"><div><h2>업적·보상·레벨표·상점 관리 <span class="atag">회원 앱 계산에 반영</span></h2><p>여기 값은 회원 앱 계산 함수(engine.js) 한 곳으로 들어가요. 바꾼 칸은 노란색 · [저장]을 눌러야 회원 앱에 반영돼요.</p></div></div>
+  return `<div class="ahead"><div><h2>업적·보상·레벨표·상점 관리 <span class="atag">회원 앱 계산에 반영</span></h2><p>여기 값은 회원 앱이 경험치·레벨을 계산할 때 그대로 써요. 바꾼 칸은 노란색 · [저장]을 눌러야 회원 앱에 반영돼요.</p></div></div>
   <div class="atabs">${H2TABS.map(([k, l]) => `<button class="${t === k ? 'on' : ''}" data-aact="h2" data-v="${k}">${l}</button>`).join('')}</div>
   <div class="ah2 ${t === 'reward' || t === 'shop' ? 'full' : ''}"><div class="ah2main">${body}</div>${t === 'reward' || t === 'shop' ? '' : h2Preview()}</div>`;
 }
@@ -250,7 +250,7 @@ function vShopAdm() {
 function vH3() {
   const Q = fraudQueue(), dec = D.fraud = ADM.fraud, list = Q.filter(f => AV.fraudF === 'all' || (AV.fraudF === 'open' ? !dec[f.id] : !!dec[f.id]));
   const byRule = {}; Q.forEach(f => { byRule[f.rule] = (byRule[f.rule] || 0) + 1; });
-  return `<div class="ahead"><div><h2>부정 검토 목록 (V5) <span class="atag">자동 감지 · 조용히</span></h2><p>감지돼도 계정 정지·레벨 하락·경고문은 하지 않아요(VERIFICATION §4). 운영자가 보고 경험치 인정 여부만 정해요.</p></div>
+  return `<div class="ahead"><div><h2>부정 검토 목록 (V5) <span class="atag">자동 감지 · 조용히</span></h2><p>감지돼도 계정을 멈추거나 레벨을 내리거나 경고를 띄우지 않아요(VERIFICATION §4). 운영자가 보고 경험치를 인정할지만 정해요.</p></div>
     <div class="aflt">${seg('fraudF', AV.fraudF, [['all', '전체'], ['open', '검토 대기'], ['done', '처리함']])}</div></div>
   <div class="akrow">${kpi('최근 9일 감지', Q.length + '건')}${kpi('검토 대기', Q.filter(f => !dec[f.id]).length + '건')}${kpi('보류 경험치', nf(Q.filter(f => !dec[f.id]).reduce((a, f) => a + f.xp, 0)) + ' XP')}</div>
   ${sec('검토 목록', tbl(['감지 시각', '회원', '센터', '규칙', '근거', '보류 XP', '결정'], list.map(f => { const d = dec[f.id];
@@ -266,7 +266,7 @@ function vH4() {
   const cost = K.map(([k, m, n, i, o, pi, po]) => ({ k, m, n, usd: n * (i * .5 * pi + o * po) / 1e6 })), tot = cost.reduce((a, x) => a + x.usd, 0);
   const daily = Array.from({ length: 26 }, (_, i) => +(tot / 26 * (.75 + .5 * Math.abs(Math.sin(i * 1.7)) + (i % 7 === 0 ? .25 : 0))).toFixed(2));
   return `<div class="ahead"><div><h2>코칭 비용·품질 <span class="atag gray">개발사 서버 제공 데이터 자리</span></h2><p>AI 코치 서버는 외부 개발사가 운영해요(PLAN §4-5). 이 화면은 그 서버가 주는 숫자를 보여 주는 자리 — 지금은 시연용 가짜 숫자예요.</p></div><div class="aflt"><span class="amut">이번 달 1일~오늘 · 환율 1,450원/$</span></div></div>
-  <div class="akrow">${kpi('이번 달 비용', '$' + tot.toFixed(0), `≈ ${nf(tot * 1450 / 10000)}만원 · 예산 $800의 ${pct(tot, 800)}%`)}${kpi('활성 유저당', '$' + (tot / users).toFixed(3), `≈ ${nf(tot / users * 1450)}원 (기획 추정 ≈200원)`)}${kpi('필터 걸린 응답', '0.6%', '584건 중 의료·금지어')}${kpi('월 20회 다 쓴 유저', '3.1%', '131명')}</div>
+  <div class="akrow">${kpi('이번 달 비용', '$' + tot.toFixed(0), `≈ ${nf(tot * 1450 / 10000)}만원 · 예산 $800의 ${pct(tot, 800)}%`)}${kpi('활성 회원당', '$' + (tot / users).toFixed(3), `≈ ${nf(tot / users * 1450)}원 (기획 추정 ≈200원)`)}${kpi('필터 걸린 응답', '0.6%', '584건 중 의료·금지어')}${kpi('월 20회 다 쓴 회원', '3.1%', '131명')}</div>
   <div class="agrid2">${sec('종류별 호출·비용', tbl(['종류', '모델', '호출', '비용($)', '비중'], cost.map(x => `<tr><td>${x.k}</td><td>${x.m}</td><td class="num">${nf(x.n)}</td><td class="num">${x.usd.toFixed(1)}</td><td class="wbar">${hshare(x.usd, Math.max(...cost.map(c => c.usd)), pct(x.usd, tot) + '%')}</td></tr>`)))}
     ${sec('일별 비용($)', vbars(daily, daily.map((_, i) => (i + 1) + '일'), { unit: '$', h: 190, every: 5, fmt: v => v.toFixed(1) }))}</div>
   <div class="agrid2">${sec('필터 걸린 응답 샘플', tbl(['시각', '종류', '걸린 이유', '대신 나간 문구'], [
@@ -275,7 +275,7 @@ function vH4() {
       ['10/23 19:40', '주간 리포트', '다른 회원과 비교 문장', '템플릿(비교 대상 = 지난주의 너)'],
       ['10/22 22:31', '코칭 대화', '보충제 추천 요청', '고정 안내 · 처방 안 함']].map(r => `<tr>${r.map(x => `<td>${x}</td>`).join('')}</tr>`)))}
     ${sec('프롬프트 버전', tbl(['버전', '적용', '대상', '필터율', '👍 비율'], [['coach-v3', '10/21~', '대화·리포트', '0.5%', '82%'], ['coach-v2', '10/07~10/20', '대화·리포트', '1.1%', '76%'], ['oneliner-v4', '10/14~', '세션 한마디', '0.2%', '—']].map(r => `<tr>${r.map((x, i) => `<td class="${i > 2 ? 'num' : ''}">${x}</td>`).join('')}</tr>`))
-      + note('예산 150% 넘으면 LLM 비율 자동 축소 → 템플릿 100%(개발사 구현 항목).'))}</div>`;
+      + note('예산의 150%를 넘으면 AI 답변 비율을 자동으로 줄여 템플릿 100%까지 내려요(개발사 구현).'))}</div>`;
 }
 
 /* ===== H5 지표 대시보드 ===== */
@@ -283,9 +283,9 @@ function vH5() {
   const r = rng(99), lvDist = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90].map((l, i) => Math.round(1800 * Math.pow(.52, i) * (.9 + r() * .2)));
   const ret = Array.from({ length: 8 }, (_, i) => ({ d7: 58 + i * 1.2 + r() * 3, d30: 34 + i * .9 + r() * 2 }));
   return `<div class="ahead"><div><h2>지표 대시보드</h2><p>운동기록 기능을 켠 계정 기준 · 최근 8주. 센터별은 읽기만.</p></div></div>
-  <div class="akrow">${kpi('기록률', '41%', '앱 활성 중 주 1회 이상 기록')}${kpi('주 평균 운동 횟수', '2.6회', '기록한 회원 기준')}${kpi('D7 재방문', ret[7].d7.toFixed(0) + '%')}${kpi('D30 재방문', ret[7].d30.toFixed(0) + '%')}${kpi('셀카 사용률', '18%', '세션 중 셀카 첨부')}${kpi('친구 보유율', '27%', '친구 1명 이상')}</div>
+  <div class="akrow">${kpi('기록률', '41%', '앱을 쓰는 회원 중 주 1회 이상 기록')}${kpi('주 평균 운동 횟수', '2.6회', '기록한 회원 기준')}${kpi('D7 재방문', ret[7].d7.toFixed(0) + '%')}${kpi('D30 재방문', ret[7].d30.toFixed(0) + '%')}${kpi('셀카 사용률', '18%', '세션 중 셀카 첨부')}${kpi('친구 보유율', '27%', '친구 1명 이상')}</div>
   <div class="agrid2">${sec('레벨 분포 (진화 단계별 계정 수)', vbars(lvDist, ['Lv1~9', '10~19', '20~29', '30~39', '40~49', '50~59', '60~69', '70~79', '80~89', '90~99'], { unit: '명', h: 200 }))}
-    ${sec('검증 등급 비율 (세션)', stack([['V0 자가(집·야외·비입점)', 30, V_SEQ.V0], ['V1 입점센터 입장', 62, V_SEQ.V1], ['V3 레슨', 8, V_SEQ.V3]]) + note('검증 등급은 순서가 있는 값이라 한 색의 진하기로 구분(진할수록 확인이 강함).'))}</div>
+    ${sec('검증 등급 비율 (세션)', stack([['V0 자가(집·야외·비입점)', 30, V_SEQ.V0], ['V1 입점센터 입장', 62, V_SEQ.V1], ['V3 레슨', 8, V_SEQ.V3]]) + note('색이 진할수록 확인이 확실한 기록이에요.'))}</div>
   <div class="agrid2">${sec('D7 재방문 (가입 주별)', vbars(ret.map(x => x.d7), ret.map((_, i) => i === 7 ? '이번 주' : `${7 - i}주 전`), { unit: '%', h: 170, fmt: v => v.toFixed(0) }))}
     ${sec('D30 재방문 (가입 주별)', vbars(ret.map(x => x.d30), ret.map((_, i) => i === 7 ? '이번 주' : `${7 - i}주 전`), { unit: '%', h: 170, fmt: v => v.toFixed(0) }))}</div>
   ${sec('센터별 (읽기 전용)', tbl(['센터', '회원', '활성(4주)', '기록률', '세션(4주)', '레슨 연계', 'V1 이상 비율'], CENTERS.map(c => { const s = centerStats(c);
@@ -298,11 +298,11 @@ function vH6() {
   const p = D.rollout ?? 10, total = 28640, steps = [10, 50, 100];
   const demo = ['user_14384', 'user_15617', 'user_10548', 'user_10411', 'user_10274', 'user_11233', 'user_10000', 'user_10137', 'me_demo'];
   const rows = demo.map(id => { const b = bucketOf(id); return `<tr><td>${id === 'me_demo' ? '시연 계정(나)' : `<span class="mono">${id}</span>`}</td><td class="num">${b}</td><td>${b < p ? '<b class="agood">보임</b>' : '<span class="amut">안 보임</span>'}</td></tr>`; });
-  return `<div class="ahead"><div><h2>공개 비율 스위치 <span class="atag">계정 기준 · 시범 센터 대신</span></h2><p>운동기록 탭을 앱 사용자 몇 %에게 보여 줄지 정해요. 계정 번호로 0~99 칸을 정해 두고 «칸 &lt; 비율»이면 보여요 → 비율을 올려도 이미 보던 사람은 계속 보여요.</p></div></div>
+  return `<div class="ahead"><div><h2>공개 비율 스위치 <span class="atag">계정 기준 · 시범 센터 대신</span></h2><p>운동기록 탭을 앱 사용자 몇 %에게 보여 줄지 정해요. 계정마다 0~99 중 칸 번호가 하나 정해져 있고, 칸 번호가 비율보다 작은 계정에만 보여요. 그래서 비율을 올려도 이미 보던 사람은 계속 봐요.</p></div></div>
   <div class="agrid2">${sec('지금 단계', `<div class="aroll">${steps.map(s => `<button class="${p === s ? 'on' : ''} ${s < p ? 'past' : ''}" data-aact="roll" data-v="${s}"><b>${s}%</b><span>${nf(total * s / 100)}명</span></button>`).join('<i>→</i>')}</div>`
-      + `<div class="akrow" style="margin-top:14px">${kpi('지금 보이는 계정', nf(total * p / 100) + '명', `앱 사용자 ${nf(total)}명 중`)}${kpi('예상 코칭 비용', '$' + nf(total * p / 100 * .41 * .14) + '/월', '기록률 41% × 유저당 $0.14')}</div>`
+      + `<div class="akrow" style="margin-top:14px">${kpi('지금 보이는 계정', nf(total * p / 100) + '명', `앱 사용자 ${nf(total)}명 중`)}${kpi('예상 코칭 비용', '$' + nf(total * p / 100 * .41 * .14) + '/월', '기록률 41% × 회원당 $0.14')}</div>`
       + note('시연: 단계 버튼은 이 화면의 저장값만 바꿔요. 회원 앱 시연 화면에서 운동기록 탭을 숨기진 않아요(시연이 막히지 않게).'))}
-    ${sec('다음 단계로 올리기 전 확인', `<ul class="achk"><li>H3 부정 감지율 2% 미만 · 보류 경험치 처리 밀림 없음</li><li>H4 유저당 코칭 비용 ≤ 기획 추정(≈200원)</li><li>H5 D7 재방문이 꺼진 그룹보다 낮지 않음</li><li>H7 구매적립 충전·아이템 사용 이상치 없음</li><li>앱 오류율·서버 응답 시간 정상(개발사)</li></ul>`)}</div>
+    ${sec('다음 단계로 올리기 전 확인', `<ul class="achk"><li>H3 부정 감지율 2% 미만 · 보류 경험치 처리 밀림 없음</li><li>H4 회원당 코칭 비용 ≤ 기획 추정(≈200원)</li><li>H5 D7 재방문이 꺼진 그룹보다 낮지 않음</li><li>H7 구매적립 충전·아이템 사용 이상치 없음</li><li>앱 오류율·서버 응답 시간 정상(개발사)</li></ul>`)}</div>
   <div class="agrid2">${sec('계정별 칸 예시', tbl(['계정', '칸(0~99)', `${p}%일 때`], rows))}
     ${sec('바꾼 기록', tbl(['시각', '내용'], (D.rollLog || [{ at: '10/20 10:00', what: '0% → 10% (첫 공개)' }]).map(x => `<tr><td class="num">${x.at}</td><td>${x.what}</td></tr>`)))}</div>`;
 }
@@ -312,7 +312,7 @@ function vH7() {
   const r = rng(5), months = ['5월', '6월', '7월', '8월', '9월', '10월'], earn = months.map((_, i) => Math.round(820000 * (1 + i * .28) * (.95 + r() * .1)));
   const cats = SHOP82.reduce((a, x) => { a[x.cat_ko] = (a[x.cat_ko] || 0) + 1; return a; }, {}), use = Object.keys(cats).map((k, i) => [k, Math.round([5120, 4380, 1980, 1210, 1460, 1720, 640, 410][i] * (.9 + r() * .2))]);
   return `<div class="ahead"><div><h2>포인트·유료 모니터</h2><p>구매적립(실결제 충전)과 상점 아이템 사용을 봐요. 운동·레벨업 포인트 지급은 없어요(결정 38). 1P = 1원 가정.</p></div><div class="aflt"><span class="amut">이번 달 = 10월 1일~오늘</span></div></div>
-  <div class="akrow">${kpi('유료 충전', '1,842만원', '1,912건')}${kpi('아이템 장부 비중', '17%', '전체 경험치 중 아이템분')}${kpi('💰 표시 계정', '11%', '현금 충전 포인트로 아이템 산 계정')}${kpi('«최근 7일 운동» 조건에 막힘', '1,284회', '사용 시도의 4.1% · 아이템 차감 안 함')}</div>
+  <div class="akrow">${kpi('유료 충전', '1,842만원', '1,912건')}${kpi('아이템 경험치 비중', '17%', '전체 경험치 중 아이템분')}${kpi('💰 표시 계정', '11%', '현금 충전 포인트로 아이템 산 계정')}${kpi('«최근 7일 운동» 조건에 막힘', '1,284회', '사용 시도의 4.1% · 아이템 차감 안 함')}</div>
   <div class="agrid2">${sec('월 구매적립 충전 (P)', vbars(earn, months, { unit: 'P', h: 190 }))}
     ${sec('카테고리별 아이템 사용 (이번 달)', tbl(['카테고리', '사용', '비중'], use.map(([k, v]) => `<tr><td>${k}</td><td class="num">${nf(v)}</td><td class="wbar">${hshare(v, Math.max(...use.map(u => u[1])), pct(v, use.reduce((a, u) => a + u[1], 0)) + '%')}</td></tr>`)))}</div>`;
 }

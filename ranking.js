@@ -103,19 +103,19 @@ function vCenterTab(W) {
   const nat = CenterRank.nationalWeeklyXP(W.sessions, W.ws);
   const chips = homes.map(h => `<button class="chip rkchip ${h.center_id === sel ? 'on' : ''}" data-act="rkCenter" data-v="${h.center_id}">${esc(rkCenter(h.center_id).name)}</button>`).join('');
   return `<div class="chips rkchips" id="rkChips">${chips}<button class="chip rkchip add" data-act="rkManage" id="rkManage">＋ 관리</button></div>
-  <div class="card" id="rkBoard"><div class="rkhd"><b>${esc(c.name)}</b><small>이번 주 · 이 센터 입장으로 번 경험치만 · 월요일 0시 초기화</small></div>
+  <div class="card" id="rkBoard"><div class="rkhd"><b>${esc(c.name)}</b><small>이번 주 · 이 센터에 입장해서 번 경험치만 · 월요일 0시에 새로 시작</small></div>
   ${board.length ? board.slice(0, 100).map(m => rkRow(m, m.weekly_xp, m.me ? `${esc(CH[m.t].name)} · 이번 주 전체 ${fmt(nat.me || 0)} XP` : `${esc(CH[m.t].name)} · Lv.${m.lv}`)).join('') : '<div class="muted" style="padding:14px 0">이번 주 이 센터 기록이 아직 없어요</div>'}</div>
   ${rkMeBar(board, '이번 주 이 센터 기록이 아직 없어요')}
-  <div class="muted" style="margin-top:8px">닉네임·캐릭터만 보여요(실명 없음) · 여러 센터를 다니면 센터마다 그 센터에서 번 경험치로만 세요 · 센터 TV 랭킹과 같은 순위</div>`;
+  <div class="muted" style="margin-top:8px">닉네임·캐릭터만 보여요(실명 없음) · 여러 센터를 다니면 센터마다 거기서 번 경험치만 따로 계산해요 · 센터 TV 랭킹과 같아요</div>`;
 }
 function vNationTab(W) {
   const board = CenterRank.nationalBoard(W.sessions, W.members, W.ws), cw = CenterRank.centerWeeklyXP(W.sessions, W.ws);
   const mainCenter = id => { if (id === 'me') { const s = rkSel(rkHomeList()); return s ? rkCenter(s).name : ''; }
     let best = null, bx = 0; Object.keys(cw).forEach(c => { if ((cw[c][id] || 0) > bx) { bx = cw[c][id]; best = c; } }); return best ? rkCenter(best).name : ''; };
-  return `<div class="card" id="rkBoard"><div class="rkhd"><b>니짐내짐 전국</b><small>이번 주 · 검증된 운동 경험치(입점 보너스 포함) · 월요일 0시 초기화</small></div>
+  return `<div class="card" id="rkBoard"><div class="rkhd"><b>니짐내짐 전국</b><small>이번 주 · 자가 기록을 뺀 운동 경험치(입점센터 보너스 포함) · <span style="white-space:nowrap">월요일 0시에 새로 시작</span></small></div>
   ${board.slice(0, 100).map(m => rkRow(m, m.weekly_xp, `${esc(CH[m.t].name)}${mainCenter(m.member_id) ? ' · ' + esc(mainCenter(m.member_id)) : ''}`)).join('')}</div>
-  ${rkMeBar(board, '이번 주 검증된 운동 기록이 아직 없어요')}
-  <div class="muted" style="margin-top:8px">닉네임·캐릭터만 보여요(실명 없음) · 센터 이름 = 그 회원이 가장 많이 다닌 센터 · 센터 TV 전국 순위와 같아요</div>`;
+  ${rkMeBar(board, '이번 주 랭킹에 들어갈 운동 기록이 아직 없어요')}
+  <div class="muted" style="margin-top:8px">닉네임·캐릭터만 보여요(실명 없음) · 옆에 적힌 센터는 그 회원이 가장 많이 다닌 곳이에요 · 센터 TV 전국 순위와 같아요</div>`;
 }
 const rkTabs = () => { const none = !rkHomeList().length;
   return `<div class="rktabs" id="rkTabs">${[['friend', '친구리그'], ['center', none ? '근처 입점센터' : '내 센터'], ['nation', '전국']].map(([k, l]) => `<button class="${S.rkTab === k ? 'on' : ''}" data-act="rkTab" data-v="${k}">${l}</button>`).join('')}</div>`; };

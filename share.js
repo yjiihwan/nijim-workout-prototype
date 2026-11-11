@@ -456,15 +456,15 @@ window.addEventListener('click', e => {
     shrKind: () => { if (ST.kind === v) return; ST.kind = v; ST.url = null; paintSheet(); refreshCard(); },
     shrSelfie: () => { ST.selfie = !ST.selfie; ST.url = null; paintSheet(); refreshCard(); },
     shrSave: () => { if (!ST.url) return shrToast('카드를 만드는 중이에요'); download(); shrToast('이미지를 저장했어요'); },
-    shrInsta: () => shareFile('story', '이미지를 저장했어요 · 인스타 스토리에서 올려 주세요'),
+    shrInsta: () => shareFile('story', '이미지를 저장했어요 · 인스타 스토리에 올려 주세요'),
     shrKakao: () => shareFile('square', '이미지를 저장했어요 · 카카오톡에서 보내 주세요'),
-    shrLink: async () => { await copyText(APP_LINK); shrToast('링크가 복사됐어요'); },
+    shrLink: async () => { await copyText(APP_LINK); shrToast('링크를 복사했어요'); },
     invOpen: () => { S.allSub = 'invite'; save(); render(); window.scrollTo(0, 0); },
     invBack: () => { S.allSub = null; save(); render(); window.scrollTo(0, 0); },
     invCopyCode: async () => { await copyText(myCode()); toast(`내 코드 ${myCode()} 복사했어요`); },
-    invLink: async () => { await copyText(inviteLink()); toast('링크가 복사됐어요'); },
+    invLink: async () => { await copyText(inviteLink()); toast('링크를 복사했어요'); },
     invSend: async () => { const data = { title: '니짐내짐', text: `니짐내짐에서 같이 운동해요! 내 코드 ${myCode()}`, url: inviteLink() };
-      if (navigator.share) { try { await navigator.share(data); } catch {} } else { await copyText(inviteLink()); toast('공유 창이 없어 링크를 복사했어요'); } },
+      if (navigator.share) { try { await navigator.share(data); } catch {} } else { await copyText(inviteLink()); toast('공유 창이 안 열려서 링크를 복사했어요'); } },
     invite: () => { S.tab = 'all'; S.sub = null; S.allSub = 'invite'; save(); render(); window.scrollTo(0, 0); },
   };
   if (!H[a]) return;

@@ -23,7 +23,7 @@ function patchItems() {   // app.js 가 ITEMS 를 만든 바로 다음, 첫 화�
   ITEMS.forEach((it, k) => {
     const b = ITEM_SEED[k], o = ADM.shop[it.id] || {};
     it.price = o.price ?? b.price; it.off = !!o.off;
-    if (it.id === 'boost1') Object.assign(it, { name: `${m}배 부스터 · 1세션`, desc: `다음 운동 1번 ${m}배 · ${cap}` });
+    if (it.id === 'boost1') Object.assign(it, { name: `${m}배 부스터 · 운동 1번`, desc: `다음 운동 1번 ${m}배 · ${cap}` });
     if (it.id === 'boost7') Object.assign(it, { name: `${m}배 부스터 · 7일`, desc: `7일 동안 운동 ${m}배 · ${cap}` });
     if (it.id === 'potion') Object.assign(it, { name: `경험치 물약 +${px}`, desc: `운동 없이 +${px} · ${cap} · 💰` });
   });

@@ -87,7 +87,7 @@ const EX_TIP = {
   russian_twist: '앉아서 상체를 좌우로 비트는 옆구리 운동이에요',
   mountain: '엎드린 자세로 무릎을 번갈아 가슴 쪽으로 당기는 운동이에요',
   walk: '빠르게 걷기, 보폭을 조금 넓히고 팔을 흔들어요',
-  run: '달리기, 대화가 가능한 속도부터 시작해요',
+  run: '달리기, 옆 사람과 말할 수 있는 속도부터 시작해요',
   cycle: '밖에서 자전거 타기, 안전모를 꼭 써요',
 };
 const EX_IMG = new Set(Object.keys(EX_TIP));

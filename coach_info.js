@@ -61,7 +61,7 @@ function kcalOf(it, p = me()) {
 }
 
 /* ③ «알려 주면 더 정확히» 안내 — 항목마다 대화 1번만(대화 지우기 전까지) */
-const HINT = { w: '몸무게 알려 주면 더 정확히 말해 줄게 · 위 «내 정보»', age: '나이 알려 주면 쉬는 시간을 더 정확히 말해 줄게 · 위 «내 정보»', sex: '성별 알려 주면 처음 무게를 더 정확히 잡아 줄게 · 위 «내 정보»' };
+const HINT = { w: '몸무게 알려 주면 더 정확히 말해 줄게 · 위 «내 정보»에 적어 줘', age: '나이 알려 주면 쉬는 시간을 더 정확히 말해 줄게 · 위 «내 정보»에 적어 줘', sex: '성별 알려 주면 처음 무게를 더 정확히 잡아 줄게 · 위 «내 정보»' };
 function hintOnce(key) { const c = S.coach; c.hinted = c.hinted || {}; if (c.hinted[key]) return null; c.hinted[key] = 1; return HINT[key]; }
 
 /* ===== 첫 대화(coachAgree 바로 뒤) ===== */
@@ -123,10 +123,10 @@ function vMyInfo() {
   const p = me(), field = (k, label, v, unit, mode, ph) => `<div class="row mirow" id="mi_${k}"><span>${label}</span><div class="mival"><label class="obfield"><input class="pin" data-k="${k}" type="text" inputmode="${mode}" enterkeyhint="done" autocomplete="off" maxlength="6" placeholder="${ph}" value="${v == null ? '' : +(+v).toFixed(1)}" aria-label="${label}"><i>${unit}</i></label>${v == null ? '' : `<button class="mix" data-act="meClear" data-v="${k}" aria-label="${label} 지우기">×</button>`}</div></div>`;
   return `${subHead('내 정보', S.infoFrom || 'settings', S.infoFrom === 'coach' ? '코치' : '설정')}<div class="sec">
   <div class="card" id="miCard"><div class="h2" style="font-size:16px;margin-top:0">코치가 쓰는 내 정보</div>
-  <div class="muted" style="margin-bottom:6px">처음 무게·올리는 폭·쉬는 시간·유산소 칼로리 계산에만 써요 · 다른 회원에겐 안 보여요 · 비워 두면 그 항목은 계산하지 않아요</div>
+  <div class="muted" style="margin-bottom:6px">처음 무게·올리는 폭·쉬는 시간·유산소 칼로리 계산에만 써요 · 다른 회원에겐 안 보여요 · 비워 둔 건 계산에 안 써요</div>
   <div class="row mirow" id="mi_sex"><span>성별</span><div class="chips">${[['m', '남'], ['f', '여'], ['n', '선택 안 함']].map(([v, l]) => `<button class="chip ${p.sex === v ? 'on' : ''}" data-act="meSex" data-v="${v}">${l}</button>`).join('')}</div></div>
   ${field('age', '나이', p.age, '살', 'numeric', '비어 있음')}${field('height', '키', p.height, 'cm', 'decimal', '비어 있음')}${field('weight', '몸무게', p.w, 'kg', 'decimal', '비어 있음')}
-  <div class="muted" style="margin-top:8px">몸무게는 너무 무거운 숫자 확인(«정말 맞아요?»)에도 써요 · 비우면 70kg 기준</div></div>
+  <div class="muted" style="margin-top:8px">몸무게는 적은 무게가 너무 무거울 때 «정말 맞아요?» 하고 묻는 데도 써요 · 비우면 70kg으로 봐요</div></div>
   <button class="btn ghost" data-act="coach" id="miToCoach">코치에게 물어보기</button></div>`;
 }
 SUB.myinfo = vMyInfo;
@@ -135,7 +135,7 @@ SUB.myinfo = vMyInfo;
 const vSettingsCoach = SUB.settings;
 SUB.settings = () => vSettingsCoach()
   .replace(/<div class="row"><div><span>체중 <span class="muted">\(선택\)<\/span><\/span>.*?<\/button><\/div><\/div>/, '')
-  .replace('<div class="card" id="ticketCard">', `<button class="card replink tap" data-act="myinfo" data-v="settings" id="myInfoCard"><div><b>내 정보</b><small>${esc(meSummary() || '아직 안 적었어요 · 코치가 무게를 정확히 짜는 데 써요')}</small></div><span class="muted">›</span></button><div class="card" id="ticketCard">`);
+  .replace('<div class="card" id="ticketCard">', `<button class="card replink tap" data-act="myinfo" data-v="settings" id="myInfoCard"><div><b>내 정보</b><small>${esc(meSummary() || '아직 안 적었어요 · 코치가 무게를 정확히 잡는 데 써요')}</small></div><span class="muted">›</span></button><div class="card" id="ticketCard">`);
 
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if (!b || b.closest('#evo') || b.disabled) return;
@@ -145,8 +145,8 @@ document.addEventListener('click', e => {
     obOk: () => { const el = $('obIn'); obAnswer(el ? el.value : ''); },
     obSkip: () => obAnswer(null, true),
     myinfo: () => { S.infoFrom = v || S.sub; return go('workout', 'myinfo'); },
-    meSex: () => { ensureMe(); S.me.sex = S.me.sex === v ? null : v; toast('저장했어요 · 코치 답변에 바로 반영돼요'); },
-    meClear: () => { setVal(v, null); toast('지웠어요 · 이 항목은 계산에서 빼요'); },
+    meSex: () => { ensureMe(); S.me.sex = S.me.sex === v ? null : v; toast('저장했어요 · 코치가 이제 이걸 보고 답해요'); },
+    meClear: () => { setVal(v, null); toast('지웠어요 · 이건 이제 계산에 안 써요'); },
   };
   if (!H[a]) return;
   e.stopImmediatePropagation(); ensureMe();
@@ -164,8 +164,8 @@ document.addEventListener('focusin', e => { if (e.target.classList && e.target.c
 document.addEventListener('change', e => {
   const el = e.target; if (!el.classList || !el.classList.contains('pin')) return;
   const k = el.dataset.k;
-  if (!el.value.trim()) { setVal(k, null); toast('지웠어요 · 이 항목은 계산에서 빼요'); }
-  else { const r = checkVal(k, el.value); if (r.msg) toast(r.msg.replace(/ ?🙂/, '').replace('줄래?', '주세요')); else { setVal(k, r.v); toast('저장했어요 · 코치 답변에 바로 반영돼요'); } }
+  if (!el.value.trim()) { setVal(k, null); toast('지웠어요 · 이건 이제 계산에 안 써요'); }
+  else { const r = checkVal(k, el.value); if (r.msg) toast(r.msg.replace(/ ?🙂/, '').replace('줄래?', '주세요')); else { setVal(k, r.v); toast('저장했어요 · 코치가 이제 이걸 보고 답해요'); } }
   save();
   const redraw = () => { if (!document.activeElement || !document.activeElement.classList.contains('pin')) render(); };
   if (typeof ptrDown !== 'undefined' && ptrDown) setTimeout(redraw, 160); else redraw();

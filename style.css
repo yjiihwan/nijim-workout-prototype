@@ -72,7 +72,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .sw{width:48px;height:28px;border-radius:99px;background:var(--g2);position:relative;transition:.2s;flex:none}
 .sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
 .sw.on{background:var(--rose)}.sw.on::after{left:23px}
-.toast{position:fixed;left:0;right:0;margin:0 auto;bottom:96px;max-width:300px;background:rgba(22,22,28,.92);color:#fff;border-radius:12px;padding:11px 14px;font-size:14px;text-align:center;opacity:0;transform:translateY(10px);transition:.3s;pointer-events:none;z-index:20}
+.toast{position:fixed;left:0;right:0;margin:0 auto;bottom:96px;max-width:300px;background:rgba(22,22,28,.92);color:#fff;border-radius:12px;padding:11px 14px;font-size:14px;text-align:center;opacity:0;transform:translateY(10px);transition:.3s;pointer-events:none;z-index:20;word-break:keep-all}
 .toast.show{opacity:1;transform:none}
 select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--g2);background:#fff}
 

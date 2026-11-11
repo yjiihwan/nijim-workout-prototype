@@ -241,15 +241,17 @@ function pillarImg(Wc, w13, col) {
 }
 
 /* ===== 사용 → 줄 세워 하나씩 ===== */
+const xpOnlyFood = f => !!f.eff.xp && !f.eff.next && !f.eff.days && !f.eff.cond;
 function eatUse(id) {
   const f = foodById(id); if (!f || !(S.inv[id] > 0)) return;
   if (f.rule === 'recent7d_workout' && lastWorkoutDays() >= 7) return toast('최근 7일 안에 운동 기록이 1번 있어야 쓸 수 있어요');
-  S.inv[id]--; EAT.q.push(id); save();
+  if (S.level >= 99 && xpOnlyFood(f)) return toast('최고 레벨이라 경험치는 더 오르지 않아요 · 음식은 그대로 있어요');   // QA 치11
+  S.inv[id]--; EAT.q.push(id); S.eatQ = [...EAT.q]; save();   // QA 치10: 대기 줄도 같이 저장 → 앱이 닫혀도 다음에 보유함으로 되돌림(app.js sanitize)
   if (EAT.cur) { toast(`${f.name} — 앞 연출이 끝나면 이어서 먹어요 (대기 ${EAT.q.length})`); return render(); }
   eatNext();
 }
 async function eatNext() {
-  const id = EAT.q.shift(); if (!id) { EAT.cur = null; render(); return; }
+  const id = EAT.q.shift(); S.eatQ = [...EAT.q]; if (!id) { EAT.cur = null; save(); render(); return; }
   const f = foodById(id), from = S.level, fromXP = S.xp, R = RARITY[f.rarity] || RARITY['일반'];
   /* 상태는 시작할 때 확정(끊겨도 잃지 않게) — 아이템 경험치 = 유료 장부·한도 없음·운동 레벨엔 안 들어감(결정 33·38) */
   let res = null, label = '';
@@ -291,7 +293,7 @@ function tick() {
 /* XP 띠: 3250–3950ms 현재값 → +획득 (배율형은 안 참). 레벨을 넘으면 100%까지 */
 function eatBar(E, t) {
   const fill = document.getElementById('eatFill'), txt = document.getElementById('eatXpTxt'); if (!fill) return;
-  const n0 = need(E.from), p0 = E.from >= 99 ? 1 : E.fromXP / n0, p1 = !E.res ? p0 : E.toLv > E.from ? 1 : E.toXP / n0, u = eio(c01((t - 3250) / 700)), p = p0 + (p1 - p0) * u;
+  const n0 = need(E.from), p0 = E.from >= 99 ? 1 : E.fromXP / n0, p1 = !E.res || E.from >= 99 ? p0 : E.toLv > E.from ? 1 : E.toXP / n0, u = eio(c01((t - 3250) / 700)), p = p0 + (p1 - p0) * u;
   fill.style.width = (Math.min(1, p) * 100).toFixed(1) + '%';
   if (txt) txt.textContent = E.from >= 99 ? 'MAX' : `${Math.round(p * n0).toLocaleString()} / ${n0.toLocaleString()} XP`;
 }
@@ -306,7 +308,7 @@ function eatFinish(ev) {
   render();
 }
 /* 화면을 떠나면 연출만 멈춤 — 경험치·레벨은 이미 저장, 못 본 진화는 S.pending 으로 다음 진입 때 */
-function eatAbort() { cancelAnimationFrame(EAT.raf); EAT.cur = null; EAT.q.forEach(id => { S.inv[id] = (S.inv[id] || 0) + 1; }); EAT.q = []; save(); }
+function eatAbort() { cancelAnimationFrame(EAT.raf); EAT.cur = null; EAT.q.forEach(id => { S.inv[id] = (S.inv[id] || 0) + 1; }); EAT.q = []; S.eatQ = []; save(); }
 
 /* ===== 상점 «먹고 마시는» 탭 ===== */
 function vEatTab() {
@@ -314,7 +316,7 @@ function vEatTab() {
   const cat = S.eatCat || 'all', list = FOODS().filter(f => cat === 'all' || f.cat === cat), bm = boostMul();
   const card = f => { const n = S.inv[f.id] || 0, using = E && E.id === f.id, wait = EAT.q.filter(x => x === f.id).length, R = RARITY[f.rarity] || RARITY['일반'];
     return `<div class="fitem ${using ? 'using' : ''}" data-r="${R.key}">${using ? '<span class="ftag use">사용 중</span>' : wait ? `<span class="ftag">대기 ${wait}</span>` : n ? `<span class="ftag own">${n}개</span>` : ''}
-      <img src="assets/food/card/${f.fid}.png" alt=""><b>${esc(f.name)}</b><small>${esc(f.desc)}</small><em style="color:${R.col}">${f.rarity}${f.rule === 'recent7d_workout' ? ' · 최근 7일 운동' : ''}</em>
+      <img src="assets/food/card/${f.fid}.png" alt=""><b>${esc(f.name)}</b><small>${esc(f.desc)}</small>${S.level >= 99 && xpOnlyFood(f) ? '<em class="fmax">최고 레벨엔 효과 없음</em>' : `<em style="color:${R.col}">${f.rarity}${f.rule === 'recent7d_workout' ? ' · 최근 7일 운동' : ''}</em>`}
       <div class="fp">${f.price.toLocaleString()}P</div>
       ${n ? `<div class="fbtn"><button class="btn ghost" data-act="buyFood" data-id="${f.id}">구매</button><button class="btn" data-act="eatUse" data-id="${f.id}">사용</button></div>` : `<button class="btn" data-act="buyFood" data-id="${f.id}">구매</button>`}</div>`; };
   /* 먹는 중엔 같은 카드를 보던 자리 위 창(오버레이)으로 띄움 — 목록 자리엔 같은 높이 빈칸이 남아 스크롤이 안 튐 */
@@ -332,6 +334,7 @@ function vEatTab() {
 }
 function buyFood(id) {
   const f = foodById(id); if (!f) return;
+  if (S.level >= 99 && xpOnlyFood(f)) return toast('최고 레벨이라 경험치 음식은 효과가 없어요 · 포인트는 그대로예요');
   if (S.points < f.price) return toast('포인트가 부족해요 — 니짐 포인트 충전 화면으로 이어져요');
   S.points -= f.price; S.inv[id] = (S.inv[id] || 0) + 1; save(); render(); toast(`${f.name} 구매 완료 · -${f.price.toLocaleString()}P`);
 }

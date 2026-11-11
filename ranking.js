@@ -147,7 +147,7 @@ function rkManageSheet() {
 /* 설정(C13) — «센터 랭킹에 안 보이기» 1개(종전 «센터 화면에 안 보이기» 통합) + 내 센터 관리 */
 const vSettingsRk0 = SUB.settings;
 SUB.settings = () => { ensureRk(); return vSettingsRk0().replace('<div class="card" id="locCard">', `<div class="card" id="rankSetCard"><div class="h2" style="font-size:16px">센터 랭킹</div>
-  <div class="row"><div><span>센터 랭킹에 안 보이기</span><div class="muted">켜면 모든 센터 TV(DID)와 앱 «내 센터»·«전국» 랭킹에서 내 닉네임·캐릭터가 빠져요 · 친구리그는 그대로</div></div><button class="sw ${S.hideRank ? 'on' : ''}" data-act="hideRank" id="hideRankSw"></button></div>
+  <div class="row"><div><span>센터 랭킹에 안 보이기</span><div class="muted">켜면 모든 센터의 TV 랭킹 화면과 앱 «내 센터»·«전국» 랭킹에서 내 닉네임·캐릭터가 빠져요 · 친구리그는 그대로</div></div><button class="sw ${S.hideRank ? 'on' : ''}" data-act="hideRank" id="hideRankSw"></button></div>
   <div class="row"><div><span>내 센터 관리</span><div class="muted">${rkHomeList().length}곳 · 자동 등록·직접 추가</div></div><button class="btn sm ghost" data-act="rkManage">관리</button></div></div>
   <div class="card" id="locCard">`); };
 SUB.friends = vRanking;

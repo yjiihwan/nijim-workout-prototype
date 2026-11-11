@@ -671,3 +671,22 @@ body.wk .replink>span.muted,body.wk .replink>span:last-child{flex:none;white-spa
 .inv-send,.inv-link{display:flex;align-items:center;justify-content:center;gap:6px}.inv-send svg,.inv-link svg{width:18px;height:18px}
 .inv-link{margin-top:8px}
 .inv-foot{text-align:center;font-size:13px;margin-top:14px}
+
+/* ===== v1.40 — QA 수정 ===== */
+/* 시연 도구는 주소에 ?demo=1 일 때만(일반 화면에 내부 말이 안 보이게) */
+body:not(.demoui) .card.demo,body:not(.demoui) .demochip,body:not(.demoui) .demoonly,body:not(.demoui) .adm-entry{display:none!important}
+.notice.ok{background:#E6F7EE;color:#0B6B3A;font-weight:700;justify-content:flex-start;line-height:1.45;word-break:keep-all}
+.notice.savefail{background:#FFE3E3;color:#8A1010;margin:12px 16px 0;line-height:1.45;word-break:keep-all;font-weight:600}
+.notice.savefail .btn.sm{flex:none;white-space:nowrap;margin:0}
+.btn.wait{opacity:.55}
+.btn.danger{background:#E5484D;color:#fff}
+.linkbtn.danger{display:block;margin:18px auto 4px;padding:10px 14px;color:#C2333A;font-weight:700;font-size:14px}
+.tile .tsub{display:block;margin-top:2px;font-size:11px;color:#B07D1F;white-space:nowrap}
+.fitem em.fmax{color:#C2333A}
+#lastBlock{height:4px}
+.notice.savefail{position:sticky;top:54px;z-index:4;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.rec .xp.hold{color:#B07D1F;font-size:12px;white-space:nowrap}
+.sh .grid2 .btn{white-space:nowrap}
+#myCode .grid2 .btn{white-space:nowrap;padding-left:6px;padding-right:6px}
+@media (max-width:350px){#myCode .grid2 .btn{font-size:14px}
+  .setrow.edit{grid-template-columns:30px auto auto 22px;gap:3px}.setrow.edit .step{gap:2px}.setrow.edit .step button{width:26px;height:26px}.setrow.edit .step span{min-width:34px;font-size:13px}.setrow.edit .wfield{width:62px;min-width:62px}.setrow.edit>span:first-child{white-space:nowrap;font-size:12px;letter-spacing:-.3px}}

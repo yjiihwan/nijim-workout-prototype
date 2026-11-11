@@ -202,14 +202,14 @@ function vStats2() {
   const photoCard = `<div class="card" id="stPhotos"><div class="h3">내 사진 모아보기 <span class="muted" style="font-weight:500">${LOCK.replace('class="ico"', 'class="ico sm"')} 나만 봐요</span></div>
     ${photos.length ? `<div class="pgrid">${photos.slice(-9).reverse().map((r, i) => `<div class="pcell"><img src="${r.photo === 'demo' ? PHOTO_SIM(i) : r.photo}" alt=""><small>${md(r.date)}</small></div>`).join('')}</div><div class="muted" style="margin-top:8px">친구·프로필·리포트엔 보이지 않아요 · 지우기는 기록 상세나 설정에서</div>`
       : '<div class="muted">아직 사진이 없어요 · 운동 끝나고 [오운완 셀카]를 찍으면 여기 모여요(나만 봐요)</div>'}</div>`;
-  const list = `<div class="card" id="stList"><div class="h2" style="font-size:16px">전체 기록 <span class="muted" style="font-weight:500">${all.length}건</span></div>${all.length ? all.slice(0, S.stMore ? 60 : 10).map(r => `<div class="rec ${r.ro ? '' : 'tap'}" ${r.ro ? '' : `data-act="rec" data-id="${r.id}"`}><div><b>${esc(r.summary)}</b><small>${r.date} · ${esc(r.place)}</small></div><span class="xp">+${fmt(r.xp)} XP</span></div>`).join('') + (all.length > (S.stMore ? 60 : 10) ? (S.stMore ? `<div class="muted" style="padding-top:8px">외 ${all.length - 60}건</div>` : `<button class="btn ghost" data-act="stMore" style="margin-top:10px">${all.length - 10}건 더 보기</button>`) : '') : '<div class="muted">기록이 없어요</div>'}</div>`;
+  const list = `<div class="card" id="stList"><div class="h2" style="font-size:16px">전체 기록 <span class="muted" style="font-weight:500">${all.length}건</span></div>${all.length ? all.slice(0, S.stMore ? 60 : 10).map(r => `<div class="rec ${r.ro ? '' : 'tap'}" ${r.ro ? '' : `data-act="rec" data-id="${r.id}"`}><div><b>${esc(r.summary)}</b><small>${r.date} · ${esc(r.place)}</small></div>${recXP(r)}</div>`).join('') + (all.length > (S.stMore ? 60 : 10) ? (S.stMore ? `<div class="muted" style="padding-top:8px">외 ${all.length - 60}건</div>` : `<button class="btn ghost" data-act="stMore" style="margin-top:10px">${all.length - 10}건 더 보기</button>`) : '') : '<div class="muted">기록이 없어요</div>'}</div>`;
   return `${subHead('통계')}<div class="sec">${seg}${body}${repBtn}${photoCard}${list}${dataDemoCard()}</div>`;
 }
 function statsPeriod(rs) {
   const wk = S.stPer === 'week', mon0 = weekStart(TODAY);
   const per = `<div class="chips" style="margin-bottom:12px">${[['week', '주'], ['month', '월']].map(([k, l]) => `<button class="chip ${S.stPer === k ? 'on' : ''}" data-act="stPer" data-v="${k}">${l}</button>`).join('')}</div>`;
   const curFrom = wk ? mon0 : TODAY.slice(0, 8) + '01', cur = inRange(rs, curFrom, TODAY);
-  const tiles = `<div class="card" id="stTiles"><div class="tiles" style="margin-top:0"><div class="tile"><small>${wk ? '이번 주' : '이번 달'}</small><b>${new Set(cur.map(r => r.date)).size}회</b></div><div class="tile"><small>운동 경험치</small><b>${fmt(cur.reduce((a, r) => a + exXPof(r), 0))}</b></div><div class="tile"><small>연속</small><b>${streakVal()}주</b></div></div></div>`;
+  const tiles = `<div class="card" id="stTiles"><div class="tiles" style="margin-top:0"><div class="tile"><small>${wk ? '이번 주' : '이번 달'}</small><b>${new Set(cur.map(r => r.date)).size}회</b></div><div class="tile"><small>운동 경험치</small><b>${fmt(cur.reduce((a, r) => a + exXPof(r) - (r.xpCenter || 0), 0))}</b>${cur.some(r => r.xpCenter) ? `<small class="tsub">+ 입점 보너스 ${fmt(cur.reduce((a, r) => a + (r.xpCenter || 0), 0))}</small>` : ''}</div><div class="tile"><small>연속</small><b>${streakVal()}주</b></div></div></div>`;
   let vals, labels;
   if (wk) { vals = []; labels = []; for (let i = 11; i >= 0; i--) { const m = addD(mon0, -7 * i); vals.push(new Set(inRange(rs, m, addD(m, 6)).map(r => r.date)).size); labels.push(i === 0 ? '이번 주' : `${+m.slice(5, 7)}/${+m.slice(8)}`); } }
   else { vals = []; labels = []; const d = dOf(TODAY); for (let i = 5; i >= 0; i--) { const x = new Date(d.getFullYear(), d.getMonth() - i, 1), k = ymd(x).slice(0, 7); vals.push(new Set(rs.filter(r => r.date.startsWith(k)).map(r => r.date)).size); labels.push(`${x.getMonth() + 1}월`); } }
@@ -220,15 +220,21 @@ function statsPeriod(rs) {
   const up = ps['가슴'] + ps['등'] + ps['어깨'] + ps['팔'], low = ps['하체'];
   const avgUp = up / 4, bal = !tot ? '' : avgUp < low * .5 ? '하체에 비해 위쪽(가슴·등·어깨·팔)이 적어요' : low < avgUp * .5 ? '위쪽에 비해 하체가 적어요' : '위아래 균형이 괜찮아요';   // 위쪽은 4부위 평균과 하체 1부위를 비교
   const balance = `<div class="card" id="stBalance"><div class="h3">부위 밸런스 · ${wk ? '최근 4주' : '최근 3개월'} 세트 수</div>${tot ? hbars(ps) + `<div class="muted" style="margin-top:8px">${bal}</div>` : emptyChart(90, '부위 기록이 없어요')}</div>`;
-  const best = {}; prEvents(rs).forEach(e => { best[e.ex] = e; });
-  rs.forEach(r => (r.items || []).forEach(it => { const e = EX[it.ex]; if (!e || e.mode !== 'wr' || best[it.ex]) return; const top = doneSets(it)[0]; if (top) best[it.ex] = { ex: it.ex, set: top, date: r.date, score: setScore(e, top), first: true }; }));
+  /* v1.40(QA 중31): 종목별 «가장 좋은 세트»를 보여 준다(예전엔 PR 이 없으면 그날 첫 세트 = 워밍업이 나왔음) */
+  const best = {}, days = {};
+  byDate(rs).forEach(r => (r.items || []).forEach(it => { const e = EX[it.ex]; if (!e || (e.mode !== 'wr' && e.mode !== 'r')) return;
+    const top = doneSets(it).reduce((m, x) => !m || setScore(e, x) > setScore(e, m) ? x : m, null); if (!top) return;
+    (days[it.ex] = days[it.ex] || new Set()).add(r.date);
+    const sc = setScore(e, top); if (!best[it.ex] || sc > best[it.ex].score) best[it.ex] = { ex: it.ex, set: top, date: r.date, score: sc }; }));
+  Object.values(best).forEach(b => { b.first = days[b.ex].size < 2; });
   const prList = Object.values(best).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-  const pr = `<div class="card" id="stPR"><div class="h3">PR · 종목별 최고 기록</div>${prList.length ? prList.map(e => `<div class="rec tap" data-act="stExGo" data-v="${e.ex}"><div><b>${EX[e.ex].name}</b><small>${md(e.date)}${e.first ? ' · 첫 기록' : ' · PR'}</small></div><span class="xp">${setTxt(EX[e.ex], e.set)}</span></div>`).join('') : '<div class="muted">아직 PR이 없어요</div>'}</div>`;
+  const pr = `<div class="card" id="stPR"><div class="h3">종목별 최고 기록</div>${prList.length ? prList.map(e => `<div class="rec tap" data-act="stExGo" data-v="${e.ex}"><div><b>${EX[e.ex].name}</b><small>${md(e.date)}${e.first ? ' · 첫 기록' : ' · 최고 기록'}</small></div><span class="xp">${setTxt(EX[e.ex], e.set)}</span></div>`).join('') : '<div class="muted">아직 기록이 없어요</div>'}</div>`;
   return per + tiles + graph + heat + balance + pr;
 }
 function statsEx(rs) {
   const cnt = {}; rs.forEach(r => (r.items || []).forEach(it => { const e = EX[it.ex]; if (e && e.mode !== 'lesson') cnt[it.ex] = (cnt[it.ex] || 0) + 1; }));
   const exs = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]).slice(0, 8);
+  if (S.stEx && cnt[S.stEx] && !exs.includes(S.stEx)) exs.push(S.stEx);   // QA 중32: 누른 운동이 상위 8개 밖이어도 칩에 끼워 그 운동 그래프를 연다
   if (!exs.length) return `<div class="card" id="stExEmpty">${emptyChart(150, '운동을 기록하면 종목별 그래프가 생겨요')}</div>`;
   const cur = exs.includes(S.stEx) ? S.stEx : exs[0], e = EX[cur];
   const chips = `<div class="chips" style="margin-bottom:12px" id="stExChips">${exs.map(x => `<button class="chip ${x === cur ? 'on' : ''}" data-act="stEx" data-v="${x}">${EX[x].name}</button>`).join('')}</div>`;
@@ -237,12 +243,12 @@ function statsEx(rs) {
   const val = ({ it }) => e.mode === 'cardio' ? (it.min || 0) : e.mode === 'wr' ? Math.max(...doneSets(it).map(s => e1rm(s))) : Math.max(...doneSets(it).map(s => setScore(e, s)));
   const unit = e.mode === 'cardio' ? '분' : e.mode === 'wr' ? 'kg' : e.mode === 't' ? '초' : '회';
   const pts = ss.filter(x => e.mode === 'cardio' || doneSets(x.it).length).map(x => ({ label: `${+x.r.date.slice(5, 7)}/${+x.r.date.slice(8)}`, v: val(x), pr: prDates.has(x.r.date) }));
-  const what = e.mode === 'wr' ? '환산 1RM(무게×횟수)' : e.mode === 'cardio' ? '운동 시간' : e.mode === 't' ? '최고 버틴 시간' : '최고 횟수';
+  const what = e.mode === 'wr' ? '1번 들 수 있는 최대 무게(추정)' : e.mode === 'cardio' ? '운동 시간' : e.mode === 't' ? '최고 버틴 시간' : '최고 횟수';
   const graph = pts.length >= 3 ? lineChart(pts, { unit }) : emptyChart(150, `${e.name} 기록이 3번 이상이면 그래프가 생겨요 (지금 ${pts.length}번)`);
   const hi = pts.length ? Math.max(...pts.map(p => p.v)) : 0;
   const tiles = `<div class="tiles" style="margin-top:12px"><div class="tile"><small>최고</small><b>${+hi.toFixed(1)}${unit}</b></div><div class="tile"><small>기록</small><b>${pts.length}번</b></div><div class="tile"><small>PR</small><b>${prDates.size}번</b></div></div>`;
   const recent = ss.slice(-5).reverse().map(({ r, it }) => `<div class="rec"><div><b>${md(r.date)}</b><small>${esc(r.place)}</small></div><span class="xp" style="color:var(--ink)">${e.mode === 'cardio' ? `${it.min}분${it.km ? ` · ${it.km}km` : ''}` : setsTxt(e, doneSets(it))}${prDates.has(r.date) ? ' <span class="prtag">PR</span>' : ''}</span></div>`).join('');
-  return `${chips}<div class="card" id="stExGraph"><div class="h3">${e.name} · ${what}</div>${graph}${pts.some(p => p.pr) ? `<div class="hleg"><i style="background:${C_GOLD};border-radius:50%"></i> PR 찍은 날</div>` : ''}${tiles}</div>
+  return `${chips}<div class="card" id="stExGraph"><div class="h3">${e.name} · ${what}</div>${graph}${pts.some(p => p.pr) ? `<div class="hleg"><i style="background:${C_GOLD};border-radius:50%"></i> PR 찍은 날</div>` : ''}${tiles}${e.mode === 'wr' ? '<div class="muted" style="margin-top:8px">무게와 횟수로 계산한 추정값이에요 · 예: 40kg × 10회 ≈ 53.3kg</div>' : ''}</div>
   <div class="card" id="stExRecent"><div class="h3">최근 기록</div>${recent}</div>`;
 }
 
@@ -312,7 +318,7 @@ function achSheet(i) {
   <div class="xrow" style="margin-top:12px"><span>조건</span><b>${a.cond}</b></div>
   <div class="xrow"><span>진행</span><b>${a.cur}/${a.goal}</b></div><div class="bar thin"><i style="width:${Math.round(a.cur / a.goal * 100)}%"></i></div>
   <div class="xrow"><span>보상(업적 전용)</span><b>${a.item}</b></div>
-  <div class="muted" style="margin-top:6px">업적 아이템은 업적으로만 얻어요 · 돈으로 살 수 없는 자랑거리${a.extra ? ' · <b>개발봇 보충안(형 확인 대기)</b>' : ''}</div>
+  <div class="muted" style="margin-top:6px">업적 아이템은 업적으로만 얻어요 · 돈으로 살 수 없는 자랑거리</div>
   ${a.done ? `<button class="btn" data-act="shareAch" data-v="${i}" id="achShare" style="margin-top:14px">${NJ_SHARE_ICON_SVG()}자랑하기</button>` : ''}
   <button class="btn ${a.done ? 'ghost' : ''}" data-act="shClose" style="margin-top:${a.done ? 8 : 14}px">닫기</button>`);
 }
@@ -405,7 +411,7 @@ function vAddFriend() {
     <div class="grid2" style="margin-top:12px"><button class="btn ghost" data-act="copyCode" style="margin:0">코드 복사</button><button class="btn" data-act="shareLink" style="margin:0">초대 링크 보내기</button></div>
     <div class="muted" style="margin-top:8px">링크를 받은 친구가 열면 바로 요청이 와요 · 연락처는 보지 않아요</div></div>
   <div class="card" id="codeIn"><div class="h3">친구 코드 입력</div><div class="cin"><input id="frCode" placeholder="예: NJ-CAPY2" maxlength="10" autocomplete="off" value="${esc(S.frCodeQ || '')}"><button class="btn sm" data-act="frCode">요청</button></div>
-    ${S.frErr ? `<div class="ferr" id="frErr">${esc(S.frErr)}</div>` : '<div class="muted" style="margin-top:6px">시연 코드: NJ-CAPY2 · NJ-PPI15</div>'}</div>
+    ${S.frErr ? `<div class="ferr" id="frErr">${esc(S.frErr)}</div>` : '<div class="muted demoonly" style="margin-top:6px">시연 코드: NJ-CAPY2 · NJ-PPI15</div>'}</div>
   <div class="card" id="recvCard"><div class="h3">받은 요청 ${S.fr.recv.length}</div>${recv || '<div class="muted">받은 요청이 없어요</div>'}</div>
   <div class="card" id="sentCard"><div class="h3">대기 목록 · 보낸 요청 ${S.fr.sent.length}</div>${sent || '<div class="muted">보낸 요청이 없어요</div>'}${S.fr.sent.length ? '<button class="btn sm ghost demochip" data-act="frDemoAccept">🧪 상대가 수락함(시연)</button>' : ''}</div>
   <div class="muted" style="text-align:center">친구 ${friendsAll().length}/50명 · 서로 수락해야 친구가 돼요</div></div>`;
@@ -420,7 +426,7 @@ const KINDS = {
   start: { label: '처음 무게', q: '벤치 처음 무게 몇 kg?' }, burn: { label: '유산소 칼로리(추정)', q: '유산소로 칼로리 얼마나 썼어?' },
 };
 const MED_FIXED = {
-  pain: ['아프면 오늘 운동은 바로 멈추자.', '통증·어지러움이 1번이라도 이어지면 의사·물리치료사와 상담해 줘.', '센터 선생님에게도 꼭 말해 줘.'],
+  pain: ['아프면 오늘 운동은 바로 멈추자.', '통증·어지러움이 계속되면 의사·물리치료사와 상담해 줘.', '센터 선생님에게도 꼭 말해 줘.'],
   disease: ['질환이나 임신에 대해선 내가 답하면 안 돼.', '운동 전에 의사와 먼저 상담해 줘. 센터 선생님에게도 알려 주면 맞춰서 도와줄 거야.'],
   diet: ['식단·보충제 양은 내가 정해 줄 수 없어.', '영양사나 의사와 상담해 줘. 운동 루틴은 1개씩 같이 짜 보자.'],
 };
@@ -549,19 +555,19 @@ function vCoach() {
   const sum = meSummary(), info = `<button class="card replink tap mibar" data-act="myinfo" data-v="coach" id="coachInfo"><div><b>내 정보</b><small>${esc(sum || '안 적음 · 적으면 무게·쉬는 시간을 더 정확히 말해 줘요')}</small></div><span class="muted">고치기 ›</span></button>`;
   const greet = `<div class="msg bot"><div class="cbox">${charFit(t, S.level, 30)}</div><div><div class="bub">안녕! 운동 습관은 내가 같이 볼게. 궁금한 거 1개씩 물어봐 💬</div></div></div>`;
   const msgs = c.msgs.map(m => m.who === 'me' ? `<div class="msg me"><div class="bub">${esc(m.text)}</div></div>`
-    : `<div class="msg bot"><div class="cbox">${charFit(t, S.level, 30)}</div><div><div class="bub ${m.fixed ? 'fixed' : ''}">${m.lines.map(esc).join('<br>')}${m.hint ? `<small class="hintl">${esc(m.hint)}</small>` : ''}</div><small class="mtag">${m.fixed ? '🛡 고정 안내 · AI 호출 안 함 · 횟수 안 씀' : m.kind === 'unknown' ? '예시 응답 · 분류 못 함' : m.kind === 'info' ? '내 정보 저장 · 횟수 안 씀' : `예시 응답 · ${KINDS[m.kind].label}`}</small></div></div>`).join('');
+    : `<div class="msg bot"><div class="cbox">${charFit(t, S.level, 30)}</div><div><div class="bub ${m.fixed ? 'fixed' : ''}">${m.lines.map(esc).join('<br>')}${m.hint ? `<small class="hintl">${esc(m.hint)}</small>` : ''}</div><small class="mtag">${m.fixed ? '🛡 안전 안내 · 질문 횟수는 줄지 않아요' : m.kind === 'unknown' ? '' : m.kind === 'info' ? '내 정보 저장 · 질문 횟수는 줄지 않아요' : ''}</small></div></div>`).join('');
   const full = left <= 0;
-  const chips = `<div class="qchips" id="coachChips">${Object.entries(KINDS).map(([k, v]) => `<button class="chip" data-act="coachQ" data-v="${k}" ${full ? 'disabled' : ''}>${v.q}</button>`).join('')}<button class="chip med" data-act="coachQ" data-v="pain">무릎이 아파 (의료 시연)</button><button class="chip med" data-act="coachQ" data-v="disease">고혈압 있는데 괜찮아? (의료 시연)</button></div>`;
+  const chips = `<div class="qchips" id="coachChips">${Object.entries(KINDS).map(([k, v]) => `<button class="chip" data-act="coachQ" data-v="${k}" ${full ? 'disabled' : ''}>${v.q}</button>`).join('')}<button class="chip med" data-act="coachQ" data-v="pain">무릎이 아파</button><button class="chip med" data-act="coachQ" data-v="disease">고혈압 있는데 괜찮아?</button></div>`;
   return `${subHead('코치에게 물어보기')}<div class="sec">${head}${info}
   <div class="chat" id="chat">${greet}${msgs}</div>
   ${full ? `<div class="notice limit" id="coachFull"><span>이번 달 질문 ${COACH_MAX}번을 다 썼어요. <b>다음 달 1일</b>에 다시 ${COACH_MAX}번 생겨요.<br>아프거나 불편하면 운동을 멈추고 센터 선생님에게 말해 주세요.</span></div>` : ''}
   <div class="h3" style="margin-top:4px">이렇게 물어봐요</div>${chips}
   <div class="cin" id="coachIn"><input id="coachQ" placeholder="${full ? '다음 달에 다시 물어볼 수 있어요' : '코치에게 물어보기'}" maxlength="80" autocomplete="off" ${full ? 'disabled' : ''}><button class="btn sm" data-act="coachSend" ${full ? 'disabled' : ''}>보내기</button></div>
-  <div class="muted" style="margin-top:8px">의학적 조언이 아니에요 · 통증·질환 질문은 규칙이 가로채서 고정 안내로 답해요(AI 호출 안 함)</div>
+  <div class="muted" style="margin-top:8px">의학적 조언이 아니에요 · 통증·질환 질문에는 정해진 안전 안내로 답해요</div>
   <button class="card replink tap" data-act="report" data-v="coach" style="margin-top:12px"><div><b>주간 리포트 보기</b><small>지난주 부위·PR·다음 주 제안</small></div><span class="muted">›</span></button>
   ${demoCard('남은 횟수', 'coachUsed', String(c.used), [['3', '17번 남음'], ['19', '1번 남음'], ['20', '20번 도달']])}
   <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:-4px"><button class="btn sm ghost demochip" data-act="coachClear" style="margin:0">🧪 대화 지우기</button><button class="btn sm ghost demochip" data-act="coachReset" style="margin:0">🧪 첫 진입 고지 다시</button><button class="btn sm ghost demochip" data-act="coachNewUser" id="coachNewUser" style="margin:0">🧪 새 사용자(기록 0)</button></div>
-  <div class="muted" style="margin-top:6px">새 사용자 시연은 지난 기록을 모두 비워요 · 되돌리기는 설정 › 처음 상태로</div></div>`;
+  <div class="muted demoonly" style="margin-top:6px">새 사용자 시연은 지난 기록을 모두 비워요 · 되돌리기는 설정 › 처음 상태로</div></div>`;
 }
 
 /* ===== 연결: 화면 등록 · 기존 화면 보강 · 버튼 ===== */
@@ -592,14 +598,15 @@ document.addEventListener('click', e => {
     ach: () => achSheet(+v),
     prof: () => { S.profFrom = S.sub; S.prof = v; return go('workout', 'profile'); },
     friendZero: () => { S.friendZero = v === 'zero'; },
-    cheer: () => { S.fr.cheered[v] = TODAY; toast(`${v}님에게 응원 👏 보냈어요 (시연 · 실제 알림 없음)`); },
+    cheer: () => { S.fr.cheered[v] = TODAY; toast(`${v}님에게 응원 👏 보냈어요`); },
     frAccept: () => { S.fr.recv = S.fr.recv.filter(x => x !== v); if (!S.fr.added.includes(v)) S.fr.added.push(v); S.friendZero = false; toast(`${v}님과 친구가 됐어요`); },
     frReject: () => { S.fr.recv = S.fr.recv.filter(x => x !== v); toast('요청을 거절했어요 · 상대에게 알리지 않아요'); },
     frCancel: () => { S.fr.sent = S.fr.sent.filter(x => x !== v); toast('요청을 취소했어요'); },
     frRequest: () => { if (!S.fr.sent.includes(v)) S.fr.sent.push(v); toast('요청 보냈어요 · 상대가 수락하면 친구가 돼요'); },
     frDemoAccept: () => { const n = S.fr.sent.shift(); if (n) { S.fr.added.push(n); S.friendZero = false; toast(`${n}님이 수락했어요 · 이제 친구예요`); } },
-    copyCode: () => toast(`내 코드 ${myCode()} 복사(시연)`),
-    shareLink: () => toast('초대 링크 공유 창 자리 (시연 · 실제로 보내지 않아요)'),
+    copyCode: () => { const c = myCode(); NJ_copyText(c).then(ok => toast(ok ? `내 코드 ${c}를 복사했어요` : `복사하지 못했어요 · 코드 ${c}를 직접 적어 보내 주세요`)); return true; },
+    shareLink: () => { const data = { title: '니짐내짐', text: `니짐내짐에서 같이 운동해요! 내 코드 ${myCode()}`, url: NJ_inviteLink() };
+      if (navigator.share) navigator.share(data).catch(() => {}); else NJ_copyText(NJ_inviteLink()).then(ok => toast(ok ? '공유 창이 없어 초대 링크를 복사했어요' : '링크를 복사하지 못했어요 · 내 코드를 직접 알려 주세요')); return true; },
     frCode: () => { const el = $('frCode'), q = (el ? el.value : '').trim().toUpperCase(); S.frCodeQ = q; S.frErr = '';
       const p = STRANGERS.find(x => x.code === q);
       if (!/^NJ-[A-Z0-9]{4,6}$/.test(q)) S.frErr = '코드를 다시 확인해 주세요 (예: NJ-CAPY2)';

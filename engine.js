@@ -54,10 +54,12 @@ const need = n => ovr(n, 'xp') ?? needBase(n);
 const levelTitle = L => ovr(L, 'title');   // null = 기본 칭호(단계명)
 const streakMul = w => CFG.STREAK[Math.min(CFG.STREAK.length - 1, Math.max(0, w))];
 
-/* 경험치 반영 → 레벨. 음수(기록 수정으로 줄어듦)면 레벨은 그대로, 이번 레벨 안에서만 줄어든다(0 아래로 안 감)
+/* 경험치 반영 → 레벨.
+   v1.40(형 11-11 승인): 음수(기록 수정·삭제로 줄어듦)면 레벨도 같이 내려간다. Lv.1 에서 더 깎을 몫이 남으면 xp 를 음수(빚)로 두어
+   다음에 받는 경험치에서 먼저 갚는다 → «줄였다 늘렸다»로 경험치가 늘어나는 구멍 없음(빼기와 더하기가 정확히 대칭)
    결정 38: 레벨업·진화로 포인트를 주지 않는다 — 반환에 points 없음 */
 function applyXP({ level, xp }, gained) {
-  if (gained < 0) return { from: level, level, xp: Math.max(0, xp + gained) };
+  if (gained < 0) { let lv = level, x = xp + gained; while (x < 0 && lv > 1) { lv--; x += need(lv); } return { from: level, level: lv, xp: x }; }
   let lv = level, x = xp + gained;
   while (lv < 99 && x >= need(lv)) { x -= need(lv); lv++; }
   if (lv >= 99) x = 0;

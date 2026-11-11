@@ -626,3 +626,48 @@ body.wk .replink>span.muted,body.wk .replink>span:last-child{flex:none;white-spa
 .sfbody{flex:1;min-width:0}.sfbody b{display:block;font-size:15px}.sfcard.done .sfbody b{color:var(--rose)}
 .sfbody small{display:block;color:var(--g5);font-size:13px;margin-top:2px;word-break:keep-all;line-height:1.4}
 .sfbtns{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.sfbtns .btn.sm{font-size:13px;padding:7px 11px}
+/* ===== 자랑하기(공유 카드 v2) · 친구 초대 ===== */
+.shico{width:18px;height:18px;vertical-align:-3px;margin-right:6px}
+.sharebtn{display:flex;align-items:center;justify-content:center}
+.sharecap{text-align:center;font-size:13px;margin:8px 0 4px}
+.shr{display:none;position:fixed;inset:0;z-index:60}
+.shr.on{display:block}
+.shr-bg{position:absolute;inset:0;background:rgba(10,12,24,.45)}
+.shr-sh{position:absolute;left:0;right:0;bottom:0;margin:0 auto;max-width:430px;max-height:calc(100% - 24px);overflow-y:auto;box-sizing:border-box;background:#fff;border-radius:24px 24px 0 0;padding:8px 18px calc(18px + env(safe-area-inset-bottom));animation:shup .25s ease-out}
+.shr-grab{width:36px;height:5px;border-radius:3px;background:#D9D9DE;margin:0 auto 10px}
+.shr-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.shr-hd b{font-size:22px;font-weight:800}
+.shr-x{width:32px;height:32px;color:#3A3A42;padding:4px}.shr-x svg{width:24px;height:24px}
+.shr-kinds{display:flex;gap:6px;margin-bottom:10px}
+.shr-seg{margin-bottom:14px}
+.shr-prev{position:relative;display:flex;justify-content:center;align-items:center;margin:0 auto 14px}
+.shr-prev.story{height:min(440px,48vh)}.shr-prev.square{height:min(330px,40vh)}
+.shr-prev img{height:100%;width:auto;max-width:100%;object-fit:contain;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.shr-prev img:not([src]){display:none}
+.shr-load{position:absolute;color:var(--g5);font-size:14px}
+.shr-sf{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid var(--g2);padding:14px 0 6px}
+.shr-sf b{display:block;font-size:16px}.shr-sf small{display:block;color:var(--g5);font-size:13px;margin-top:3px}
+.shr-sf .sw[disabled]{opacity:.45}
+.shr-to{display:grid;grid-template-columns:repeat(4,1fr);padding:14px 0 4px}
+.shr-to button{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink)}
+.shr-to i{width:54px;height:54px;border-radius:50%;background:var(--g1);display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.shr-to i svg{width:24px;height:24px}
+.shr-to i.ig{border-radius:16px;color:#fff;background:linear-gradient(45deg,#FEC053 0%,#F2203E 45%,#B729A8 75%,#5342D6 100%)}
+.shr-to i.kk{background:#FEE500}.shr-to i.kk svg{width:28px;height:28px}
+.shr-toast{margin:8px auto 0;width:max-content;max-width:300px;height:46px;box-sizing:border-box;padding:0 20px 0 14px;border-radius:23px;background:#16161C;color:#fff;font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;opacity:0;transform:translateY(6px);transition:.25s;pointer-events:none}
+.shr-toast.show{opacity:1;transform:none}
+.shr-toast i{width:22px;height:22px;border-radius:50%;background:#00C281;color:#fff;display:flex;align-items:center;justify-content:center}.shr-toast i svg{width:14px;height:14px}
+.allrow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;margin:10px 0}
+.allrow .allico{width:40px;height:40px;border-radius:12px;background:#FFE3EE;color:var(--rose);display:flex;align-items:center;justify-content:center;flex:none}.allrow .allico svg{width:22px;height:22px}
+.allrow div{flex:1}.allrow b{display:block;font-size:16px}.allrow small{color:var(--g5);font-size:13px}
+.inv-hero{text-align:center;padding:20px 16px}
+.inv-char{display:flex;justify-content:center;align-items:flex-end;height:160px}
+.inv-t{font-size:20px;font-weight:800;margin-top:10px}.inv-d{margin-top:6px;line-height:1.6}
+.inv-code{display:flex;justify-content:space-between;align-items:center}
+.inv-code small{display:block;color:var(--g5);font-size:13px}.inv-code b{font-size:26px;font-weight:800;letter-spacing:.5px}
+.inv-code button{display:flex;align-items:center;gap:4px;background:var(--g1);border-radius:12px;padding:9px 12px;font-weight:700;font-size:14px;color:var(--ink)}.inv-code button svg{width:18px;height:18px}
+.inv-rw-hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}.inv-rw-hd b{font-size:15px}
+.inv-ex{background:#FFF3DC;color:#B07D1F;font-size:11px}
+.inv-send,.inv-link{display:flex;align-items:center;justify-content:center;gap:6px}.inv-send svg,.inv-link svg{width:18px;height:18px}
+.inv-link{margin-top:8px}
+.inv-foot{text-align:center;font-size:13px;margin-top:14px}

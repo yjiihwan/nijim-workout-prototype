@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.37.2';
+const VER = 'v1.38';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -78,6 +78,7 @@ const selfieClaims = (exceptId = null) => realRecs().filter(r => r.date === TODA
 const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const daysAgo = n => { const d = new Date(); d.setDate(d.getDate() - n); return ymd(d); };
 const TODAY = ymd(new Date());
+const NJ_SHARE_ICON_SVG = () => `<svg class="shico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${window.NJ_SHARE_ICON || ''}</svg>`;
 const DOW = ['일','월','화','수','목','금','토'];
 const md = s => `${+s.slice(5, 7)}/${+s.slice(8)}(${DOW[new Date(s).getDay()]})`;
 const SR = (ex, ...sets) => ({ ex, sets: sets.map(([w, r]) => ({ w, r, done: true })) });
@@ -629,12 +630,13 @@ function vResult() {
     ${ev ? `<div class="ptline" id="ptLine">Lv.${ev.from} → ${ev.to} 레벨업</div>` : ''}
     <div class="muted" style="margin-top:6px" id="resultNote">${note}</div>
     ${m && m.ratio != null && S.moodDemo === 'auto' ? `<div class="muted" style="margin-top:4px">평소 대비 ${Math.round(m.ratio * 100)}% (오늘 한 종목만 · 지난 10회 기준)</div>` : ''}</div>
+  ${rec && !rec.demo ? `<button class="btn sharebtn" data-act="share" data-id="${rec.id}" id="shareBtn">${NJ_SHARE_ICON_SVG()}자랑하기</button><div class="muted sharecap">오늘 한 운동을 카드로 만들어 자랑해요</div>` : ''}
   ${canSelfie ? selfieCta(rec) : sfDone ? sfCard('sfDone', rec.photo, `오운완 인증 완료 · +${fmt(rec.selfieIn ?? rec.selfieXP)} XP`, rec.photo ? '사진은 나한테만 보여요 · 셀카 보너스는 하루 1번' : '사진은 지웠어요 · 받은 보너스는 그대로예요', 'result')
     : rec && !rec.demo && rec.photo ? sfCard('sfDone', rec.photo, '오운완 사진 저장됨', '사진은 나한테만 보여요 · 이번엔 보너스 경험치가 붙지 않았어요', 'result') : ''}
   ${rec && rec.br ? `<div class="card" id="xpCard"><div class="h3">경험치 내역</div>${xpRows(rec)}<div class="xrow total"><span>합계</span><b>+${fmt(rec.xp)} XP</b></div></div>` : ''}
   <div class="card demo"><div class="h3">🧪 시연 — 다른 결과로 보기</div><div class="chips">${[['low','아쉬운'],['normal','평소대로'],['high','신남']].map(([k, l]) => `<button class="chip ${v===k?'on':''}" data-act="mset" data-v="${k}">${l}</button>`).join('')}</div>
   <div class="muted" style="margin-top:8px">표정은 캐릭터 얼굴(눈·입·볼) 자체가 바뀜 · 레벨·경험치와 무관</div></div>
-  <button class="btn" data-act="back" id="resultOk">확인 · 운동기록 탭으로</button>
+  <button class="btn ghost" data-act="back" id="resultOk">확인 · 운동기록 탭으로</button>
   <button class="btn ghost" data-tab="home" style="margin-top:8px">홈에서 카드 보기</button></div>`;
 }
 /* 결과 화면에서 셀카를 찍으면 더 받는 경험치(결정 37) — 같은 기록을 셀카 붙여 다시 계산 → 차이를 지금 남은 한도 안에서 */
@@ -826,7 +828,9 @@ function vRec() {
   <div class="card" id="recItems">${items.map(itemHTML).join('') || '<div class="muted">세부 기록이 없어요</div>'}</div>
   ${E ? `<div class="warn" id="v0Warn">수정하면 이 기록은 <b>자가 기록(×0.4)</b>으로 다시 계산돼요 · 지금 +${fmt(r.xp)} XP → 수정 후 <b>+${fmt(ed.xp)} XP</b>${ed.xp < r.xp ? ' · 레벨은 그대로고 다음 레벨까지 거리만 늘어나요' : ''}</div>
     <div class="grid2"><button class="btn ghost" data-act="editCancel">취소</button><button class="btn" data-act="editSave" id="editSave">수정 저장</button></div>`
-  : lesson ? `<div class="muted">레슨 기록은 선생님 확정 기록이라 수정할 수 없어요</div>` : `<button class="btn ghost" data-act="editStart" id="editStart">기록 수정</button>`}
+  : ''}
+  ${!E && !r.demo ? `<button class="btn sharebtn" data-act="share" data-id="${r.id}" id="recShare">${NJ_SHARE_ICON_SVG()}자랑하기</button>` : ''}
+  ${E ? '' : lesson ? `<div class="muted">레슨 기록은 선생님 확정 기록이라 수정할 수 없어요</div>` : `<button class="btn ghost" data-act="editStart" id="editStart">기록 수정</button>`}
   ${!E && r.br ? `<div class="card" style="margin-top:12px"><div class="h3">경험치 내역</div>${xpRows(r)}<div class="xrow total"><span>합계</span><b>+${fmt(r.xp)} XP</b></div></div>` : ''}
   ${!E && r.photo ? `<div class="card" id="recPhoto"><div class="h3">오운완 셀카 <span class="muted" style="font-weight:500">${LOCK.replace('class="ico"', 'class="ico sm"')} 나만 봐요</span></div><img class="recphoto" src="${r.photo}" alt=""><button class="btn ghost" data-act="delPhoto" data-id="${r.id}" id="delPhoto">사진 삭제</button></div>` : ''}</div>`;
 }
@@ -934,6 +938,7 @@ function endSession(auto = false) {
   const items = s.items.filter(it => (it.sets || []).some(x => x.done) || it.min > 0).map(({ draft, run, plan, ...it }) => ({ ...it, sets: it.sets ? it.sets.filter(x => x.done).map(({ at, ...x }) => x) : undefined }));
   const rec = { id: Date.now(), date: TODAY, place: s.place.name, placeKind: s.place.kind, summary: summaryOf(items), items, xp: gained + cb, xpCenter: cb, cbCut: cbr.cut, centerBase: r.baseXP, centerIf: isDemo ? null : centerIf(s, ctx, r), raw: r.raw, held, cut: isDemo ? 0 : cap.cut, cutReason: cap.reason,
     xpBoost: isDemo ? 0 : cap.boostGained, selfieXP: isDemo || held ? 0 : r.selfieXP, selfieIn: isDemo || held ? 0 : cap.selfieGained, boosted, v: V2K[r.v], light: s.light, prCount: s.prCount, photo: s.photo, ctx, br: isDemo ? { demoXP: gained } : r, demo: isDemo, auto: auto || undefined };
+  rec.dur = Math.max(1, Math.round((s.lastAt - s.startedAt) / 60000));   // 공유 카드 «운동 시간»(v2 SPEC §2)
   if (res.level > res.from) rec.lvUp = { from: res.from, to: res.level };
   S.records.push(rec);
   /* 결정 21: 표정만 바뀜 — 위 레벨·경험치 계산에 관여하지 않음 */

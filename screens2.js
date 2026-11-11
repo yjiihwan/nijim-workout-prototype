@@ -313,7 +313,8 @@ function achSheet(i) {
   <div class="xrow"><span>진행</span><b>${a.cur}/${a.goal}</b></div><div class="bar thin"><i style="width:${Math.round(a.cur / a.goal * 100)}%"></i></div>
   <div class="xrow"><span>보상(업적 전용)</span><b>${a.item}</b></div>
   <div class="muted" style="margin-top:6px">업적 아이템은 업적으로만 얻어요 · 돈으로 살 수 없는 자랑거리${a.extra ? ' · <b>개발봇 보충안(형 확인 대기)</b>' : ''}</div>
-  <button class="btn" data-act="shClose" style="margin-top:14px">닫기</button>`);
+  ${a.done ? `<button class="btn" data-act="shareAch" data-v="${i}" id="achShare" style="margin-top:14px">${NJ_SHARE_ICON_SVG()}자랑하기</button>` : ''}
+  <button class="btn ${a.done ? 'ghost' : ''}" data-act="shClose" style="margin-top:${a.done ? 8 : 14}px">닫기</button>`);
 }
 
 /* ===== 친구 데이터 · C17 프로필 ===== */

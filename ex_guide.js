@@ -95,12 +95,12 @@ const EX_IMG = new Set(Object.keys(EX_TIP));
 const EX_ICON = '<svg viewBox="0 0 24 24"><path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"/></svg>';
 function exThumb(e) {
   const img = !e.custom && EX_IMG.has(e.id);
-  return `<span class="exth${img ? '' : ' none'}" role="button" aria-label="${esc(e.name)} 그림 크게 보기" data-act="exImg" data-v="${e.id}">${img ? `<img src="assets/ex/t/${e.id}.png" alt="" loading="lazy" width="42" height="42">` : EX_ICON}</span>`;
+  return `<span class="exth${img ? '' : ' none'}" role="button" aria-label="${esc(e.name)} 그림 크게 보기" data-act="exImg" data-v="${e.id}">${img ? `<img src="assets/ex/t/${e.id}.png?v=${VER}" alt="" loading="lazy" width="42" height="42">` : EX_ICON}</span>`;
 }
 function exImgSheet(id) {
   const e = EX[id]; if (!e) return;
   const img = !e.custom && EX_IMG.has(id), tip = !e.custom && EX_TIP[id];
-  sheet(`<div class="exzoom${img ? '' : ' empty'}">${img ? `<figure><img src="assets/ex/z/${id}_a.png" alt="${esc(e.name)} 시작 자세"><figcaption>시작</figcaption></figure><span class="exarrow" aria-hidden="true">→</span><figure><img src="assets/ex/z/${id}_b.png" alt="${esc(e.name)} 끝 자세"><figcaption>끝</figcaption></figure>` : `<div class="exnone">${EX_ICON}<span>${e.custom ? '직접 추가한 운동은 그림이 없어요' : '그림 준비 중이에요'}</span></div>`}</div>
+  sheet(`<div class="exzoom${img ? '' : ' empty'}">${img ? `<figure><img src="assets/ex/z/${id}_a.png?v=${VER}" alt="${esc(e.name)} 시작 자세"><figcaption>시작</figcaption></figure><span class="exarrow" aria-hidden="true">→</span><figure><img src="assets/ex/z/${id}_b.png?v=${VER}" alt="${esc(e.name)} 끝 자세"><figcaption>끝</figcaption></figure>` : `<div class="exnone">${EX_ICON}<span>${e.custom ? '직접 추가한 운동은 그림이 없어요' : '그림 준비 중이에요'}</span></div>`}</div>
   <div class="extip"><b>${esc(e.name)}</b>${tip ? ` — ${esc(tip)}` : ''}</div>
   <div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="shClose" style="margin-top:0">닫기</button><button class="btn" data-act="exImgAdd" data-v="${id}" style="margin-top:0">이 운동 기록하기</button></div>`);
 }

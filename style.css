@@ -732,3 +732,8 @@ button.setrow.tapset:active{background:var(--g1)}
 .notice.flashn.minus{background:#FFF3DC;color:#6B4700}
 @media (max-width:350px){.endbar{gap:6px;padding:6px}.endbar .btn{font-size:14px;padding:13px 9px}.qrow .chip{padding:8px 10px}.optbtn{padding:12px 13px}.optbtn b{font-size:15px}}
 #qMin{display:grid;grid-template-columns:repeat(5,1fr)}#qMin .chip{padding:8px 0;text-align:center}
+
+/* ===== v1.42 (11-11) — «주 몇 회» 목표 삭제 · 홈 «이번 주 n회 운동» 아래 캐릭터 한마디 ===== */
+.wsay{display:flex;align-items:center;gap:8px;background:#EAF6FF;border-radius:12px;padding:6px 11px 6px 8px;font-size:13px;line-height:1.4;margin-top:10px}
+.wsay .cbox{flex:0 0 30px;width:30px;height:30px;display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
+.wsay span:last-child{min-width:0}

@@ -156,7 +156,7 @@ const rankList0 = rankList;
 rankList = function () {
   ensureRk(); const l = rankList0(); if (!S.rkMeDemo || S.rkHome === 'none') return l;
   const me = l.find(f => f.me); me.week = CenterRank.nationalWeeklyXP(rkMySessions(), rkWeekStart()).me || me.week;
-  if (S.fTab === 'week') { l.forEach(f => { f.key = f.rate * 10000 + f.week; }); l.sort((a, b) => b.key - a.key); }
+  if (S.fTab === 'week') { l.forEach(f => { f.key = f.week; }); l.sort((a, b) => b.key - a.key); }
   return l;
 };
 

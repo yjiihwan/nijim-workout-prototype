@@ -169,9 +169,9 @@ const numIn = (path, { mul = 1, step = 'any', w = 80, nullable = false } = {}) =
 const fr = (label, input, hint = '') => `<div class="afr"><span>${label}</span>${input}${hint ? `<em>${hint}</em>` : ''}</div>`;
 function h2Preview() {   // 바꾼 값(초안)과 지금 값(저장됨)을 같은 엔진 함수로 계산해 나란히
   const s = { verify: 'V1', selfie: false, prCount: 1, items: [{ ex: 'bench', sets: [1, 2, 3, 4].map(() => ({ w: 40, r: 10, done: true })) }, { ex: 'lat_pulldown', sets: [1, 2, 3, 4].map(() => ({ w: 35, r: 12, done: true })) }, { ex: 'treadmill', min: 20 }] };
-  const c = { firstToday: true, weekParts: [], streakWeeks: 2, lastDays: 2, prToday: 0, goal: 3, weekCountBefore: 2, todayCounted: false, boost: false };
+  const c = { firstToday: true, weekParts: [], streakWeeks: 2, lastDays: 2, prToday: 0, boost: false };
   const calc = () => { const r = sessionXP(s, c), L0 = { dayUsed: 0, weekEx: 0, dayItem: 0, weekItem: 0, weekPaid: 0, allV0Today: false }, g = capGain(r, L0, false);
-    const per = Math.round(sessionXP(s, { ...c, goal: 9, prToday: 9 }).raw);
+    const per = Math.round(sessionXP(s, { ...c, prToday: 9 }).raw);
     const lv = n => { let t = 0; for (let k = 1; k < n; k++) t += need(k); return t; };
     const w99 = weeksToLv99({ level: 1, xp: 0, perWeek: 3, per: r.raw });
     return { sess: g.gained, raw: r.raw, day: CFG.DAY_CAP, week: CFG.WEEK_CAP, per, lv10: lv(10), lv99: lv(99), w99: w99.weeks, low: Math.round(CFG.MOOD.low * 100), high: Math.round(CFG.MOOD.high * 100), boost: CFG.BOOST.mul, pot: CFG.POTION.xp }; };
@@ -182,14 +182,14 @@ function h2Preview() {   // 바꾼 값(초안)과 지금 값(저장됨)을 같�
     row('sess', '① 한도 적용 뒤'), row('day', '하루 운동 한도'), row('week', '주 운동 한도'),
     row('lv10', 'Lv.10 누적 경험치'), row('lv99', 'Lv.99 누적 경험치'), row('w99', 'Lv.99까지(① 주 3회)', v => v === Infinity ? '—' : `${nf(v)}주 ≈ ${(v / 52).toFixed(1)}년`),
     row('low', '표정 «아쉬운» 미만', v => v + '%'), row('high', '표정 «신남» 이상', v => v + '%'),
-    row('boost', '부스터 배수', v => '×' + v), row('pot', '물약 1병', v => '+' + v)], 'prev')}<div class="amut" style="margin-top:8px;line-height:1.5">① 벤치·랫풀다운 4세트씩 + 트레드밀 20분 · 센터 입장 확인 · 연속 2주 · 오늘 첫 운동 · PR 1 · 주간 목표 달성 · 새 부위 3</div></div>`;
+    row('boost', '부스터 배수', v => '×' + v), row('pot', '물약 1병', v => '+' + v)], 'prev')}<div class="amut" style="margin-top:8px;line-height:1.5">① 벤치·랫풀다운 4세트씩 + 트레드밀 20분 · 센터 입장 확인 · 연속 2주 · 오늘 첫 운동 · PR 1 · 새 부위 3</div></div>`;
 }
 const H2TABS = [['xp', '경험치·한도'], ['mood', '표정'], ['lv', '레벨표 99행'], ['ach', '업적 24'], ['reward', '보상 종류'], ['shop', '상점'], ['item', '부스터·물약']];
 function vH2() {
   const t = AV.h2;
   const body = {
     xp: () => `<div class="agrid3">
-      ${sec('경험치 단위 (PLAN §2-3)', [['XP.weight', '웨이트·머신 1세트'], ['XP.body', '맨몸 1세트'], ['XP.cardio', '유산소 1분'], ['XP.lesson', '레슨 1회'], ['XP.firstSet', '첫 세트 보너스'], ['XP.complete', '세션 완료 보너스'], ['XP.newPart', '이번 주 새 부위'], ['XP.pr', 'PR 1개'], ['XP.weekGoal', '주간 목표 달성']].map(([p, l]) => fr(l, numIn(p), 'XP')).join(''))}
+      ${sec('경험치 단위 (PLAN §2-3)', [['XP.weight', '웨이트·머신 1세트'], ['XP.body', '맨몸 1세트'], ['XP.cardio', '유산소 1분'], ['XP.lesson', '레슨 1회'], ['XP.firstSet', '첫 세트 보너스'], ['XP.complete', '세션 완료 보너스'], ['XP.newPart', '이번 주 새 부위'], ['XP.pr', 'PR 1개'], ['XP.dayDone', '운동 완료 고정분(배율 없음)']].map(([p, l]) => fr(l, numIn(p), 'XP')).join(''))}
       ${sec('한도 (결정 32·33)', fr('하루 운동 경험치', numIn('DAY_CAP'), 'XP') + fr('하루 · 전부 자가 기록이면', numIn('DAY_CAP_V0'), 'XP') + fr('주 운동 경험치', numIn('WEEK_CAP', { w: 90 }), 'XP')
         + note('하루·주 한도는 <b>운동 경험치에만</b> 걸려요. 아이템 경험치 한도는 «부스터·물약» 탭.'))}
       ${sec('검증 배율·연속 배율', [['VERIFY.V0', '자가 기록 V0 (집·야외·입점 안 된 헬스장)'], ['VERIFY.V1', '입점센터 입장 V1'], ['VERIFY.V3', '레슨 확정 V3']].map(([p, l]) => fr(l, numIn(p, { step: '0.05' }), '×')).join('')
@@ -283,7 +283,7 @@ function vH5() {
   const r = rng(99), lvDist = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90].map((l, i) => Math.round(1800 * Math.pow(.52, i) * (.9 + r() * .2)));
   const ret = Array.from({ length: 8 }, (_, i) => ({ d7: 58 + i * 1.2 + r() * 3, d30: 34 + i * .9 + r() * 2 }));
   return `<div class="ahead"><div><h2>지표 대시보드</h2><p>운동기록 기능을 켠 계정 기준 · 최근 8주. 센터별은 읽기만.</p></div></div>
-  <div class="akrow">${kpi('기록률', '41%', '앱 활성 중 주 1회 이상 기록')}${kpi('주간 목표 달성률', '57%', '목표 주 3회가 가장 많음')}${kpi('D7 재방문', ret[7].d7.toFixed(0) + '%')}${kpi('D30 재방문', ret[7].d30.toFixed(0) + '%')}${kpi('셀카 사용률', '18%', '세션 중 셀카 첨부')}${kpi('친구 보유율', '27%', '친구 1명 이상')}</div>
+  <div class="akrow">${kpi('기록률', '41%', '앱 활성 중 주 1회 이상 기록')}${kpi('주 평균 운동 횟수', '2.6회', '기록한 회원 기준')}${kpi('D7 재방문', ret[7].d7.toFixed(0) + '%')}${kpi('D30 재방문', ret[7].d30.toFixed(0) + '%')}${kpi('셀카 사용률', '18%', '세션 중 셀카 첨부')}${kpi('친구 보유율', '27%', '친구 1명 이상')}</div>
   <div class="agrid2">${sec('레벨 분포 (진화 단계별 계정 수)', vbars(lvDist, ['Lv1~9', '10~19', '20~29', '30~39', '40~49', '50~59', '60~69', '70~79', '80~89', '90~99'], { unit: '명', h: 200 }))}
     ${sec('검증 등급 비율 (세션)', stack([['V0 자가(집·야외·비입점)', 30, V_SEQ.V0], ['V1 입점센터 입장', 62, V_SEQ.V1], ['V3 레슨', 8, V_SEQ.V3]]) + note('검증 등급은 순서가 있는 값이라 한 색의 진하기로 구분(진할수록 확인이 강함).'))}</div>
   <div class="agrid2">${sec('D7 재방문 (가입 주별)', vbars(ret.map(x => x.d7), ret.map((_, i) => i === 7 ? '이번 주' : `${7 - i}주 전`), { unit: '%', h: 170, fmt: v => v.toFixed(0) }))}

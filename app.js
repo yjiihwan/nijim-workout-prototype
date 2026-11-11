@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.41';
+const VER = 'v1.42';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -33,7 +33,7 @@ const ITEMS = [
   { id:'boost1', img:'headband_gold', kind:'effect', use:1, name:'2배 부스터 · 1세션', desc:'다음 운동 1번 2배 · 한도 없음', price:300 },
   { id:'boost7', img:'shaker', kind:'effect', use:1, name:'2배 부스터 · 7일', desc:'7일 동안 운동 2배 · 한도 없음', price:1500 },
   { id:'potion', img:null, kind:'effect', use:1, name:'경험치 물약 +300', desc:'운동 없이 +300 · 한도 없음 · 💰', price:1000 },
-  { id:'charm', img:'charm', kind:'effect', use:1, name:'연속 보호권', desc:'못 채운 주 1회 보호', price:500 },
+  { id:'charm', img:'charm', kind:'effect', use:1, name:'연속 보호권', desc:'운동 못 간 주 1회 보호', price:500 },
   { id:'crown', img:'crown', kind:'effect', name:'리그 왕관', desc:'리그 표시 꾸미기 · 7일', price:800 },
   { id:'cap', img:'cap', kind:'look', name:'스포츠 캡', desc:'효과 없음', price:200 },
   { id:'sunglasses', img:'sunglasses', kind:'look', name:'선글라스', desc:'효과 없음', price:300 },
@@ -42,11 +42,11 @@ const ITEMS = [
 ];
 patchItems();   // 본사(H2) 가격·판매 여부 — config_store.js
 const FRIENDS = [
-  { n:'운동하는곰', t:'koa', lv:27, week:2140, rate:100, paid:0 },
-  { n:'새벽러너', t:'saetbyeol', lv:41, week:980, rate:75, paid:0 },
-  { n:'벤치왕', t:'ttukbi', lv:33, week:1650, rate:100, paid:2, pure:24 },
-  { n:'필라테스러', t:'mungchi', lv:12, week:610, rate:67, paid:0 },
-  { n:'헬린이9일차', t:'bamtol', lv:4, week:420, rate:50, paid:0 },
+  { n:'운동하는곰', t:'koa', lv:27, week:2140, paid:0 },
+  { n:'새벽러너', t:'saetbyeol', lv:41, week:980, paid:0 },
+  { n:'벤치왕', t:'ttukbi', lv:33, week:1650, paid:2, pure:24 },
+  { n:'필라테스러', t:'mungchi', lv:12, week:610, paid:0 },
+  { n:'헬린이9일차', t:'bamtol', lv:4, week:420, paid:0 },
 ];
 /* 장소(C3b) — 센터 탐색 지도의 장소 데이터 자리. linked = 니짐 입장 연동 센터 */
 const PLACES = [
@@ -106,7 +106,7 @@ const seedHist = () => {
   return H;
 };
 
-const fresh = () => ({ type:'mungchi', chosen:false, onboarded:false, goal:3, goalNext:null, perm:{ noti:false, loc:false },
+const fresh = () => ({ type:'mungchi', chosen:false, onboarded:false, perm:{ noti:false, loc:false },
   noti:{ entry:true, nudge:true, report:true }, locCheck:true, hideTips:false, bodyweight:null,
   level:18, xp:need(18) - 120, exLv:18, exXp:need(18) - 120, points:2450,
   events:[], pending:null, sound:true, placeholder:false, demo:'none', quitDemo:false,
@@ -145,7 +145,7 @@ function sanitize() {
   const xpOk = (lv, x) => !num(x) ? 0 : lv >= 99 ? 0 : x < 0 && lv > 1 ? 0 : Math.min(x, need(lv) - 1);   // 필요량을 넘는 값(«Lv.19까지 -99,486 XP») 방지
   S.xp = xpOk(S.level, S.xp); S.exXp = xpOk(S.exLv, S.exXp);
   ['points', 'streakWeeks', 'ticketLeft', 'shields', 'lowRun'].forEach(k => { if (!num(S[k]) || S[k] < 0) S[k] = F[k]; });
-  if (![2, 3, 4, 5].includes(S.goal)) S.goal = F.goal;
+  delete S.goal; delete S.goalNext;   // v1.42: 주간 목표 삭제(옛 저장값 정리)
   const okItem = it => plainObj(it) && !!EX[it.ex] && (it.sets == null || Array.isArray(it.sets));
   const fixSets = it => { if (it.sets) it.sets = it.sets.filter(plainObj); return it; };
   const usedId = new Set();
@@ -292,7 +292,7 @@ function sessCtx() {
   const today = realRecs().filter(r => r.date === TODAY), wk = realRecs().filter(r => weekDays().includes(r.date) && r.date !== TODAY);
   return { firstToday: !today.length, weekParts: [...new Set([...wk, ...today].flatMap(r => (r.items || []).map(i => EX[i.ex] && EX[i.ex].part)).filter(Boolean))],
     streakWeeks: S.streakWeeks, lastDays: lastWorkoutDays(), prToday: today.reduce((a, r) => a + (r.prCount || 0), 0),
-    goal: S.goal, weekCountBefore: weekCount(), todayCounted: todayDone(), boost: boostMul(), selfieToday: selfieClaims(), ...volCtx(today) };
+    boost: boostMul(), selfieToday: selfieClaims(), ...volCtx(today) };
 }
 /* 결정 35 입력값 — 종목별 경험치용 «내 평소»(대상 세트·분) + 오늘 앞 세션에서 이미 센 양·그 세션 배율(같은 날 재판정 차액용) */
 function volCtx(today) {
@@ -334,9 +334,14 @@ const coachLine = () => {
   if (S.session) return '운동 중! 끝나면 [운동 끝]만 눌러 줘';
   if (todayDone()) return '오늘 기록 완료! 내일은 어깨 쪽 한번 가볼까?';
   if (!S.records.length) return '첫 운동을 기록해 볼까? 아래 [운동 시작]을 눌러 줘';
-  const left = S.goal - weekCount();
-  return left <= 0 ? '이번 주 목표 달성! 오늘은 가볍게 스트레칭 어때?' : `이번 주 ${left}회 남았어. 오늘 한 번 가면 캐릭터가 더 단단해져 💧`;
+  return '오늘 같이 운동하면 내가 더 단단해질 거야 💧';
 };
+/* v1.42: «주 몇 회» 목표 삭제 — 이번 주 운동한 횟수만 보고 캐릭터가 한마디(칭찬·독려). 명령형 안 씀 */
+const weekSay = n => n <= 0 ? '이번 주 한 번 가 볼까?' : n === 1 ? '이번 주 첫 운동 했네! 시작이 좋아' : n === 2 ? '벌써 두 번째야. 꾸준한데?' : n === 3 ? '세 번이나 갔어! 진짜 잘하고 있어'
+  : n === 4 ? '네 번째라니, 이번 주 대단한데?' : n === 5 ? '다섯 번이나! 이번 주 완전 멋져' : `이번 주 ${n}번이나 갔어. 대단해! 쉬는 것도 운동인 거 알지?`;
+/* 요즘 한 주에 몇 번 운동하는지(지난 4주 평균 · 기록 없으면 3) — 계산기 기본값용 */
+const usualWeek = () => { const m0 = weekDays()[0], a = new Date(m0); a.setDate(a.getDate() - 28); const from = ymd(a);
+  const n = new Set((typeof statRecs === 'function' ? statRecs() : realRecs()).filter(r => r.date >= from && r.date < m0).map(r => r.date)).size; return n ? Math.min(7, Math.max(1, Math.round(n / 4))) : 3; };
 
 /* ===== 더미 탭(실제 앱 화면 자리) ===== */
 function vDummy(title, lines) {
@@ -403,14 +408,14 @@ function parseW(raw) {
   return { ok: true, w, snapped: Math.abs(w - v) > 1e-9 };
 }
 const sw = (act, on, id = '') => `<button class="sw ${on ? 'on' : ''}" data-act="${act}" ${id ? `id="${id}"` : ''}></button>`;
-const obProg = n => `<div class="obprog" aria-label="3단계 중 ${n}단계">${[1, 2, 3].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}<span>${n}/3</span></div>`;
+const obProg = n => `<div class="obprog" aria-label="2단계 중 ${n}단계">${[1, 2].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}<span>${n}/2</span></div>`;
 const LOCK = '<svg class="ico" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>';
 const BELL = '<svg class="ico" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>';
 const PIN = '<svg class="ico" viewBox="0 0 24 24"><path d="M12 21s-6.5-6.1-6.5-11a6.5 6.5 0 0 1 13 0c0 4.9-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>';
 const CAM = '<svg class="ico" viewBox="0 0 24 24"><path d="M4 8.5h3l1.6-2.2h6.8L17 8.5h3v10.5H4z"/><circle cx="12" cy="13.5" r="3.4"/></svg>';
 const FLASK = '<svg viewBox="0 0 64 64" class="itemsvg"><path d="M25 8h14M27 8v14L14 46a6 6 0 0 0 5.3 9h25.4A6 6 0 0 0 50 46L37 22V8" fill="none" stroke="#16161C" stroke-width="3" stroke-linejoin="round"/><path d="M19 42h26l3.3 6a3 3 0 0 1-2.6 4.5H18.3A3 3 0 0 1 15.7 48z" fill="#FF0065" opacity=".85"/><circle cx="29" cy="35" r="2.2" fill="#39B4FF"/><circle cx="35" cy="30" r="1.6" fill="#39B4FF"/></svg>';
 
-/* ===== C2 온보딩 — 1/3 캐릭터 선택(C2a) ===== */
+/* ===== C2 온보딩 — 1/2 캐릭터 선택(C2a) · v1.42: «주 몇 회» 질문 화면 삭제로 2단계 ===== */
 function vChoose() {
   const pick = S.pick || S.type;
   return `<div class="sec">${S.onboarded ? '' : obProg(1)}<div class="h2">같이 운동할 친구를 골라 주세요</div><div class="muted" style="margin-bottom:12px">능력치는 모두 같고 생김새·말투만 달라요. Lv.10 전에 1번 바꿀 수 있어요.</div>
@@ -419,18 +424,10 @@ function vChoose() {
   <button class="btn" data-act="choose" id="chooseBtn">${esc(CH[pick].name)}${wa(pick)} 시작하기</button>
   <div class="muted demoonly" style="text-align:center;margin-top:8px">시연용: 고른 뒤에도 레벨·경험치는 예시값(Lv.18)을 유지해요</div></div>`;
 }
-/* 2/3 주간 목표 */
-function vOnbGoal() {
-  const opts = [[2, '가볍게 시작해요'], [3, '기본 · 이틀에 한 번꼴'], [4, '꾸준히 늘려 가요'], [5, '운동이 일상이에요']];
-  return `<div class="sec">${obProg(2)}<div class="h2">일주일에 몇 번 운동할까요?</div><div class="muted" style="margin-bottom:12px">목표를 채운 주마다 «연속 n주»가 쌓여요. 레슨도 1번으로 세요.</div>
-  <div class="card opts" id="goalOpts">${opts.map(([n, d]) => `<button class="opt ${S.goal === n ? 'on' : ''}" data-act="goal" data-v="${n}"><b>주 ${n}회</b><small>${d}</small><i></i></button>`).join('')}</div>
-  <div class="muted">못 채운 주는 «쉬어가기 티켓»(한 달 1장)으로 지켜요. 티켓이 없어도 연속은 절반만 줄어요. 목표는 설정에서 언제든 바꿀 수 있어요.</div>
-  <button class="btn" data-act="obNext" id="goalNext">다음</button></div>`;
-}
-/* 3/3 알림·위치 허용 + 사진은 나만 봄 */
+/* 2/2 알림·위치 허용 + 사진은 나만 봄 */
 function vOnbPerm() {
   const row = (ico, title, desc, k) => `<div class="prow">${ico}<div><b>${title}</b><small>${desc}</small></div><button class="btn sm ${S.perm[k] ? 'ghost' : ''}" data-act="perm" data-v="${k}">${S.perm[k] ? '허용됨' : '허용'}</button></div>`;
-  return `<div class="sec">${obProg(3)}<div class="h2">거의 다 됐어요</div><div class="muted" style="margin-bottom:12px">둘 다 나중에 설정에서 바꿀 수 있어요.</div>
+  return `<div class="sec">${obProg(2)}<div class="h2">거의 다 됐어요</div><div class="muted" style="margin-bottom:12px">둘 다 나중에 설정에서 바꿀 수 있어요.</div>
   <div class="card">${row(BELL, '알림', '센터에 들어가면 «입장 확인! 캐릭터가 기다려요» 한 번 · 언제든 끌 수 있어요', 'noti')}
   ${row(PIN, '위치', '입장 기록이 없는 센터에서 기록할 때 저장 순간 1번만 확인해요. 위치 좌표는 저장하지 않아요', 'loc')}</div>
   <div class="card privacy" id="photoNote">${LOCK}<div><b>사진은 나만 봐요</b><small>오운완 셀카는 나한테만 보여요. 친구·다른 회원에게 공개되지 않고, 언제든 지울 수 있어요. 찍지 않아도 기록은 그대로 돼요.</small></div></div>
@@ -473,7 +470,8 @@ function vWorkout() {
     <button class="linkbtn" data-act="sub" data-v="me" id="goMe">내 캐릭터 자세히 ›</button></div></div>${moodToday() ? `<div class="say moodsay ${moodToday().verdict}" id="stageSay">${esc(moodToday().line)}</div>` : EXPR[ex].line ? `<div class="say moodsay ${ex}" id="stageSay">${esc(EXPR[ex].line)}</div>` : ''}</div>
   <button class="btn" data-act="start" id="goRecord" style="margin-top:0">${S.session ? '운동 이어서 하기' : '오늘 운동 기록하기'}</button>
   <div class="muted" style="text-align:center;margin:6px 0 12px">${S.session ? `${esc(S.session.place.name)}에서 운동 중 · <span data-clock="sess">${clock(Date.now() - S.session.startedAt)}</span>` : `센터 입장이 확인되면 바로 시작돼요 · ${CB_TXT}`}</div>
-  <div class="card" id="streakCard"><div style="display:flex;justify-content:space-between;align-items:center"><div class="h2" style="margin:0;font-size:16px">이번 주 ${wk}/${S.goal}회</div><span class="pill ${wk>=S.goal?'tier4':'tier1'}">🔥 ${S.streakWeeks}주 연속</span></div>
+  <div class="card" id="streakCard"><div style="display:flex;justify-content:space-between;align-items:center"><div class="h2" style="margin:0;font-size:16px" id="weekCnt">이번 주 ${wk}회 운동</div><span class="pill ${wk>=1?'tier4':'tier1'}">🔥 ${S.streakWeeks}주 연속</span></div>
+    <div class="wsay" id="weekSay"><span class="cbox">${charFit(t, lv, 26, ex)}</span><span>${weekSay(wk)}</span></div>
     <div class="week">${week}</div>
     <div class="wxp" id="weekXP"><span>이번 주 운동 경험치</span><b>${weekXP().toLocaleString()}/${CFG.WEEK_CAP.toLocaleString()}</b></div><div class="bar thin"><i style="width:${Math.min(100, Math.round(weekXP() / CFG.WEEK_CAP * 100))}%"></i></div>${centerWeek() ? `<div class="wxp itm" id="weekCenterXP"><span>+ 입점센터 보너스</span><b>${centerWeek().toLocaleString()} · 따로 계산</b></div>` : ''}${itemWeek() ? `<div class="wxp itm" id="weekItemXP"><span>+ 아이템 경험치</span><b>${itemWeek().toLocaleString()} · 한도 없음</b></div>` : ''}
     <div class="muted" style="margin-top:8px;font-weight:700;color:var(--ink)">${now.getMonth()+1}월</div><div class="cal">${cal}</div></div>
@@ -484,7 +482,7 @@ function vWorkout() {
     <button class="entry" data-act="sub" data-v="friends">${ico.rank}<b>랭킹</b><small>친구리그 ${rankMe()}위 · 내 센터 · 전국</small></button>
     <button class="entry" data-act="sub" data-v="shop">${ico.shop}<b>아이템 상점</b><small>${S.points.toLocaleString()}P 보유</small></button>
     <button class="entry" data-act="sub" data-v="stats">${ico.stats}<b>통계</b><small>이번 달 ${S.records.filter(r => r.date.startsWith(TODAY.slice(0,7))).length}회</small></button>
-    <button class="entry" data-act="sub" data-v="settings" id="goSettings">${ico.set}<b>설정</b><small>목표 · 알림 · 사진 · 연출</small></button></div><div id="lastBlock"></div></div>`;
+    <button class="entry" data-act="sub" data-v="settings" id="goSettings">${ico.set}<b>설정</b><small>알림 · 사진 · 연출</small></button></div><div id="lastBlock"></div></div>`;
 }
 const clock = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = s % 60;
   return h ? `${h}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}` : `${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}`; };
@@ -679,14 +677,14 @@ function xpRows(rec) {
   (b.bonusRows || []).forEach(([name, x]) => add(`평소보다 많이 함 · ${esc(name)} +${volPct}%`, Math.round(x), 'vol', 'vol'));
   if (b.short) note(`5회 미만 ${b.short}세트는 기록만 남았어요`);
   if (b.noBase && b.noBase.length && b.lines.length) note(`기록 5번 쌓이면 «평소보다 많이 한 날 +${volPct}%»가 열려요`);
-  if (b.first) add('오늘 첫 세트', b.first); if (b.complete) add('운동 완료', b.complete);
+  if (b.first) add('오늘 첫 세트', b.first); if (b.complete || b.dayDone) add('운동 완료', (b.complete || 0) + (b.dayDone || 0));   // v1.42: 50(배율 적용) + 고정 67 을 한 줄로
   const s0 = (b.base || 0) + (b.first || 0) + (b.complete || 0), afterV = Math.round(s0 * b.vm), vAmt = afterV - Math.round(s0), sAmt = (b.mult ?? afterV) - afterV;
   if (b.vm !== 1) add(`${VERIFY_LABEL[b.v].replace(/ ✓| ★ 2배/, '')} ×${b.vm}`, vAmt, 'mul', 'v');
   if (b.sm !== 1) add(b.comeback ? `복귀 첫 운동 ×${b.sm.toFixed(2)}` : `연속 ${b.streakW ?? S.streakWeeks}주 ×${b.sm.toFixed(2)}`, sAmt, 'mul', 's');
   if (b.catchUp) add('오늘 앞 기록 차액(오늘 합계로 평소보다 많이 함)', b.catchUp, 'vol');
   if (b.boostPart) add(`×${b.bm || CFG.BOOST.mul} 부스터 · 한도 없음`, b.boostPart, 'gold');
   if (b.newXP) add(`새 부위 (${b.newParts.join('·')})`, b.newXP); if (b.prXP) add(`개인 기록 ${b.prN}번`, b.prXP);
-  if (b.goal) add(`주간 목표 ${S.goal}회 달성`, b.goal);
+  if (b.goal) add('주간 보너스(예전 규칙)', b.goal);   // v1.41 이전 기록에만 남아 있음
   if (b.selfieXP) add(`📸 오운완 셀카 · 기본 ${fmt(b.baseXP)}의 ${CFG.SELFIE_BONUS.pct}%`, b.selfieXP, 'gold sf');
   /* 반올림 차이(맨몸 +20% 같은 소수)는 곱하기 줄 → 평소보다 많이 함 줄 순으로 흡수해 줄 합 = 받기 전 합계(raw) */
   const fix = Math.round(rec.raw ?? b.raw ?? 0) - R.reduce((t, x) => t + (x.n || 0), 0), tgt = fix ? (R.find(x => x.k === 's') || R.find(x => x.k === 'v') || [...R].reverse().find(x => x.k === 'vol')) : null;
@@ -702,7 +700,7 @@ function vResult() {
   const rec = S.records.find(r => r.id === S.lastResult) || S.records[S.records.length - 1];
   const past = rec && rec.id === S.lastResult && typeof rec.id === 'number' && ymd(new Date(rec.id)) !== rec.date;   // 저장한 날 ≠ 기록 날짜   // 자정을 넘겨 끝낸 운동 = 시작한 날 기록
   const m = S.mood && S.mood.date === (past ? rec.date : TODAY) ? S.mood : null, v = m ? (m.quiet ? 'na' : m.verdict) : 'na', t = S.type, lv = S.level;
-  const note = { low: '평소보다 가볍게 한 날이라 <b>오늘 하루만</b> 표정이 살짝 아쉬워요. 레벨·경험치·연속·주간 목표는 <b>그대로</b>예요.',
+  const note = { low: '평소보다 가볍게 한 날이라 <b>오늘 하루만</b> 표정이 살짝 아쉬워요. 레벨·경험치·연속은 <b>그대로</b>예요.',
     normal: '평소만큼 했어요. 캐릭터는 평소 표정(쌩쌩) 그대로예요.',
     high: '평소보다 훨씬 많이 했어요! <b>오늘 하루</b> 캐릭터가 신나요. 내일은 회복도 챙겨요.',
     na: m && m.quiet ? '요즘 아쉬운 날이 이어져서 표정 대신 한마디만 남겨요. 레벨·경험치는 그대로예요.' : `오늘은 표정 판정을 하지 않았어요(${esc(m ? m.why || '기록 없음' : '기록 없음')}). 캐릭터는 평소 표정이에요.` }[v];
@@ -777,8 +775,8 @@ function vSelfie() {
 
 /* ===== 랭킹·내 캐릭터 (v1.10 그대로) ===== */
 function rankList() {
-  const me = { n:'나', t:S.type, lv:S.level, week:leagueWeek(), rate:Math.min(100, Math.round(weekCount()/S.goal*100)), paid:S.paidLog.length ? 1 : 0, pure:S.exLv, me:true };
-  let arr = [...FRIENDS, me].map(f => ({ ...f, key: S.fTab === 'week' ? f.rate * 10000 + f.week : (S.pureOnly ? (f.pure ?? f.lv) : f.lv) }));
+  const me = { n:'나', t:S.type, lv:S.level, week:leagueWeek(), paid:S.paidLog.length ? 1 : 0, pure:S.exLv, me:true };
+  let arr = [...FRIENDS, me].map(f => ({ ...f, key: S.fTab === 'week' ? f.week : (S.pureOnly ? (f.pure ?? f.lv) : f.lv) }));
   return arr.sort((a, b) => b.key - a.key);
 }
 function rankMe() { const prev = S.fTab; S.fTab = 'level'; const r = rankList().findIndex(f => f.me) + 1; S.fTab = prev; return r; }
@@ -788,9 +786,9 @@ function vFriends() {
   ${S.fTab==='level'?`<div class="row" style="padding-top:0"><span class="muted">운동만 보기 (💰 유료 경험치 빼고)</span><button class="sw ${S.pureOnly?'on':''}" data-act="pure"></button></div>`:''}
   <div class="card">${list.map((f, i) => `<div class="rank ${f.me?'me':''}"><div class="no">${i+1}</div><div class="av">${S.placeholder ? `<img src="${placeholderSrc(f.lv)}" alt="">` : charAvatar(f.t, f.lv, 40)}</div>
   <div><b>${esc(f.n)}</b> ${f.paid?'<span title="유료 사용">💰</span>':''}<div class="muted">${esc(CH[f.t].name)} · ${stageName(f.t, f.lv)}</div></div>
-  <div class="val">${S.fTab==='week'?`${f.rate}%<small>${f.week.toLocaleString()} XP</small>`:`Lv.${S.pureOnly?(f.pure??f.lv):f.lv}<small>${f.paid&&!S.pureOnly&&f.pure!==f.lv?`운동만 Lv.${f.pure}`:TIER_NAME[tierOf(f.lv)]}</small>`}</div></div>`).join('')}</div>
+  <div class="val">${S.fTab==='week'?`${f.week.toLocaleString()}<small>XP</small>`:`Lv.${S.pureOnly?(f.pure??f.lv):f.lv}<small>${f.paid&&!S.pureOnly&&f.pure!==f.lv?`운동만 Lv.${f.pure}`:TIER_NAME[tierOf(f.lv)]}</small>`}</div></div>`).join('')}</div>
   <button class="btn ghost" data-act="invite">친구 초대</button>
-  <div class="muted" style="margin-top:8px">이번 주 = 주간 목표 달성률 기준 · 검증된 운동만 집계(입점센터 보너스 포함)</div></div>`;
+  <div class="muted" style="margin-top:8px">이번 주 = 이번 주에 얻은 경험치 순 · 검증된 운동만 집계(입점센터 보너스 포함)</div></div>`;
 }
 function vMe() {
   const t = S.type, looks = ITEMS.filter(i => i.kind === 'look');
@@ -816,16 +814,14 @@ function centerCard() {
   <div class="muted" style="margin-top:6px">월요일 0시에 새로 채워져요 · ⓘ 1.5배는 기본 경험치 기준이에요</div></div>`;
 }
 
-/* ===== C13 주간 목표 · 설정 ===== */
+/* ===== C13 설정 (v1.42: 주간 목표 카드 삭제) ===== */
 function vSettings() {
   const evs = [...S.events].reverse(), photos = S.records.filter(r => r.photo);
   return `${subHead('설정')}<div class="sec">
-  <div class="card" id="goalCard"><div class="h2" style="font-size:16px">주간 목표</div><div class="chips">${[2, 3, 4, 5].map(n => `<button class="chip ${(S.goalNext || S.goal) === n ? 'on' : ''}" data-act="goalSet" data-v="${n}">주 ${n}회</button>`).join('')}</div>
-    <div class="muted" style="margin-top:8px">${S.goalNext && S.goalNext !== S.goal ? `이번 주는 주 ${S.goal}회 그대로 · <b style="color:var(--ink)">다음 주 월요일부터 주 ${S.goalNext}회</b>` : `지금 주 ${S.goal}회 · 바꾸면 다음 주 월요일부터 적용돼요`}</div></div>
   <div class="card" id="ticketCard"><div class="h2" style="font-size:16px">쉬어가기 티켓</div>
-    <div class="row"><div><b>이번 달 ${S.ticketLeft}장 남음</b><div class="muted">목표 못 채운 주를 1번 지켜 줘요 · 매달 1일에 1장</div></div></div>
+    <div class="row"><div><b>이번 달 ${S.ticketLeft}장 남음</b><div class="muted">한 번도 운동 못 간 주를 1번 지켜 줘요 · 매달 1일에 1장</div></div></div>
     <div class="row"><div><b>연속 보호권 ${S.shields}장</b><div class="muted">상점에서 산 보호권 · 티켓 다음에 써요</div></div><button class="btn sm ghost" data-act="sub" data-v="shop">상점</button></div>
-    <div class="row"><span>못 채운 주에 자동으로 쓰기</span>${sw('ticketAuto', S.ticketAuto)}</div>
+    <div class="row"><span>운동 못 간 주에 자동으로 쓰기</span>${sw('ticketAuto', S.ticketAuto)}</div>
     <div class="muted">티켓·보호권이 없으면 연속은 절반으로 줄어요(0이 되지 않아요)</div></div>
   <div class="card" id="notiCard"><div class="h2" style="font-size:16px">알림</div>
     <div class="row"><div><span>입장 확인 알림</span><div class="muted">«입장 확인! 캐릭터가 기다려요»</div></div>${sw('noti', S.noti.entry, 'notiEntry').replace('data-act="noti"', 'data-act="noti" data-v="entry"')}</div>
@@ -872,8 +868,8 @@ function vShop() {
   <div class="muted" style="margin-top:10px">니짐 포인트로 구매 · 가격은 예시값 · 효과형은 사용 후 환불되지 않아요</div></div>`;
 }
 const avgSession = () => { const rs = realRecs().filter(r => r.v !== 'lesson' && !r.edited).slice(-10).map(r => r.raw || r.xp); return rs.length ? Math.round(median(rs) / 10) * 10 : 260; };
-function calcDefaults() { return { sessions: Math.max(1, S.goal - weekCount()), per: avgSession(), booster: 'one', potions: 0 }; }
-function cmpDefaults() { return { perWeek: S.goal, per: avgSession(), booster: '7d', potions: 7 }; }
+function calcDefaults() { return { sessions: Math.max(1, usualWeek() - weekCount()), per: avgSession(), booster: 'one', potions: 0 }; }
+function cmpDefaults() { return { perWeek: usualWeek(), per: avgSession(), booster: '7d', potions: 7 }; }
 const dur = w => !isFinite(w) ? '도달 못 함' : w < 9 ? `${w}주` : w < 104 ? `약 ${Math.round(w / 4.345)}개월` : `약 ${(w / 52.18).toFixed(1)}년`;
 function vCalc() {
   const c = S.calc || (S.calc = calcDefaults()), f = forecastWeek({ L: ledger(), ...c });
@@ -939,7 +935,8 @@ const EDIT_KEEP_MS = 864e5;
 const editKeeps = r => typeof r.id === 'number' && r.id > 1e12 && Date.now() - r.id >= 0 && Date.now() - r.id < EDIT_KEEP_MS;
 const keepUntil = r => { const d = new Date(r.id + EDIT_KEEP_MS); return `${md(ymd(d))} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 function editCalc(r, items) {
-  const keep = editKeeps(r), ctx = r.ctx || { firstToday: true, weekParts: [], streakWeeks: S.streakWeeks, lastDays: 1, prToday: 0, goal: S.goal, weekCountBefore: 0, todayCounted: true, boost: false };
+  const keep = editKeeps(r), ctx = r.ctx ? { ...r.ctx } : { firstToday: true, weekParts: [], streakWeeks: S.streakWeeks, lastDays: 1, prToday: 0, boost: false };
+  if (!(r.br && r.br.dayDone != null)) ctx.oldRule = { goal: (r.br && r.br.goal) || 0 };   // v1.41 이전 기록 = 옛 규칙 그대로(주간 보너스 유지·완료 고정분 없음)
   const L = ledgerOf([...S.records.filter(q => q.id !== r.id), ...S.paidLog.map(p => ({ ...p, paid: true }))], r.date, weekDaysOf(r.date));
   if (!keep) {
     const x = sessionXP({ verify: 'V0', selfie: false, items, prCount: 0 }, { ...ctx, boost: !!r.boosted });   // 이미 쓴 부스터는 수정해도 유지
@@ -969,7 +966,7 @@ function editNoteHTML(r, ed, items) {
 
 const MAIN = { home:vHome, nearby:vNearby, membership:vMembership, workout:vWorkout, all:vAll };
 const SUB = { session:vSession, place:vPlace, pick:vPick, set:vSet, cardio:vCardio, result:vResult, selfie:vSelfie, rec:vRec, calc:vCalc,
-  onbGoal:vOnbGoal, onbPerm:vOnbPerm, friends:vFriends, me:vMe, shop:vShop, stats:vStats, settings:vSettings };
+  onbPerm:vOnbPerm, friends:vFriends, me:vMe, shop:vShop, stats:vStats, settings:vSettings };
 /* v1.40 안전망(QA 치6·치8): 화면 그리기가 실패해도 빈 화면으로 두지 않는다 — ① 운동기록 첫 화면으로 ② 그것도 안 되면 «처음 상태로 시작» 화면 */
 const SESS_SUBS = ['session', 'set', 'cardio', 'pick'];
 function viewHTML() {
@@ -1330,10 +1327,10 @@ function useItem(id) {
       <div class="muted">유료 경험치라 랭킹에 💰가 붙고, «운동만 보기»·주간 리그엔 안 들어가요 · 하루 몇 병이든 쓸 수 있어요</div>
       <div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="shClose">취소</button><button class="btn" data-act="usePotion">사용</button></div>`);
   }
-  const f = forecastWeek({ L, sessions: Math.max(1, S.goal - weekCount()), per: avgSession(), booster: id === 'boost1' ? 'one' : '7d', potions: 0 });
+  const f = forecastWeek({ L, sessions: Math.max(1, usualWeek() - weekCount()), per: avgSession(), booster: id === 'boost1' ? 'one' : '7d', potions: 0 });
   sheet(`<div class="h2">${it.name}을 쓸까요?</div>
     <div class="xrow"><span>예상으로 더 받는 경험치</span><b>+${fmt(f.extra)} XP</b></div>${nolimit}
-    <div class="muted">남은 운동 ${Math.max(1, S.goal - weekCount())}번 · 1번 ${fmt(avgSession())} XP 기준 · 2배로 늘어난 몫은 운동 한도를 다 채운 주에도 그대로 들어가요</div>
+    <div class="muted">이번 주 운동 ${Math.max(1, usualWeek() - weekCount())}번 더 · 1번 ${fmt(avgSession())} XP 기준 · 2배로 늘어난 몫은 운동 한도를 다 채운 주에도 그대로 들어가요</div>
     <div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="shClose">취소</button><button class="btn" data-act="useBoost" data-id="${id}">사용</button></div>`);
 }
 /* ===== 사운드 (WebAudio 합성, 에셋 없음) ===== */
@@ -1551,10 +1548,8 @@ document.addEventListener('click', e => {
   else if (a === 'wseg') S.wseg = v;
   else if (a === 'pick') S.pick = v;
   else if (a === 'choose') { S.type = S.pick || S.type; S.chosen = true; S.pick = null;
-    if (!S.onboarded) return go('workout', 'onbGoal');
+    if (!S.onboarded) return go('workout', 'onbPerm');
     S.sub = null; toast(`${CH[S.type].name}${wa(S.type)} 운동 시작!`); }
-  else if (a === 'goal') S.goal = +v;
-  else if (a === 'obNext') return go('workout', 'onbPerm');
   else if (a === 'perm') { S.perm[v] = !S.perm[v]; if (v === 'loc' && S.perm.loc) S.locCheck = true; }
   else if (a === 'obDone') { S.onboarded = true; toast(`${CH[S.type].name}${wa(S.type)} 운동 시작!`); return go('workout'); }
   else if (a === 'rechoose') { if (S.level >= 10) return toast('Lv.10부터는 캐릭터 변경권이 있어야 바꿀 수 있어요'); S.chosen = false; S.sub = null; }
@@ -1581,7 +1576,6 @@ document.addEventListener('click', e => {
   else if (a === 'cmp') { const m = S.cmp, lim = { perWeek: [0, 7, 1], per: [0, 1200, 20], potions: [0, 21, 1] }[b.dataset.k]; m[b.dataset.k] = clampStep(m[b.dataset.k], dd, lim[2], lim[0], lim[1]); }
   else if (a === 'cmpB') S.cmp.booster = v;
   else if (a === 'equip') { S.equipped[id] = !S.equipped[id]; }
-  else if (a === 'goalSet') { S.goalNext = +v === S.goal ? null : +v; toast(+v === S.goal ? `주 ${S.goal}회 그대로` : `다음 주 월요일부터 주 ${v}회`); }
   else if (a === 'ticketAuto') S.ticketAuto = !S.ticketAuto;
   else if (a === 'noti') S.noti[v] = !S.noti[v];
   else if (a === 'locCheck') { if (!S.perm.loc) { S.perm.loc = true; S.locCheck = true; toast('위치 권한을 허용했어요'); } else S.locCheck = !S.locCheck; }

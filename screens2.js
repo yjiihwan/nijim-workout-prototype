@@ -163,15 +163,16 @@ function weekReport(rs, mon) {
 }
 function vReport() {
   ensure2();
-  const rs = statRecs(), mon = addD(weekStart(TODAY), -7 * S.repWeek), R = weekReport(rs, mon), goal = S.goal, t = S.type;
+  const rs = statRecs(), mon = addD(weekStart(TODAY), -7 * S.repWeek), R = weekReport(rs, mon), t = S.type;
   const label = S.repWeek === 0 ? '이번 주(진행 중)' : S.repWeek === 1 ? '지난주' : `${S.repWeek}주 전`;
   const nav = `<div class="wnav"><button data-act="repWeek" data-d="1" ${S.repWeek >= 8 ? 'disabled' : ''} aria-label="이전 주">‹</button><div><b>${label}</b><small>${md(R.mon)} ~ ${md(R.sun)}</small></div><button data-act="repWeek" data-d="-1" ${S.repWeek <= 0 ? 'disabled' : ''} aria-label="다음 주">›</button></div>`;
   const thin = R.sessions < 2;
   const say = thin ? (R.sessions ? `이 주엔 ${R.sessions}번 기록했어. 2번 넘으면 부위·제안까지 정리해 줄게` : '이 주엔 기록이 없어. 1번만 해도 여기 채워져')
-    : R.sessions >= goal ? `${R.sessions}번 운동해서 주 ${goal}회 목표 채웠어! 그만큼 한 칸 더 단단해졌어`
-    : `${R.sessions}번 했어. 목표까지 ${goal - R.sessions}번 남았지만 나온 날이 쌓이고 있어`;
+    : R.sessions >= 5 ? `${R.sessions}번이나 운동했어! 정말 열심히 한 주였어`
+    : R.sessions >= 3 ? `${R.sessions}번이나 운동했어! 그만큼 한 칸 더 단단해졌어`
+    : `${R.sessions}번 운동했어. 나온 날이 차곡차곡 쌓이고 있어`;
   const head = `<div class="card coach" id="repSay"><div class="cbox">${charFit(t, S.level, 52)}</div><div><div class="say">${esc(say)}</div></div></div>`;
-  const tiles = `<div class="card" id="repTiles"><div class="tiles" style="margin-top:0"><div class="tile"><small>운동</small><b>${R.sessions}회</b><small>목표 ${goal}회</small></div><div class="tile"><small>운동 경험치</small><b>${fmt(R.exXP)}</b><small>XP</small></div><div class="tile"><small>연속</small><b>${streakVal()}주</b><small>${R.sessions >= goal ? '이번 주 +1' : '유지 중'}</small></div></div>
+  const tiles = `<div class="card" id="repTiles"><div class="tiles" style="margin-top:0"><div class="tile"><small>운동</small><b>${R.sessions}회</b><small>7일 중</small></div><div class="tile"><small>운동 경험치</small><b>${fmt(R.exXP)}</b><small>XP</small></div><div class="tile"><small>연속</small><b>${streakVal()}주</b><small>${R.sessions >= 1 ? '이어 가는 중' : S.repWeek === 0 ? '1번 가면 이어져요' : '쉬어 간 주'}</small></div></div>
     <div class="muted" style="margin-top:8px">지난 4주 평균 주 ${R.avg4}회${R.sessions > R.avg4 ? ' · 평소보다 많이 했어요' : ''}</div></div>`;
   if (thin) return `${subHead('주간 리포트', S.repFrom || 'stats', S.repFrom === 'coach' ? '코치' : '통계')}<div class="sec">${nav}${head}${tiles}
     <div class="card zero-card" id="repThin"><div class="h3">데이터가 아직 적어요</div><div class="muted">한 주에 2번 이상 기록하면 부위 비율·PR·다음 주 제안·휴식 권고까지 보여 드려요.</div><button class="btn" data-act="start" style="margin-top:12px">오늘 운동 기록하기</button></div>
@@ -214,7 +215,7 @@ function statsPeriod(rs) {
   if (wk) { vals = []; labels = []; for (let i = 11; i >= 0; i--) { const m = addD(mon0, -7 * i); vals.push(new Set(inRange(rs, m, addD(m, 6)).map(r => r.date)).size); labels.push(i === 0 ? '이번 주' : `${+m.slice(5, 7)}/${+m.slice(8)}`); } }
   else { vals = []; labels = []; const d = dOf(TODAY); for (let i = 5; i >= 0; i--) { const x = new Date(d.getFullYear(), d.getMonth() - i, 1), k = ymd(x).slice(0, 7); vals.push(new Set(rs.filter(r => r.date.startsWith(k)).map(r => r.date)).size); labels.push(`${x.getMonth() + 1}월`); } }
   const empty = !vals.some(v => v);
-  const graph = `<div class="card" id="stGraph"><div class="h3">${wk ? `최근 12주 운동 횟수 <span class="muted" style="font-weight:500">· 점선 = 목표 주 ${S.goal}회</span>` : '최근 6개월 운동 횟수'}</div>${empty ? emptyChart(150, '기록이 쌓이면 여기 그래프가 생겨요') : barChart(vals, labels, { goal: wk ? S.goal : null })}</div>`;
+  const graph = `<div class="card" id="stGraph"><div class="h3">${wk ? '최근 12주 운동 횟수' : '최근 6개월 운동 횟수'}</div>${empty ? emptyChart(150, '기록이 쌓이면 여기 그래프가 생겨요') : barChart(vals, labels)}</div>`;
   const heat = `<div class="card" id="stHeat"><div class="h3">운동 달력 · ${wk ? '최근 12주' : '최근 6개월'}</div>${heatmap(rs, wk ? 12 : 26)}${empty ? '<div class="muted" style="margin-top:6px">아직 칠해진 칸이 없어요</div>' : ''}</div>`;
   const pFrom = wk ? addD(mon0, -21) : addD(TODAY, -89), ps = partSets(inRange(rs, pFrom, TODAY)), tot = PARTS.reduce((a, p) => a + ps[p], 0);
   const up = ps['가슴'] + ps['등'] + ps['어깨'] + ps['팔'], low = ps['하체'];
@@ -286,9 +287,9 @@ function achieveList(all = false) {
     A('누적', '50', '운동 50회', '운동한 날 50일', n, 50, '은메달'),
     A('누적', '100', '운동 100회', '운동한 날 100일', n, 100, '금메달'),
     A('누적', '300', '운동 300회', '운동한 날 300일', n, 300, '무지개 메달'),
-    A('습관', 'flame', '4주 연속', '주간 목표 4주 연속 달성', streak, 4, '불꽃 리본'),
-    A('습관', 'flame', '12주 연속', '주간 목표 12주 연속 달성', streak, 12, '불꽃 망토'),
-    A('습관', 'flame', '26주 연속', '주간 목표 26주(반년) 연속 달성', streak, 26, '불사조 깃털', '보충'),
+    A('습관', 'flame', '4주 연속', '4주 연속 운동(주 1번 이상)', streak, 4, '불꽃 리본'),
+    A('습관', 'flame', '12주 연속', '12주 연속 운동(주 1번 이상)', streak, 12, '불꽃 망토'),
+    A('습관', 'flame', '26주 연속', '26주(반년) 연속 운동(주 1번 이상)', streak, 26, '불사조 깃털', '보충'),
     A('탐험', 'compass', '운동 10종', '서로 다른 운동 10종 기록', exN, 10, '탐험가 모자'),
     A('탐험', 'pin', '장소 3곳', '장소 3곳에서 기록(집·야외 포함)', places, 3, '여행 스티커'),
     A('탐험', 'bldg', '지점 2곳', '니짐 지점 2곳 방문(통합 멤버십)', branches, 2, '지점 도장 수첩'),
@@ -329,9 +330,9 @@ const exRatio = (lv, pureLv) => Math.round(cumXP(Math.max(1, pureLv ?? lv)) / Ma
 const PAID_TIER = ['', '1만P 미만', '1~5만P', '5만P 이상'];
 const FRIEND_EXTRA = { 운동하는곰: { streak: 9, ach: 12 }, 새벽러너: { streak: 14, ach: 15 }, 벤치왕: { streak: 3, ach: 8 }, 필라테스러: { streak: 2, ach: 6 }, 헬린이9일차: { streak: 1, ach: 2 } };
 const STRANGERS = [
-  { n: '오늘도출근', t: 'capy', lv: 22, week: 760, rate: 67, paid: 0, streak: 4, ach: 7, code: 'NJ-CAPY2' },
-  { n: '근손실방지위원장', t: 'imu', lv: 58, week: 1800, rate: 100, paid: 3, pure: 31, streak: 6, ach: 11, code: 'NJ-IMU58' },
-  { n: '퇴근후스쿼트', t: 'ppiyak', lv: 15, week: 540, rate: 50, paid: 1, pure: 13, streak: 2, ach: 5, code: 'NJ-PPI15' },
+  { n: '오늘도출근', t: 'capy', lv: 22, week: 760, paid: 0, streak: 4, ach: 7, code: 'NJ-CAPY2' },
+  { n: '근손실방지위원장', t: 'imu', lv: 58, week: 1800, paid: 3, pure: 31, streak: 6, ach: 11, code: 'NJ-IMU58' },
+  { n: '퇴근후스쿼트', t: 'ppiyak', lv: 15, week: 540, paid: 1, pure: 13, streak: 2, ach: 5, code: 'NJ-PPI15' },
 ];
 const personOf = name => { const f = FRIENDS.find(x => x.n === name) || STRANGERS.find(x => x.n === name); return f ? { ...f, ...(FRIEND_EXTRA[f.n] || {}) } : null; };
 function friendsAll() { ensure2(); return S.friendZero ? [] : [...FRIENDS, ...S.fr.added.map(personOf).filter(Boolean)]; }
@@ -366,17 +367,17 @@ function vProfile() {
 
 /* ===== C15 친구·리그 (친구 0명 상태 + 행 눌러 프로필) ===== */
 rankList = function () {
-  const me = { n: '나', t: S.type, lv: S.level, week: leagueWeek(), rate: Math.min(100, Math.round(weekCount() / S.goal * 100)), paid: S.paidLog.length ? 1 : 0, pure: S.exLv, me: true };
-  return [...friendsAll(), me].map(f => ({ ...f, key: S.fTab === 'week' ? f.rate * 10000 + f.week : (S.pureOnly ? (f.pure ?? f.lv) : f.lv) })).sort((a, b) => b.key - a.key);
+  const me = { n: '나', t: S.type, lv: S.level, week: leagueWeek(), paid: S.paidLog.length ? 1 : 0, pure: S.exLv, me: true };
+  return [...friendsAll(), me].map(f => ({ ...f, key: S.fTab === 'week' ? f.week : (S.pureOnly ? (f.pure ?? f.lv) : f.lv) })).sort((a, b) => b.key - a.key);
 };
 function lastVsThis() {
   const rs = S.records, m0 = weekStart(TODAY), m1 = addD(m0, -7);
   const W = (a, b) => { const w = inRange(rs, a, b); return { n: new Set(w.map(r => r.date)).size, xp: w.reduce((s, r) => s + exXPof(r), 0) }; };
-  const last = W(m1, addD(m1, 6)), cur = W(m0, TODAY), g = S.goal;
+  const last = W(m1, addD(m1, 6)), cur = W(m0, TODAY);
   const row = (label, a, b, unit, max) => `<div class="cmp2"><span>${label}</span><div><div class="cb"><i class="l" style="width:${a / max * 100}%"></i></div><div class="cb"><i class="c" style="width:${b / max * 100}%"></i></div></div><b>${fmt(a)}${unit}<br><em>${fmt(b)}${unit}</em></b></div>`;
   const say = cur.n > last.n ? `지난주의 너보다 벌써 ${cur.n - last.n}번 더 했어!` : cur.n === last.n && cur.n ? `지난주랑 같은 ${cur.n}번! 1번만 더 가 볼까?` : `이번 주는 지금부터! 지난주 ${last.n}번을 따라잡아 보자`;
   return `<div class="card" id="cmpCard"><div class="h3">내 지난주 vs 이번 주</div>
-  ${row('운동', last.n, cur.n, '회', Math.max(g, last.n, cur.n, 1))}${row('운동 경험치', last.xp, cur.xp, '', Math.max(last.xp, cur.xp, 1))}${row('목표 달성', Math.min(150, Math.round(last.n / g * 100)), Math.min(150, Math.round(cur.n / g * 100)), '%', 150)}
+  ${row('운동', last.n, cur.n, '회', Math.max(last.n, cur.n, 1))}${row('운동 경험치', last.xp, cur.xp, '', Math.max(last.xp, cur.xp, 1))}
   <div class="rleg" style="margin-top:6px"><span><i class="lgw"></i>지난주</span><span><i class="lgx"></i>이번 주</span></div>
   <div class="say" style="margin-top:10px">${esc(say)}</div></div>`;
 }
@@ -386,7 +387,7 @@ function vFriends2() {
   const req = S.fr.recv.length ? `<button class="notice tap" data-act="sub" data-v="addFriend" id="reqNotice" style="width:100%"><span>👋 친구 요청 ${S.fr.recv.length}개가 왔어요</span><b style="color:var(--rose)">보기 ›</b></button>` : '';
   if (!friendsAll().length) return `${subHead('랭킹 · 친구')}<div class="sec">${req}
     <div class="card zero-card" id="zeroCard" style="text-align:center"><div class="cbox" style="height:110px">${charFit(S.type, S.level, 100)}</div>
-      <div class="h2" style="margin:10px 0 4px">친구를 초대해 보세요</div><div class="muted">친구끼리만 보는 주간 리그예요. 무게가 아니라 <b>각자 목표 달성률</b>로 겨뤄서 주 2회 목표여도 1등 할 수 있어요.</div>
+      <div class="h2" style="margin:10px 0 4px">친구를 초대해 보세요</div><div class="muted">친구끼리만 보는 주간 리그예요. 무게가 아니라 <b>그 주에 얻은 경험치</b>로 겨뤄요.</div>
       <button class="btn" data-act="sub" data-v="addFriend" id="goAddFriend">친구 추가하기</button><div class="muted" style="margin-top:8px">초대 링크·내 코드로만 · 연락처는 보지 않아요</div></div>
     ${lastVsThis()}${zeroDemo}</div>`;
   const list = rankList();
@@ -394,9 +395,9 @@ function vFriends2() {
   ${S.fTab === 'level' ? `<div class="row" style="padding-top:0"><span class="muted">운동만 보기 (💰 유료 경험치 빼고)</span><button class="sw ${S.pureOnly ? 'on' : ''}" data-act="pure"></button></div>` : ''}
   <div class="card">${list.map((f, i) => `<div class="rank tap ${f.me ? 'me' : ''}" data-act="prof" data-v="${f.me ? 'me' : esc(f.n)}"><div class="no">${i + 1}</div><div class="av">${S.placeholder ? `<img src="${placeholderSrc(f.lv)}" alt="">` : charAvatar(f.t, f.lv, 40)}</div>
   <div><b>${esc(f.n)}</b> ${f.paid ? '<span title="유료 사용">💰</span>' : ''}<div class="muted">${esc(CH[f.t].name)} · ${stageName(f.t, f.lv)}</div></div>
-  <div class="val">${S.fTab === 'week' ? `${f.rate}%<small>${f.week.toLocaleString()} XP</small>` : `Lv.${S.pureOnly ? (f.pure ?? f.lv) : f.lv}<small>${f.paid && !S.pureOnly && f.pure !== f.lv ? `운동만 Lv.${f.pure}` : TIER_NAME[tierOf(f.lv)]}</small>`}</div></div>`).join('')}</div>
+  <div class="val">${S.fTab === 'week' ? `${f.week.toLocaleString()}<small>XP</small>` : `Lv.${S.pureOnly ? (f.pure ?? f.lv) : f.lv}<small>${f.paid && !S.pureOnly && f.pure !== f.lv ? `운동만 Lv.${f.pure}` : TIER_NAME[tierOf(f.lv)]}</small>`}</div></div>`).join('')}</div>
   <button class="btn ghost" data-act="sub" data-v="addFriend" id="goAddFriend">친구 추가</button>
-  <div class="muted" style="margin-top:8px">이번 주 = 주간 목표 달성률 기준 · 검증된 운동만 집계(입점센터 보너스 포함) · 이름을 누르면 프로필</div>${zeroDemo}</div>`;
+  <div class="muted" style="margin-top:8px">이번 주 = 이번 주에 얻은 경험치 순 · 검증된 운동만 집계(입점센터 보너스 포함) · 이름을 누르면 프로필</div>${zeroDemo}</div>`;
 }
 
 /* ===== C15b 친구 추가 ===== */
@@ -514,7 +515,7 @@ function coachReply(kind, q = '') {
   return ({
     session: sessAns, next: nextAns, safety: safetyAns, rest: restAns, start: startAns, burn: burnAns,
   }[kind] || (() => ({
-    week: !lastWeek.sessions ? ['지난주엔 운동 기록이 없어.', '이번 주에 1번만 기록해도 주간 리포트에 정리해 줄게 📋'] : [`지난주 ${lastWeek.sessions}번 운동했어${lastWeek.sessions >= S.goal ? ', 목표 딱 채웠어!' : '.'}`, lastWeek.missing.length ? `${jo(lastWeek.missing.join('·'), '은', '는')} 비어 있었어.` : '큰 부위 4곳 다 챙겼어.', '자세한 건 주간 리포트에 정리해 뒀어 📋'],
+    week: !lastWeek.sessions ? ['지난주엔 운동 기록이 없어.', '이번 주에 1번만 기록해도 주간 리포트에 정리해 줄게 📋'] : [`지난주 ${lastWeek.sessions}번 운동했어.`, lastWeek.missing.length ? `${jo(lastWeek.missing.join('·'), '은', '는')} 비어 있었어.` : '큰 부위 4곳 다 챙겼어.', '자세한 건 주간 리포트에 정리해 뒀어 📋'],
     plateau: plateauReply(rs, plateauEx(q)),
     balance: !bigSum ? ['최근 4주 근력 기록이 없어서 밸런스를 아직 볼 수 없어.', '2~3번 기록하면 부위별로 정리해 줄게!'] : [`4주 동안 ${jo(hi, '이', '가')} ${p4[hi]}세트로 제일 많았어.`, p4[lo] ? `${jo(lo, '은', '는')} ${p4[lo]}세트뿐이라 이번 주 1번 넣어 보자.` : `${jo(lo, '은', '는')} 한 번도 없어서 이번 주 1번 넣어 보자.`],
     lesson: lesson ? [`${md(lesson.date)} PT 확인됐어!`, `선생님 확인이라 경험치 2배, ${fmt(lesson.xp)} XP 들어왔어 ⭐`] : ['아직 확인된 레슨이 없어. 수업 끝나면 선생님 확인 1번이면 돼.'],

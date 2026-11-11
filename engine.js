@@ -6,7 +6,7 @@
 const CFG = {
   DAY_CAP: 600, DAY_CAP_V0: 200,          // 하루 상한(그날 기록이 전부 V0면 200)
   WEEK_CAP: 1800,                          // 결정 32
-  XP: { weight: 10, body: 8, cardio: 2, lesson: 150, firstSet: 20, complete: 50, newPart: 15, pr: 30, weekGoal: 200 },
+  XP: { weight: 10, body: 8, cardio: 2, lesson: 150, firstSet: 20, complete: 50, newPart: 15, pr: 30, dayDone: 67 },   // v1.42: 주간 목표 보너스(200) 삭제 → dayDone = 그날 첫 운동 완료 고정분(배율 없음 · 주 3회면 201 ≈ 옛 200)
   LIM: { weightSets: 30, bodySets: 30, cardioMin: 60, newPartsWeek: 6, prDay: 3, exPerSession: 25, cardioMaxMin: 180 },
   VERIFY: { V0: 0.4, V1: 1.0, V3: 2.0 },   // 결정 36 ①: 입점센터 입장 V1 0.8 → 1.0 · 결정 37 ②: 비입점 위치 V1b(0.7)·셀카 V2(1.0) 폐지 → 입점 안 된 헬스장 = V0
   STREAK: [1.0, 1.0, 1.05, 1.10, 1.20, 1.20, 1.30],   // 연속 주 0~6+ (6주 이상 1.30)
@@ -113,9 +113,9 @@ function potionGain(L) {
 }
 
 /* ----- 세션 경험치 (PLAN §2-3 · 결정 35 = XP_ENGINE_SPEC v1.10 §3-1) -----
-   세션 XP = (Σ 운동별 기본 × 평소 대비(1.0|1.2) + 첫 세트 20 + 완료 50) × 검증 × 연속(복귀면 ×1.5) [× 부스터] + 고정(새 부위·PR·주간 목표)
+   세션 XP = (Σ 운동별 기본 × 평소 대비(1.0|1.2) + 첫 세트 20 + 완료 50) × 검증 × 연속(복귀면 ×1.5) [× 부스터] + 고정(새 부위·PR·그날 첫 운동 완료 dayDone)
    s = { verify:'V0'|'V1'|'V3', selfie: null | { src:'camera'|'gallery', dup, past }, items:[{ ex, sets:[{w,r,s,done,pr}], min }], prCount }
-   c = { firstToday, weekParts[], streakWeeks, lastDays, prToday, goal, weekCountBefore, todayCounted, boost, selfieToday(그날 셀카 보너스 이미 받음),
+   c = { firstToday, weekParts[], streakWeeks, lastDays, prToday, boost, oldRule(v1.41 이전 기록을 고칠 때만 { goal: 그때 받은 주간 보너스 } — 옛 규칙 그대로 다시 계산), selfieToday(그날 셀카 보너스 이미 받음),
          xpBase:{ex: 평소 양|null}, todayQ:{ex: 오늘 앞 세션 대상 양}, todayPrev:[{ex, cnt, bonus, mul}] } */
 /* 결정 37 ②·SPEC 단위 32: 옛 V1b·V2(또는 모르는 값)는 V0 로 — 0.7·1.0 배율은 어디서도 안 씀. 셀카는 등급을 바꾸지 않는다 */
 const effVerify = s => CFG.VERIFY[s.verify] != null ? s.verify : 'V0';
@@ -184,10 +184,14 @@ function sessionXP(s, c) {
   const fresh = parts.filter(p => !c.weekParts.includes(p));
   const newN = Math.min(fresh.length, Math.max(0, CFG.LIM.newPartsWeek - c.weekParts.length));
   const prN = Math.min(s.prCount || 0, Math.max(0, CFG.LIM.prDay - (c.prToday || 0)));
-  const goal = any && !c.todayCounted && c.weekCountBefore + 1 === c.goal ? X.weekGoal : 0;
-  const fixed = newN * X.newPart + prN * X.pr + goal;
+  /* v1.42: «주 몇 회» 목표 삭제. 그날 첫 운동을 끝내면 고정 dayDone(검증·연속 배율 없음 — 옛 주간 보너스와 같은 성격).
+     v1.41 이전 기록(oldRule)은 그때 받은 주간 보너스를 그대로 두고 dayDone 은 주지 않는다 → 옛 기록 경험치 불변 */
+  const old = c.oldRule || null;
+  const goal = old && any ? (old.goal || 0) : 0;
+  const dayDone = !old && c.firstToday && any ? X.dayDone : 0;
+  const fixed = newN * X.newPart + prN * X.pr + goal + dayDone;
   return { lines, base, baseXP, selfieXP, selfieWhy, bonusXP, bonusRows, noBase, short, per, catchUp, first, complete, v, vm, sm, comeback, mult, boostPart, bm, newParts: fresh.slice(0, newN), newXP: newN * X.newPart,
-    prN, prXP: prN * X.pr, goal, fixed, raw: mult + catchUp + boostPart + fixed + selfieXP, any };
+    prN, prXP: prN * X.pr, goal, dayDone: old ? undefined : dayDone, fixed, raw: mult + catchUp + boostPart + fixed + selfieXP, any };
 }
 
 /* ----- 입점 보너스 (결정 36 · SPEC §3-2a) — 세 번째 장부. 운동 장부 반영(capGain) 결과와 무관하게 baseXP 에서 바로 -----

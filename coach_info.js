@@ -135,7 +135,7 @@ SUB.myinfo = vMyInfo;
 const vSettingsCoach = SUB.settings;
 SUB.settings = () => vSettingsCoach()
   .replace(/<div class="row"><div><span>체중 <span class="muted">\(선택\)<\/span><\/span>.*?<\/button><\/div><\/div>/, '')
-  .replace('<div class="card" id="goalCard">', `<button class="card replink tap" data-act="myinfo" data-v="settings" id="myInfoCard"><div><b>내 정보</b><small>${esc(meSummary() || '아직 안 적었어요 · 코치가 무게를 정확히 짜는 데 써요')}</small></div><span class="muted">›</span></button><div class="card" id="goalCard">`);
+  .replace('<div class="card" id="ticketCard">', `<button class="card replink tap" data-act="myinfo" data-v="settings" id="myInfoCard"><div><b>내 정보</b><small>${esc(meSummary() || '아직 안 적었어요 · 코치가 무게를 정확히 짜는 데 써요')}</small></div><span class="muted">›</span></button><div class="card" id="ticketCard">`);
 
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if (!b || b.closest('#evo') || b.disabled) return;

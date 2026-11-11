@@ -676,7 +676,7 @@ function xpRows(rec) {
 }
 function vResult() {
   const rec = S.records.find(r => r.id === S.lastResult) || S.records[S.records.length - 1];
-  const past = rec && rec.date !== TODAY && rec.id === S.lastResult;   // 자정을 넘겨 끝낸 운동 = 시작한 날 기록
+  const past = rec && rec.id === S.lastResult && typeof rec.id === 'number' && ymd(new Date(rec.id)) !== rec.date;   // 저장한 날 ≠ 기록 날짜   // 자정을 넘겨 끝낸 운동 = 시작한 날 기록
   const m = S.mood && S.mood.date === (past ? rec.date : TODAY) ? S.mood : null, v = m ? (m.quiet ? 'na' : m.verdict) : 'na', t = S.type, lv = S.level;
   const note = { low: '평소보다 가볍게 한 날이라 <b>오늘 하루만</b> 표정이 살짝 아쉬워요. 레벨·경험치·연속·주간 목표는 <b>그대로</b>예요.',
     normal: '평소만큼 했어요. 캐릭터는 평소 표정(쌩쌩) 그대로예요.',
@@ -895,7 +895,7 @@ function vRec() {
       : `<div class="setrow"><span>${si + 1}세트</span><b>${setTxt(e, s)}</b>${s.pr ? '<span class="prtag">PR</span>' : '<span></span>'}</div>`).join('')}</div>`; };
   const ed = E ? editCalc(r, E.items) : null;
   return `${subHead(md(r.date) + ' 기록', S.recFrom || '', S.recFrom === 'stats' ? '통계' : S.recFrom === 'settings' ? '설정' : '운동기록')}<div class="sec">
-  <div class="card" id="recHead"><div class="sh1"><div><b>${esc(r.place)}</b>${vBadge(r.v)}</div><em class="xpbig">+${fmt(r.xp)} XP</em></div><div class="muted" style="margin-top:4px">${esc(r.summary)}${r.light ? ' · 가볍게 한 날' : ''}</div>${r.held ? `<div class="warn" id="recHold" style="margin-top:8px">세트 사이가 ${CFG.SET_GAP_SEC}초보다 짧아서 경험치 ${fmt(heldAll(r))} XP는 저장하고 24시간 뒤에 들어와요</div>` : ''}</div>
+  <div class="card" id="recHead"><div class="sh1"><div><b>${esc(r.place)}</b>${vBadge(r.v)}</div><em class="xpbig">+${fmt(r.xp)} XP</em></div><div class="muted" style="margin-top:4px">${esc(r.summary)}${r.light ? ' · 가볍게 한 날' : ''}</div>${r.held ? `<div class="warn" id="recHold" style="margin-top:8px">세트 사이가 ${CFG.SET_GAP_SEC}초보다 짧아서 경험치 ${fmt(heldAll(r))} XP는 24시간 뒤에 들어와요. 기록은 그대로 저장됐어요.</div>` : ''}</div>
   <div class="card" id="recItems">${items.map(itemHTML).join('') || '<div class="muted">세부 기록이 없어요</div>'}</div>
   ${E ? `<div class="warn" id="v0Warn">${r.held ? `수정하면 이 기록은 <b>자가 기록(×0.4)</b>으로 다시 계산되고, 입점센터·개인 기록 보너스는 빠져요 · 24시간 뒤에 받을 경험치 ${fmt(heldAll(r))} XP → <b>${fmt(ed.xp)} XP</b>` : `수정하면 이 기록은 <b>자가 기록(×0.4)</b>으로 다시 계산되고, 입점센터·개인 기록 보너스는 빠져요 · 지금 +${fmt(r.xp)} XP → 수정 후 <b>+${fmt(ed.xp)} XP</b>${ed.xp < r.xp ? ` · ${fmt(r.xp - ed.xp)} XP가 빠지고 그만큼 레벨도 내려갈 수 있어요` : ''}`}</div>
     <div class="grid2"><button class="btn ghost" data-act="editCancel">취소</button><button class="btn" data-act="editSave" id="editSave">수정 저장</button></div>`

@@ -682,7 +682,7 @@ body:not(.demoui) .card.demo,body:not(.demoui) .demochip,body:not(.demoui) .demo
 .btn.danger{background:#E5484D;color:#fff}
 .linkbtn.danger{display:block;margin:18px auto 4px;padding:10px 14px;color:#C2333A;font-weight:700;font-size:14px}
 .tile .tsub{display:block;margin-top:2px;font-size:11px;color:#B07D1F;white-space:nowrap}
-.fitem em.fmax{color:#C2333A}
+.fitem em.fmax{color:#C2333A;white-space:nowrap}
 #lastBlock{height:4px}
 .notice.savefail{position:sticky;top:54px;z-index:4;box-shadow:0 2px 8px rgba(0,0,0,.08)}
 .rec .xp.hold{color:#B07D1F;font-size:12px;white-space:nowrap}

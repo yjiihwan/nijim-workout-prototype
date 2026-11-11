@@ -316,7 +316,7 @@ function vEatTab() {
   const cat = S.eatCat || 'all', list = FOODS().filter(f => cat === 'all' || f.cat === cat), bm = boostMul();
   const card = f => { const n = S.inv[f.id] || 0, using = E && E.id === f.id, wait = EAT.q.filter(x => x === f.id).length, R = RARITY[f.rarity] || RARITY['일반'];
     return `<div class="fitem ${using ? 'using' : ''}" data-r="${R.key}">${using ? '<span class="ftag use">사용 중</span>' : wait ? `<span class="ftag">대기 ${wait}</span>` : n ? `<span class="ftag own">${n}개</span>` : ''}
-      <img src="assets/food/card/${f.fid}.png" alt=""><b>${esc(f.name)}</b><small>${esc(f.desc)}</small>${S.level >= 99 && xpOnlyFood(f) ? '<em class="fmax">최고 레벨엔 효과 없음</em>' : `<em style="color:${R.col}">${f.rarity}${f.rule === 'recent7d_workout' ? ' · 최근 7일 운동' : ''}</em>`}
+      <img src="assets/food/card/${f.fid}.png" alt=""><b>${esc(f.name)}</b><small>${esc(f.desc)}</small>${S.level >= 99 && xpOnlyFood(f) ? '<em class="fmax">Lv.99 효과 없음</em>' : `<em style="color:${R.col}">${f.rarity}${f.rule === 'recent7d_workout' ? ' · 최근 7일 운동' : ''}</em>`}
       <div class="fp">${f.price.toLocaleString()}P</div>
       ${n ? `<div class="fbtn"><button class="btn ghost" data-act="buyFood" data-id="${f.id}">구매</button><button class="btn" data-act="eatUse" data-id="${f.id}">사용</button></div>` : `<button class="btn" data-act="buyFood" data-id="${f.id}">구매</button>`}</div>`; };
   /* 먹는 중엔 같은 카드를 보던 자리 위 창(오버레이)으로 띄움 — 목록 자리엔 같은 높이 빈칸이 남아 스크롤이 안 튐 */

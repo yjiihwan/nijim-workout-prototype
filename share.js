@@ -267,7 +267,7 @@ function numunit(c, x, y, parts, ns, us, col, o = {}) {
 
 /* ===== ② 셀카 오운완 — 사진 전면 + 아래 기록 블록 ===== */
 const SELFIE = {
-  story: { W: 1080, H: 1920, M: 64, bottom: 1516, face_y: 0.30, kick: 30, num: [96, 88, 80], unit: 34, lab: 28, row_h: 58, name: 31, sum_: 28, maxrows: 3, logo_h: 36, char_h: 88, gap_stats: 26, gap_list: 26, gap_foot: 40, scrim: 300 },
+  story: { W: 1080, H: 1920, M: 64, bottom: 1646, face_y: 0.30, kick: 30, num: [96, 88, 80], unit: 34, lab: 28, row_h: 58, name: 31, sum_: 28, maxrows: 3, logo_h: 36, char_h: 88, gap_stats: 26, gap_list: 26, gap_foot: 40, scrim: 300 },
   square: { W: 1080, H: 1080, M: 48, bottom: 1032, face_y: 0.30, kick: 26, num: [80, 72, 66], unit: 28, lab: 23, row_h: 50, name: 27, sum_: 24, maxrows: 3, logo_h: 30, char_h: 72, gap_stats: 26, gap_list: 22, gap_foot: 44, scrim: 240 },
 };
 const smooth = t => t * t * (3 - 2 * t);

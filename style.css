@@ -639,21 +639,47 @@ body.wk .replink>span.muted,body.wk .replink>span:last-child{flex:none;white-spa
 .shr-hd b{font-size:22px;font-weight:800}
 .shr-x{width:32px;height:32px;color:#3A3A42;padding:4px}.shr-x svg{width:24px;height:24px}
 .shr-kinds{display:flex;gap:6px;margin-bottom:10px}
-.shr-seg{margin-bottom:14px}
-.shr-prev{position:relative;display:flex;justify-content:center;align-items:center;margin:0 auto 14px}
-.shr-prev.story{height:min(440px,48vh)}.shr-prev.square{height:min(330px,40vh)}
-.shr-prev img{height:100%;width:auto;max-width:100%;object-fit:contain;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+/* v1.45 오운완 2종 고르기(SPEC §9 · screens/S1~S3) */
+.shr-sh{padding-left:20px;padding-right:20px}
+.shr-hd{height:32px;margin-bottom:11px}
+.shr-styles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.shr-style{position:relative;display:flex;align-items:center;gap:10px;height:76px;padding:0 10px;border-radius:16px;background:#F5F5F7;text-align:left;min-width:0}
+.shr-style.on{background:#fff;box-shadow:inset 0 0 0 2px #FC2066}
+.shr-th{flex:none;width:34px;height:60px;border-radius:3px;overflow:hidden;background:#E6E6EA;display:flex;align-items:center;justify-content:center;color:#9A9AA3}
+.shr-th.selfie{background:#2A2A30;color:#B9B9C2}.shr-th svg{width:18px;height:18px}
+.shr-th img{width:100%;height:100%;object-fit:cover;display:block}
+.shr-stt{min-width:0;display:flex;flex-direction:column;gap:4px}
+.shr-stt b{font-size:15px;font-weight:700;color:#3A3A42;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.shr-style.on .shr-stt b{color:#16161C}
+.shr-stt small{font-size:12px;font-weight:500;color:#6B6B73;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shr-ck{position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:50%;background:#FC2066;color:#fff;display:flex;align-items:center;justify-content:center}.shr-ck svg{width:11px;height:11px}
+.shr-prev{position:relative;display:flex;justify-content:center;align-items:center;height:min(424px,calc(100dvh - 420px));min-height:300px;margin:0 auto 14px}
+.shr-kinds~.shr-prev{height:min(424px,calc(100dvh - 466px))}
+.shr-prev.square img{height:min(300px,100%);width:auto}
+.shr-prev img{height:100%;width:auto;max-width:100%;object-fit:contain;border-radius:14px;box-shadow:0 0 0 1px #ECECEF}
 .shr-prev img:not([src]){display:none}
+.shr-prev.drag img{touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
 .shr-load{position:absolute;color:var(--g5);font-size:14px}
-.shr-sf{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid var(--g2);padding:14px 0 6px}
-.shr-sf b{display:block;font-size:16px}.shr-sf small{display:block;color:var(--g5);font-size:13px;margin-top:3px}
-.shr-sf .sw[disabled]{opacity:.45}
-.shr-to{display:grid;grid-template-columns:repeat(4,1fr);padding:14px 0 4px}
-.shr-to button{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink)}
-.shr-to i{width:54px;height:54px;border-radius:50%;background:var(--g1);display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.shr-pick{height:100%;aspect-ratio:9/16;max-width:100%;border-radius:14px;background:#F5F5F7;box-shadow:inset 0 0 0 1px #ECECEF;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:56px 10px 0}
+.shr-prev.square .shr-pick{aspect-ratio:1;height:min(300px,100%)}
+.shr-pick>i{color:#9A9AA3;margin-bottom:18px}.shr-pick>i svg{width:44px;height:44px}
+.shr-pick b{font-size:15px;font-weight:700;color:#16161C}
+.shr-pick small{font-size:12.5px;font-weight:500;color:#6B6B73;margin-top:7px}
+.shr-pkb{display:flex;gap:8px;margin-top:16px}
+.shr-pkb button{width:104px;height:44px;border-radius:22px;background:#fff;box-shadow:inset 0 0 0 1.5px #ECECEF;font-size:13.5px;font-weight:700;color:#16161C;white-space:nowrap;padding:0}
+.shr-pkb button.dark{background:#16161C;color:#fff;box-shadow:none}
+.shr-row{display:flex;justify-content:center;align-items:center;gap:10px}
+.shr-row.two{justify-content:space-between}
+.shr-size{display:flex;width:200px;height:36px;padding:3px;border-radius:18px;background:#F5F5F7}
+.shr-row.two .shr-size{width:176px}
+.shr-size button{flex:1;border-radius:15px;font-size:13px;font-weight:600;color:#6B6B73}
+.shr-size button.on{background:#fff;font-weight:700;color:#16161C}
+.shr-chg{width:120px;height:36px;border-radius:18px;background:#fff;box-shadow:inset 0 0 0 1.5px #ECECEF;font-size:13px;font-weight:700;color:#16161C}
+.shr-to{display:grid;grid-template-columns:repeat(4,1fr);padding:22px 0 4px}
+@media (max-width:359px){.shr-th{display:none}.shr-style{padding:0 12px}.shr-prev{min-height:240px}}   /* 320 폭: 썸네일까지 넣으면 종류 이름이 «캐릭터 오…»로 잘림 */
+.shr-to button{display:flex;flex-direction:column;align-items:center;gap:9px;font-size:13px;font-weight:600;color:#3A3A42;white-space:nowrap}
+.shr-to i{width:54px;height:54px;border-radius:50%;background:#F5F5F7;display:flex;align-items:center;justify-content:center;color:#16161C}
 .shr-to i svg{width:24px;height:24px}
-.shr-to i.ig{border-radius:16px;color:#fff;background:linear-gradient(45deg,#FEC053 0%,#F2203E 45%,#B729A8 75%,#5342D6 100%)}
-.shr-to i.kk{background:#FEE500}.shr-to i.kk svg{width:28px;height:28px}
+.shr-to button[disabled]{color:#B9B9C2;cursor:default}.shr-to button[disabled] i{opacity:.4}
 .shr-toast{margin:8px auto 0;width:max-content;max-width:300px;height:46px;box-sizing:border-box;padding:0 20px 0 14px;border-radius:23px;background:#16161C;color:#fff;font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;opacity:0;transform:translateY(6px);transition:.25s;pointer-events:none}
 .shr-toast.show{opacity:1;transform:none}
 .shr-toast i{width:22px;height:22px;border-radius:50%;background:#00C281;color:#fff;display:flex;align-items:center;justify-content:center}.shr-toast i svg{width:14px;height:14px}

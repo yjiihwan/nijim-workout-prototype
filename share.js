@@ -202,7 +202,7 @@ function badgeBody(o, d, L, sq, A) {
   }
 }
 
-/* ---------- 오운완 카드 2종(v1.45) — 정본 shared_inbox/results/nijim_ounwan_share_redesign_20261112 (SPEC.md · _src/render.py SELFIE·CHAR).
+/* ---------- 오운완 카드 2종(v1.45·v1.47 배치) — 정본 shared_inbox/results/nijim_ounwan_share_redesign_20261112 (SPEC.md · _src/render.py SELFIE·CHAR).
    좌표·크기는 render.py 를 그대로 옮겼다(SPEC 숫자와 다르면 render.py 가 맞다). ---------- */
 const CO = { pink: '#FC2066', pinkD: '#FF5C8F', tint: '#FFF0F5', tint2: '#FFD9E5', ink: '#16161C', slate: '#6B6B73', row: '#F0F0F3', bell: '#B9B9C2', photoBg: '#0B0B0D' };
 const CHN = t => (CH[t] && CH[t].name) || '';
@@ -267,7 +267,7 @@ function numunit(c, x, y, parts, ns, us, col, o = {}) {
 
 /* ===== ② 셀카 오운완 — 사진 전면 + 아래 기록 블록 ===== */
 const SELFIE = {
-  story: { W: 1080, H: 1920, M: 64, bottom: 1646, face_y: 0.30, kick: 30, num: [96, 88, 80], unit: 34, lab: 28, row_h: 58, name: 31, sum_: 28, maxrows: 3, logo_h: 36, char_h: 88, gap_stats: 26, gap_list: 26, gap_foot: 40, scrim: 300 },
+  story: { W: 1080, H: 1920, M: 64, bottom: 1830, face_y: 0.30, kick: 30, num: [96, 88, 80], unit: 34, lab: 28, row_h: 58, name: 31, sum_: 28, maxrows: 3, logo_h: 36, char_h: 88, gap_stats: 26, gap_list: 26, gap_foot: 40, scrim: 300 },
   square: { W: 1080, H: 1080, M: 48, bottom: 1032, face_y: 0.30, kick: 26, num: [80, 72, 66], unit: 28, lab: 23, row_h: 50, name: 27, sum_: 24, maxrows: 3, logo_h: 30, char_h: 72, gap_stats: 26, gap_list: 22, gap_foot: 44, scrim: 240 },
 };
 const smooth = t => t * t * (3 - 2 * t);
@@ -362,9 +362,27 @@ function buildSelfie(c, d, A, size) {
 
 /* ===== ① 캐릭터 오운완 — 연분홍 바탕 + 큰 캐릭터 + 흰 목록 패널 1장 ===== */
 const CHAR = {
-  story: { W: 1080, H: 1920, M: 64, top: 300, bot: 1520, logo_h: 40, head: [104, 96, 88], sub: 32, date: 28, ch_max: 560, ch_min: 300, lab: 26, num: 64, unit: 30, stat_h: 124, row_h: 100, art: 80, name: 34, sum_: 28, pad: 26, maxrows: 4, gap: 30 },
-  square: { W: 1080, H: 1080, M: 48, top: 44, bot: 1036, logo_h: 32, head: [72, 66, 60], sub: 26, date: 24, ch_max: 330, ch_min: 230, lab: 22, num: 50, unit: 24, stat_h: 100, row_h: 88, art: 66, name: 29, sum_: 24, pad: 24, maxrows: 6, gap: 22 },
+  // v1.47: 머리줄=맨 위(top), 숫자+목록=맨 아래(bot), 가운데 전부 캐릭터. ch_max=공유 원본 최대 높이(720) — 배율 ≤ 1(확대 금지)
+  story: { W: 1080, H: 1920, M: 64, top: 90, bot: 1830, logo_h: 40, head: [104, 96, 88], sub: 32, date: 28, ch_max: 720, ch_min: 300, lab: 26, num: 64, unit: 30, stat_h: 124, row_h: 100, art: 80, name: 34, sum_: 28, pad: 26, maxrows: 4, gap: 30, lw: 0 },
+  square: { W: 1080, H: 1080, M: 48, top: 48, bot: 1032, logo_h: 32, head: [72, 66, 60], sub: 26, date: 24, ch_max: 720, ch_min: 230, lab: 22, num: 50, unit: 24, stat_h: 100, row_h: 88, art: 66, name: 29, sum_: 24, pad: 24, maxrows: 6, gap: 22, lw: 380, lw_max: 470 },
 };
+/* 연속 도장 자리: 캐릭터 오른쪽 위 근처에서 캐릭터 몸(불투명 픽셀)과 겹침이 가장 적은 곳. 머리줄·숫자줄·목록·카드 끝은 피함 */
+function stampSpot(ch, box, r, bounds, obst, ideal) {
+  const [bx, by, bw, bh] = box, G = 4, gw = Math.ceil(bw / G), gh = Math.ceil(bh / G);
+  const cv = document.createElement('canvas'); cv.width = gw; cv.height = gh; const x = cv.getContext('2d', { willReadFrequently: true });
+  x.drawImage(ch, 0, 0, gw, gh); const a = x.getImageData(0, 0, gw, gh).data;
+  const solid = (px, py) => { const gx = Math.floor((px - bx) / G), gy = Math.floor((py - by) / G); return gx >= 0 && gy >= 0 && gx < gw && gy < gh && a[(gy * gw + gx) * 4 + 3] > 40; };
+  const disk = []; for (let dy = -r; dy <= r; dy += 6) for (let dx = -r; dx <= r; dx += 6) if (dx * dx + dy * dy <= r * r) disk.push([dx, dy]);
+  const hitRect = (cx, cy, [x0, y0, x1, y1]) => { const nx = Math.max(x0, Math.min(cx, x1)), ny = Math.max(y0, Math.min(cy, y1)); return (cx - nx) ** 2 + (cy - ny) ** 2 < r * r; };
+  let best = null;
+  for (let cy = by - r; cy <= by + bh * 0.6; cy += 8) for (let cx = bx + bw * 0.5; cx <= bx + bw + r * 1.4; cx += 8) {
+    if (cx - r < bounds[0] || cx + r > bounds[2] || cy - r < bounds[1] || cy + r > bounds[3] || obst.some(o => hitRect(cx, cy, o))) continue;
+    let n = 0; for (const [dx, dy] of disk) if (solid(cx + dx, cy + dy)) n++;
+    const sc = n / disk.length * 200 + Math.hypot(cx - ideal[0], cy - ideal[1]) / r;
+    if (!best || sc < best[2]) best = [cx, cy, sc, n / disk.length];
+  }
+  return best || [Math.min(ideal[0], bounds[2] - r), Math.max(ideal[1], bounds[1] + r), 0, 1];
+}
 function stamp(c, cx, cy, r, weeks) {
   c.save(); c.translate(cx, cy); c.rotate(-8 * Math.PI / 180);
   c.beginPath(); c.arc(0, 0, r, 0, Math.PI * 2); c.fillStyle = CO.pink; c.fill();
@@ -420,43 +438,54 @@ function buildChar(c, d, A, size) {
   let info;
   if (!sq) {
     const [rows, more] = pickRows(d.items, L.maxrows), panelH = (rows.length + (more ? 1 : 0)) * L.row_h + 2 * L.pad, headH = 224;
-    const avail = L.bot - L.top - headH - 24 - L.stat_h - panelH - 3 * L.gap, chb = Math.max(L.ch_min, Math.min(L.ch_max, avail));
-    const [cw, chh, k] = fitBox(ch, W - 2 * M, chb), total = headH + chh + 24 + L.stat_h + panelH + 3 * L.gap;
-    const y0 = Math.max(L.top, L.top + Math.max(0, (L.bot - L.top - total) / 2));
+    const y0 = L.top, py = L.bot - panelH, sy = py - L.gap - L.stat_h;
+    const zTop = y0 + headH + L.gap, zBot = sy - 24 - L.gap;
+    const [cw, chh, k] = fitBox(ch, W - 2 * M, Math.max(L.ch_min, Math.min(L.ch_max, zBot - zTop)));
     drawLogo(c, A.logoB, M, y0, L.logo_h);
     TX(c, W - M, y0 + L.logo_h - 6, d.date_long, 600, L.date, CO.slate, 1, 'rs');
     const hb = y0 + L.logo_h + 34 + L.head[0] * 0.95, [hs] = fitSize('오늘도 오운완!', 800, L.head, W - 2 * M);
     headline(hb, hs, -hs * 0.02);
     const [ss, sub] = fitSize(sub0, 500, [L.sub, L.sub - 2, L.sub - 4], W - 2 * M); TX(c, M, hb + 54, sub, 500, ss, CO.slate);
-    const cyTop = y0 + headH + L.gap, flw = Math.min(cw * 0.95, 420);
-    c.fillStyle = CO.tint2; c.beginPath(); c.ellipse(W / 2, cyTop + chh, flw / 2, 22, 0, 0, Math.PI * 2); c.fill();
+    const cyTop = zTop + Math.max(0, (zBot - zTop - chh) / 2), flw = Math.min(cw * 0.95, 480);
+    c.fillStyle = CO.tint2; c.beginPath(); c.ellipse(W / 2, cyTop + chh, flw / 2, 24, 0, 0, Math.PI * 2); c.fill();
     c.drawImage(ch, W / 2 - cw / 2, cyTop, cw, chh);
-    if (d.streak) stamp(c, W / 2 + cw / 2 + 74, cyTop + 96, 80, d.streak);
-    const sy = cyTop + chh + 24 + L.gap; statrow(c, M, sy, W - 2 * M, st, L);
-    const py = sy + L.stat_h + L.gap; listpanel(c, M, py, W - 2 * M, rows, more, L, A, chk);
+    let sp = null;
+    if (d.streak) {
+      const r = Math.round(Math.max(80, Math.min(112, chh * 0.155)));
+      sp = stampSpot(ch, [W / 2 - cw / 2, cyTop, cw, chh], r, [M - 24, y0 + headH + 16, W - M + 24, sy - 10], [], [W / 2 + cw / 2 + r * 0.6, cyTop + r * 1.1]);
+      stamp(c, sp[0], sp[1], r, d.streak); sp.push(r);
+    }
+    statrow(c, M, sy, W - 2 * M, st, L);
+    listpanel(c, M, py, W - 2 * M, rows, more, L, A, chk);
     chk.push(['panel_bottom', py + panelH, L.bot]);
-    if (d.streak) chk.push(['stamp_right', W / 2 + cw / 2 + 74 + 80, W - 8]);
-    info = { rows: rows.map(exName), more, char_k: +k.toFixed(3), bottom: Math.round(py + panelH) };
+    info = { rows: rows.map(exName), more, char_k: +k.toFixed(3), char: [W / 2 - cw / 2, cyTop, cw, chh].map(Math.round), stamp: sp && [Math.round(sp[0]), Math.round(sp[1]), sp[4], +sp[3].toFixed(3)], bottom: Math.round(py + panelH) };
   } else {
     drawLogo(c, A.logoB, M, L.top, L.logo_h);
     TX(c, W - M, L.top + L.logo_h - 4, d.date_long, 600, L.date, CO.slate, 1, 'rs');
     const hb = L.top + L.logo_h + 28 + L.head[0] * 0.92; headline(hb, L.head[0], -1.4);
     const [ss, sub] = fitSize(sub0, 500, [L.sub, L.sub - 2], W - 2 * M); TX(c, M, hb + 46, sub, 500, ss, CO.slate);
-    const top2 = hb + 46 + 40, lw = 330, rx = M + lw + 20, rw = W - M - rx;
+    const top2 = hb + 46 + 40, hAv = Math.min(L.ch_max, L.bot - 26 - top2 - 10, ih(ch));
+    // 넓적한 캐릭터(고레벨)는 기둥 폭이 키를 막는다 → 기둥을 380~470 사이에서 필요한 만큼만 넓힘(목록 폭 ≥ 494)
+    const lw = Math.round(Math.max(L.lw, Math.min(L.lw_max, hAv * iw(ch) / ih(ch) + 10))), rx = M + lw + 20, rw = W - M - rx;
     const nfit = Math.max(1, Math.min(L.maxrows, Math.floor((L.bot - top2 - L.stat_h - 16 - 2 * L.pad) / L.row_h)));
     const [rows, more] = pickRows(d.items, nfit), n2 = rows.length + (more ? 1 : 0);
     const rh = Math.min(118, Math.max(L.row_h, (L.bot - top2 - 20 - L.stat_h - 16 - 2 * L.pad) / n2)), f = rh / L.row_h;
     L = { ...L, row_h: rh, art: Math.min(96, L.art * f), name: Math.min(34, L.name * Math.sqrt(f)), sum_: Math.min(28, L.sum_ * Math.sqrt(f)) };
-    const ph = n2 * L.row_h + 2 * L.pad, blk = L.stat_h + 16 + ph;
-    const [cw, chh, k] = fitBox(ch, lw - 10, Math.min(L.ch_max + 60, L.bot - top2 - 30));
-    const bh = Math.max(blk, chh + 26), by0 = top2 + Math.max(0, (L.bot - top2 - bh) * 0.5), base = by0 + bh, by = base - blk, cy = base - 26 - chh;
+    const ph = n2 * L.row_h + 2 * L.pad, blk = L.stat_h + 16 + ph, by = L.bot - blk, base = L.bot;
+    const [cw, chh, k] = fitBox(ch, lw - 10, hAv);
+    const cy = base - 26 - chh, cx0 = M + lw / 2 - cw / 2;
     c.fillStyle = CO.tint2; c.beginPath(); c.ellipse(M + lw / 2, base - 26, cw * 0.47, 20, 0, 0, Math.PI * 2); c.fill();
-    c.drawImage(ch, M + lw / 2 - cw / 2, cy, cw, chh);
-    if (d.streak) stamp(c, Math.min(M + lw / 2 + cw / 2 + 10, rx - 56 - 14), cy + 40, 56, d.streak);
+    c.drawImage(ch, cx0, cy, cw, chh);
+    let sp = null;
+    if (d.streak) {
+      const r = Math.round(Math.max(56, Math.min(76, chh * 0.15)));
+      sp = stampSpot(ch, [cx0, cy, cw, chh], r, [M - 16, top2 - 6, W - M, base], [[rx - 14, by - 14, W, H]], [cx0 + cw + r * 0.5, cy + r * 1.0]);
+      stamp(c, sp[0], sp[1], r, d.streak); sp.push(r);
+    }
     statrow(c, rx, by, rw, st, L);
     listpanel(c, rx, by + L.stat_h + 16, rw, rows, more, L, A, chk);
-    chk.push(['panel_bottom', by + L.stat_h + 16 + ph, H - 24]);
-    info = { rows: rows.map(exName), more, char_k: +k.toFixed(3), bottom: Math.round(by + L.stat_h + 16 + ph) };
+    chk.push(['panel_bottom', by + L.stat_h + 16 + ph, L.bot + 0.5]);
+    info = { rows: rows.map(exName), more, char_k: +k.toFixed(3), char: [cx0, cy, cw, chh].map(Math.round), stamp: sp && [Math.round(sp[0]), Math.round(sp[1]), sp[4], +sp[3].toFixed(3)], bottom: Math.round(by + L.stat_h + 16 + ph) };
   }
   return { style: 'char', size, ...info, stats: st.map(([l, p]) => l + ' ' + p.map(x => x.join('')).join('')), overflow: chk.filter(x => x[1] > x[2] + 0.5).map(x => x[0]) };
 }

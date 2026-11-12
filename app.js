@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.49';
+const VER = 'v1.50';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -526,7 +526,7 @@ function vSession() {
         : e.mode === 'lesson' ? `${it.min}분 · 선생님 확인` : ds.length ? setsTxt(e, ds) : (it.plan ? `지난번 ${it.plan}` : '아직 0세트');
       return `<button class="prow tap" data-act="openEx" data-v="${it.ex}"><div><b>${e.name}${ds.some(x => x.pr) ? ' <span class="prtag">PR</span>' : ''}</b><small>${esc(sub)}</small></div><span class="cnt">${e.mode === 'cardio' || e.mode === 'lesson' ? (it.min ? '✓' : it.run ? '⏱' : '') : `${ds.length}세트`}</span></button>`; }).join('')}</div>`;
   const sfPct = CFG.SELFIE_BONUS.pct, selfieBtn = s.selfie ? sfCard('sfSess', s.photo, '오운완 셀카 찍음', `저장하면 경험치 +${sfPct}%${r.selfieXP ? ` (+${fmt(r.selfieXP)})` : ''}가 들어가요`, 'session')
-    : selfieClaims() ? `<div class="muted sfnote" id="sfSess">오늘 오운완 인증 완료 ✓ · 셀카 보너스는 하루 1번이에요</div>`
+    : selfieClaims() ? `<div class="muted sfnote" id="sfSess">오늘 보너스 받음 ✓ · 오운완 보너스는 하루 1번이에요</div>`
     : `<button class="btn ghost camb" data-act="selfie" data-v="session" id="sfSessBtn">${CAM}오운완 셀카 <span class="muted">찍으면 경험치 +${sfPct}% · 하루 1번 · 나만 봐요</span></button>`;
   const demos = [['none','실제 기록대로'],['next','다음 레벨까지 (짧은 연출)'],['boundary','10레벨 경계 넘기 (큰 연출)'],['multi','+5레벨 한꺼번에 (묶음)']];
   return `${subHead('오늘 운동')}<div class="sec"><div class="honest" id="honestTop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg><span>한 만큼만 솔직하게 기록해 주세요. 기록이 정확해야 AI 코칭이 내 몸에 맞게 나와요.</span></div>${head}${empty}
@@ -726,8 +726,8 @@ function vResult() {
     <div class="muted" style="margin-top:6px" id="resultNote">${note}</div>
     ${m && m.ratio != null && S.moodDemo === 'auto' ? `<div class="muted" style="margin-top:4px">평소의 ${Math.round(m.ratio * 100)}%만큼 했어요 · 오늘 한 운동끼리만 지난 10번 기록과 비교했어요</div>` : ''}</div>
   ${rec && !rec.demo ? `<button class="btn sharebtn" data-act="share" data-id="${rec.id}" id="shareBtn">${NJ_SHARE_ICON_SVG()}자랑하기</button><div class="muted sharecap">오늘 한 운동을 카드로 만들어 자랑해요</div>` : ''}
-  ${canSelfie ? selfieCta(rec) : sfDone ? sfCard('sfDone', rec.photo, `오운완 인증 완료 · +${fmt(rec.selfieIn ?? rec.selfieXP)} XP`, rec.photo ? '사진은 나한테만 보여요 · 셀카 보너스는 하루 1번' : '사진은 지웠어요 · 받은 보너스는 그대로예요', 'result')
-    : rec && !rec.demo && rec.photo ? sfCard('sfDone', rec.photo, '오운완 사진 저장됨', '사진은 나한테만 보여요 · 이번엔 보너스 경험치가 붙지 않았어요', 'result') : ''}
+  ${canSelfie ? selfieCta(rec) : sfDone ? sfCard('sfDone', rec.photo, `오운완 인증 완료 · +${fmt(rec.selfieIn ?? rec.selfieXP)} XP`, rec.photo ? '오늘 보너스 받음 · 사진은 나만 봐요' : '사진은 지웠어요 · 받은 보너스는 그대로예요', 'result')
+    : rec && !rec.demo && rec.photo ? sfCard('sfDone', rec.photo, '오운완 사진 저장됨', `${proofHint(rec).t || '이번엔 보너스 경험치가 붙지 않았어요'} · 사진은 나만 봐요`, 'result') : ''}
   ${rec && rec.br ? `<div class="card" id="xpCard"><div class="h3">경험치 내역</div>${xpRows(rec)}<div class="xrow total"><span>다 더하면</span><b>+${fmt(rec.xp)} XP</b></div></div>` : ''}
   <div class="card demo"><div class="h3">🧪 시연 — 다른 결과로 보기</div><div class="chips">${[['low','아쉬운'],['normal','평소대로'],['high','신남']].map(([k, l]) => `<button class="chip ${v===k?'on':''}" data-act="mset" data-v="${k}">${l}</button>`).join('')}</div>
   <div class="muted" style="margin-top:8px">표정은 얼굴(눈·입·볼)만 바뀌어요 · 레벨·경험치와는 상관없어요</div></div>
@@ -744,13 +744,42 @@ function selfieCalc(rec) {
 }
 const selfieGain = rec => { const c = selfieCalc(rec); return c ? c.g : 0; };
 function selfieCta(rec) {
+  const h = proofHint(rec);
+  return `<button class="card selfiecta" data-act="selfie" data-v="result" id="selfieCta">${CAM}<div><b>오운완 셀카 찍기</b><small><span class="pfhint ${h.k}" id="proofHint">${h.t || '사진은 나만 보는 기록으로 남아요'}</span><br>앨범 사진도 돼요 · 사진은 나만 봐요</small></div><span class="rgo">›</span></button>`;
+}
+/* 오운완 인증 사진 보너스 상태 — 결과 화면 셀카 칸·자랑하기 셀카 칸이 같은 판단·같은 문구를 쓴다(v1.50).
+   past = 오늘·방금 끝낸 기록이 아님(하루 1번 셈이 «오늘» 기준이라 지난 기록엔 보너스 없음) · held = 경험치 대기 중 기록 */
+function proofState(rec) {
+  if (!rec || rec.demo || !rec.br || rec.br.demoXP) return { k: 'none', g: 0 };
+  if (rec.selfieXP > 0) return { k: 'got', g: 0 };
+  if (rec.held) return { k: 'held', g: 0 };
+  if (rec.date !== TODAY && rec.id !== S.lastResult) return { k: 'past', g: 0 };
   const c = selfieCalc(rec), why = c && c.r2.selfieWhy;
-  const sub = !c ? '사진은 나만 보는 기록으로 남아요'
-    : why === 'today' ? '오늘은 이미 오운완 보너스를 받았어요 · 사진은 나만 보는 기록으로 남아요'
-    : why === 'norecord' ? '5회 이상 세트나 유산소 기록이 있어야 보너스가 붙어요 · 사진은 나만 봐요'
-    : c.g ? `찍으면 경험치 +${CFG.SELFIE_BONUS.pct}%! 예상 +${fmt(c.g)} XP · 하루 1번 · 나만 봐요`
-    : '오늘·이번 주 운동 경험치를 다 모아서 찍어도 더 붙지 않아요 · 사진은 나만 봐요';
-  return `<button class="card selfiecta" data-act="selfie" data-v="result" id="selfieCta">${CAM}<div><b>오운완 셀카 찍기</b><small>${sub}</small></div><span class="rgo">›</span></button>`;
+  if (!c) return { k: 'none', g: 0 };
+  if (why === 'today') return { k: 'today', g: 0 };
+  if (why === 'norecord') return { k: 'norec', g: 0 };
+  return c.g > 0 ? { k: 'can', g: c.g } : { k: 'cap', g: 0 };
+}
+function proofHint(rec) {
+  const st = proofState(rec);
+  const t = { can: `사진 올리면 경험치 +${fmt(st.g)} · 하루 1번`, got: '오늘 보너스 받음 · 사진만 바뀌어요', today: '오늘 보너스 받음 · 사진만 저장돼요',
+    norec: '보너스는 5회 이상 세트나 유산소 기록부터', cap: '경험치 한도를 다 채워서 보너스는 없어요',
+    held: '경험치 대기 중인 기록이라 사진만 저장돼요', past: '지난 기록은 사진만 저장돼요', none: '' }[st.k];
+  return { ...st, t };
+}
+/* 오운완 인증 사진 저장 — 결과 화면 셀카와 자랑하기 사진이 같은 기록(rec.photo)·같은 보너스 계산을 쓴다.
+   이미 받은 기록은 사진만 바꾸고, 보너스는 하루 1번 규칙(selfieCalc)대로만 붙는다 */
+function proofSave(rec, url) {
+  rec.photo = url;
+  if (rec.selfieXP > 0) return { got: 0, swap: true, res: null };
+  if (proofState(rec).k !== 'can') return { got: 0, swap: false, res: null };
+  const c = selfieCalc(rec); if (!c || !c.r2.selfieXP) return { got: 0, swap: false, res: null };
+  const g = c.g; rec.br = c.r2; rec.raw = c.r2.raw; rec.selfieXP = c.r2.selfieXP; rec.selfieIn = Math.max(0, c.r2.selfieXP - c.cut); rec.xp += g;
+  if (c.cut) { rec.cut = (rec.cut || 0) + c.cut; rec.cutReason = rec.cutReason || c.reason; }
+  const res = applyXP({ level: S.level, xp: S.xp }, g); gainEx(g);
+  S.level = res.level; S.xp = res.xp;
+  if (res.level > res.from) rec.lvUp = { from: rec.lvUp ? rec.lvUp.from : res.from, to: res.level };
+  return { got: g, swap: false, res };
 }
 
 /* 찍은 셀카 카드 — 저장 전(세션)·저장 후(요약) 공통. 사진이 없으면(지운 뒤) 썸네일 없이 «다시 찍기»만 */
@@ -1299,17 +1328,10 @@ function applySelfie() {
   S.selfieSwap = false;
   if (S.selfieFor === 'session' && S.session) { S.selfieGot = 0; S.session.selfie = { ...SELFIE_SHOT }; S.session.photo = S.shot; S.session.lastAt = Date.now(); return; }
   const rec = S.records.find(r => r.id === S.lastResult); if (!rec) return;
-  rec.photo = S.shot;
-  // 이미 보너스 받은 기록 → 다시 찍기는 사진만 교체(경험치 재부여 없음). 방금 이 흐름에서 받은 보너스(selfieRes)는 확인 전까지 안내 유지
-  if (rec.selfieXP > 0) { if (!S.selfieRes) { S.selfieGot = 0; S.selfieSwap = true; } return; }
-  S.selfieGot = 0;
-  const c = selfieCalc(rec); if (!c || !c.r2.selfieXP) return;   // 하루 1회·대상 기록 없음 → 사진만 저장
-  const g = c.g; rec.br = c.r2; rec.raw = c.r2.raw; rec.selfieXP = c.r2.selfieXP; rec.selfieIn = Math.max(0, c.r2.selfieXP - c.cut); rec.xp += g; S.selfieGot = g;
-  if (c.cut) { rec.cut = (rec.cut || 0) + c.cut; rec.cutReason = rec.cutReason || c.reason; }
-  const res = applyXP({ level: S.level, xp: S.xp }, g); gainEx(g);
-  S.level = res.level; S.xp = res.xp;
-  if (res.level > res.from) rec.lvUp = { from: rec.lvUp ? rec.lvUp.from : res.from, to: res.level };
-  S.selfieRes = res;
+  const out = proofSave(rec, S.shot);
+  // 이미 보너스 받은 기록 → 다시 찍기는 사진만 교체. 방금 이 흐름에서 받은 보너스(selfieRes)는 확인 전까지 안내 유지
+  if (out.swap) { if (!S.selfieRes) { S.selfieGot = 0; S.selfieSwap = true; } return; }
+  S.selfieGot = out.got; if (out.res) S.selfieRes = out.res;
 }
 
 /* ===== 바텀시트 (기존 화면은 밀지 않고 덮는다) ===== */
@@ -1515,8 +1537,8 @@ document.addEventListener('click', e => {
   else if (a === 'shoot') return shoot();
   else if (a === 'selfieOk') { const res = S.selfieRes; S.selfieRes = null; S.shot = null; S.bump = 1;
     if (S.selfieFor === 'session') return go('workout', 'session');
-    if (res && res.level > res.from) return afterGain(res, { toast: `오운완 보너스 +${fmt(S.selfieGot)} XP` });
-    go('workout', 'result'); S.bump = 0; if (S.selfieGot) toast(`오운완 보너스 +${fmt(S.selfieGot)} XP`); return; }
+    if (res && res.level > res.from) return afterGain(res, { toast: `인증 사진 저장 · 경험치 +${fmt(S.selfieGot)}` });
+    go('workout', 'result'); S.bump = 0; toast(S.selfieGot ? `인증 사진 저장 · 경험치 +${fmt(S.selfieGot)}` : S.selfieSwap ? '인증 사진 바꿈 · 보너스는 그대로' : '인증 사진 저장'); return; }
   else if (a === 'stw') { if (!commitWeightField()) return; it.draft.w = clampStep(it.draft.w, dd, EX[it.ex].step || 2.5, 0, 500); it.dirty = true; }
   else if (a === 'str') { if (!commitWeightField()) return; it.draft.r = clampStep(it.draft.r, dd, 1, 1, 100); it.dirty = true; }
   else if (a === 'sts') { if (!commitWeightField()) return; it.draft.s = clampStep(it.draft.s, dd, 10, 10, 1800); it.dirty = true; }

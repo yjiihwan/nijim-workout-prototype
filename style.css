@@ -768,3 +768,11 @@ button.setrow.tapset:active{background:var(--g1)}
 .wsay{display:flex;align-items:center;gap:8px;background:#EAF6FF;border-radius:12px;padding:6px 11px 6px 8px;font-size:13px;line-height:1.4;margin-top:10px}
 .wsay .cbox{flex:0 0 30px;width:30px;height:30px;display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
 .wsay span:last-child{min-width:0}
+/* v1.50 오운완 인증 사진 보너스 안내 — 자랑하기 셀카 칸 아래 한 줄(미리보기 높이를 그만큼 줄여 아래 버튼이 밀리지 않게) */
+.shr-sh.hasbonus .shr-prev{height:min(400px,calc(100dvh - 450px));min-height:276px;margin-bottom:10px}
+.shr-sh.hasbonus .shr-kinds~.shr-prev{height:min(400px,calc(100dvh - 496px))}
+.shr-bonus{display:flex;align-items:center;justify-content:center;gap:6px;height:22px;margin:0 0 12px;font-size:13px;font-weight:600;color:#6B6B73;white-space:nowrap;overflow:hidden}
+.shr-bonus i{flex:none;display:flex}.shr-bonus i svg{width:16px;height:16px}
+.shr-bonus span{overflow:hidden;text-overflow:ellipsis}
+.shr-bonus.can{color:#FC2066;font-weight:700}
+.pfhint.can{color:#FC2066;font-weight:700}

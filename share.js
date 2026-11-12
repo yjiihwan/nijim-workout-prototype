@@ -568,6 +568,10 @@ let ST = null, SEQ = 0, TSEQ = 0;
 const kindsFor = r => r ? ['workout', ...(r.lvUp ? ['levelup'] : [])] : [];
 const photoFor = recId => PICKED.get(recId) || todayPhoto(S.records.find(x => x.id === recId));
 const needPhoto = () => ST.kind === 'workout' && ST.style === 'selfie' && !ST.photo;
+/* v1.50 셀카 칸 = 오운완 인증 사진 — 상태별 보너스 안내(결과 화면과 같은 proofHint) */
+const bonusLine = () => { const r = S.records.find(x => x.id === ST.recId), h = r ? proofHint(r) : null;
+  return h && h.t ? `<div class="shr-bonus ${h.k}" id="shrBonus"><i>${SVGI(I_CAM, 2)}</i><span>${h.t}</span></div>` : ''; };
+let PROOF_RES = null;   // 시트에서 사진 올려 레벨이 오른 경우 — 시트를 닫을 때 레벨업 연출
 function openShare(opt) {
   const photo = opt.recId != null ? photoFor(opt.recId) : null;
   let style = null; try { style = localStorage.getItem(STYLE_KEY); } catch {}
@@ -582,15 +586,15 @@ function paintSheet() {
   const tile = ([k, t, s]) => `<button class="shr-style ${ST.style === k ? 'on' : ''}" data-act="shrStyle" data-v="${k}" id="shrStyle_${k}" aria-pressed="${ST.style === k}">
     <span class="shr-th ${k}">${ST.thumbs[k] ? `<img src="${ST.thumbs[k]}" alt="">` : k === 'selfie' && !ST.photo ? SVGI(I_CAM, 1.8) : ''}</span><span class="shr-stt"><b>${t}</b><small>${s}</small></span>${ST.style === k ? `<i class="shr-ck">${SVGI(I_CHECK, 3.2)}</i>` : ''}</button>`;
   const prev = np
-    ? `<div class="shr-prev ${ST.size}"><div class="shr-pick" id="shrPick"><i>${SVGI(I_CAM, 1.6)}</i><b>오늘 운동 사진을 골라 주세요</b><small>사진 위에 오늘 기록이 올라가요</small>
+    ? `<div class="shr-prev ${ST.size}"><div class="shr-pick" id="shrPick"><i>${SVGI(I_CAM, 1.6)}</i><b>오늘 운동 사진을 골라 주세요</b><small>사진 위에 오늘 기록이 올라가요<br>오운완 인증 사진으로도 저장돼요</small>
         <div class="shr-pkb"><button class="dark" data-act="shrAlbum" id="shrAlbum">앨범에서 고르기</button><button data-act="shrCam" id="shrCam">바로 찍기</button></div></div></div>`
     : `<div class="shr-prev ${ST.size}${wk && ST.style === 'selfie' ? ' drag' : ''}"><img id="shrImg" draggable="false" alt="자랑 카드 미리보기" ${ST.url ? `src="${ST.url}"` : ''}><span class="shr-load" id="shrLoad">${ST.url ? '' : '카드 만드는 중…'}</span></div>`;
-  const off = np ? 'disabled' : '';
-  el.innerHTML = `<div class="shr-bg" data-act="shrClose"></div><div class="shr-sh" role="dialog" aria-label="자랑하기"><div class="shr-grab"></div>
+  const off = np ? 'disabled' : '', bl = wk && ST.style === 'selfie' ? bonusLine() : '';
+  el.innerHTML = `<div class="shr-bg" data-act="shrClose"></div><div class="shr-sh${bl ? ' hasbonus' : ''}" role="dialog" aria-label="자랑하기"><div class="shr-grab"></div>
   <div class="shr-hd"><b>자랑하기</b><button class="shr-x" data-act="shrClose" aria-label="닫기">${SVGI('<path d="M6 6l12 12M18 6 6 18"/>')}</button></div>
   ${kinds.length > 1 ? `<div class="shr-kinds">${kinds.map(k => `<button class="chip ${ST.kind === k ? 'on' : ''}" data-act="shrKind" data-v="${k}">${k === 'workout' ? '오운완 카드' : '레벨업 카드'}</button>`).join('')}</div>` : ''}
   ${wk ? `<div class="shr-styles">${STYLES.map(tile).join('')}</div>` : ''}
-  ${prev}
+  ${prev}${bl}
   <div class="shr-row ${wk && ST.style === 'selfie' && ST.photo ? 'two' : ''}"><div class="shr-size"><button class="${ST.size === 'story' ? 'on' : ''}" data-act="shrSize" data-v="story" id="shrStory">스토리</button><button class="${ST.size === 'square' ? 'on' : ''}" data-act="shrSize" data-v="square" id="shrSquare">정사각</button></div>
     ${wk && ST.style === 'selfie' && ST.photo ? '<button class="shr-chg" data-act="shrAlbum" id="shrChange">사진 바꾸기</button>' : ''}</div>
   <div class="shr-to">
@@ -644,7 +648,24 @@ function setPhoto(file) {
   const url = URL.createObjectURL(file); PICKED.set(ST.recId, url);
   ST.photo = url; ST.style = 'selfie'; ST.url = null; ST.thumbs.selfie = null; ST.shift = 0;
   try { localStorage.setItem(STYLE_KEY, 'selfie'); } catch {}
+  saveProof(ST.recId, file);
   paintSheet(); refreshCard(); refreshThumbs();
+}
+/* 고른 사진을 그 기록의 오운완 인증 사진으로 — 결과 화면 앨범과 같은 240×320 저장본 + 같은 proofSave(보너스 하루 1번) */
+function saveProof(recId, file) {
+  const rec = S.records.find(x => x.id === recId); if (!rec || rec.demo) return;
+  const img = new Image(), src = URL.createObjectURL(file);
+  img.onload = () => {
+    const c = document.createElement('canvas'); c.width = 240; c.height = 320; const g = c.getContext('2d'), r = Math.min(img.width / 3, img.height / 4);
+    g.drawImage(img, (img.width - r * 3) / 2, (img.height - r * 4) / 2, r * 3, r * 4, 0, 0, 240, 320); URL.revokeObjectURL(src);
+    const out = proofSave(rec, c.toDataURL('image/jpeg', .72));
+    if (out.res && out.res.level > out.res.from) PROOF_RES = out.res;
+    save();
+    if (ST && ST.recId === recId) { paintSheet(); const im = $('shrImg'); if (im && ST.url) im.src = ST.url; }
+    shrToast(out.got ? `인증 사진 저장 · 경험치 +${fmt(out.got)}` : out.swap ? '인증 사진 바꿈 · 보너스는 그대로' : '인증 사진 저장');
+  };
+  img.onerror = () => URL.revokeObjectURL(src);
+  img.src = src;
 }
 document.addEventListener('change', e => { if (e.target && (e.target.id === 'shrFileAlbum' || e.target.id === 'shrFileCam')) { setPhoto(e.target.files && e.target.files[0]); e.target.value = ''; } });
 function shrToast(msg) { const t = $('shrToast'); if (!t) return toast(msg); t.innerHTML = `<i>${SVGI(I_CHECK, 3)}</i>${msg}`; t.classList.add('show'); clearTimeout(shrToast.h); shrToast.h = setTimeout(() => t.classList.remove('show'), 2000); }
@@ -665,7 +686,8 @@ async function copyText(t) {
   catch { const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch {} ta.remove(); return ok; }
 }
 window.NJ_copyText = copyText; window.NJ_inviteLink = () => inviteLink();   // 랭킹 › 친구 추가(screens2.js)에서도 같은 복사·초대 링크를 쓴다
-function closeShare() { SEQ++; TSEQ++; if (ST && ST.url) URL.revokeObjectURL(ST.url); ST = null; const el = $('shareSheet'); if (el) { el.className = 'shr'; el.innerHTML = ''; } }
+function closeShare() { SEQ++; TSEQ++; if (ST && ST.url) URL.revokeObjectURL(ST.url); ST = null; const el = $('shareSheet'); if (el) { el.className = 'shr'; el.innerHTML = ''; }
+  const res = PROOF_RES; PROOF_RES = null; if (res) afterGain(res, { to: null }); else render(); }
 
 /* ---------- 친구 초대(S3) ---------- */
 const inviteLink = () => `${APP_LINK}?ref=${encodeURIComponent(myCode())}`;   // 초대 링크 형식 = 개발 결정(공식 링크 + 코드)

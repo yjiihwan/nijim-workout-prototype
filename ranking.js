@@ -15,14 +15,14 @@ const RK_CENTERS = [
 const rkCenter = id => RK_CENTERS.find(c => c.id === id);
 const rkCenterIdOf = place => { const c = RK_CENTERS.find(c => place && place.startsWith(c.name)); return c ? c.id : null; };
 
-/* 가짜 회원 — sessions [센터 id | null(레슨 V3), 이 세션이 주간 경험치에 들어간 몫]. 친구 5명은 친구리그 주간 XP 와 합이 같게 */
+/* 가짜 회원 — sessions [센터 id | null(레슨 V3), 그 센터에서 이번 주에 번 경험치 합, 방문한 날 수(없으면 1)]. 친구 5명은 친구리그 주간 XP 와 합이 같게 */
 const RK_MEMBERS = [
-  ['운동하는곰', 'koa', 27, [['sillim', 900], ['bongcheon', 840], [null, 400]]],                      // 2곳
-  ['새벽러너', 'saetbyeol', 41, [['sillim', 300], ['bongcheon', 380], ['snu', 300]]],                 // 3곳
+  ['운동하는곰', 'koa', 27, [['sillim', 900, 2], ['bongcheon', 840, 3], [null, 400]]],                // 2곳 · 방문은 봉천 3 > 신림 2(경험치는 신림이 많음)
+  ['새벽러너', 'saetbyeol', 41, [['sillim', 300, 2], ['bongcheon', 380, 2], ['snu', 300]]],           // 3곳 · 방문 동률(신림 2·봉천 2) → 경험치 많은 봉천
   ['벤치왕', 'ttukbi', 33, [['sillim', 1650]]],
   ['필라테스러', 'mungchi', 12, [['snu', 610]]],
   ['헬린이9일차', 'bamtol', 4, [['sillim', 420]]],
-  ['근손실방지위원장', 'imu', 58, [['bongcheon', 1500], ['sillim', 900], [null, 300]]],              // 2곳
+  ['근손실방지위원장', 'imu', 58, [['bongcheon', 1500, 2], ['sillim', 900, 3], [null, 300]]],        // 2곳 · 방문은 신림 3 > 봉천 2(경험치는 봉천이 많음)
   ['오늘도출근', 'capy', 22, [['sillim', 760]]],
   ['퇴근후스쿼트', 'ppiyak', 15, [['bongcheon', 540]]],
   ['숨김설정회원', 'dot', 70, [['sillim', 1200], ['bongcheon', 600], ['snu', 400]], true],           // 3곳 + 숨김 켬
@@ -54,18 +54,21 @@ const ensureRk = () => {
   S.hideRank = !!S.hideRank; S.rkCrowd = !!S.rkCrowd;
 };
 const rkWeekStart = () => weekDays()[0];
+const rkDay = i => weekDays()[Math.min(i, 6)];
 function rkMySessions() {
   const wd = weekDays(), out = [];
   S.records.filter(r => wd.includes(r.date) && !r.demo && !r.paid && r.v !== 'self').forEach(r => {
     out.push({ member_id: 'me', center_id: r.v === 'auto' ? rkCenterIdOf(r.place) : null, date: r.date, verify: r.v === 'auto' ? 'V1' : 'V3', xp_league: Math.max(0, (r.xp || 0) - (r.xpBoost || 0)) });
   });
-  if (S.rkMeDemo && S.rkHome !== 'none') [['sillim', 420], ['sillim', 380], ['bongcheon', 310]].concat(S.rkHome === 'many' ? [['gangnam_long', 260]] : [])
-    .forEach(([c, xp]) => out.push({ member_id: 'me', center_id: c, date: rkWeekStart(), verify: 'V1', xp_league: xp }));
+  if (S.rkMeDemo && S.rkHome !== 'none') [['sillim', 420, 0], ['sillim', 380, 1], ['bongcheon', 310, 2]].concat(S.rkHome === 'many' ? [['gangnam_long', 260, 3]] : [])
+    .forEach(([c, xp, d]) => out.push({ member_id: 'me', center_id: c, date: rkDay(d), verify: 'V1', xp_league: xp }));
   return out;
 }
 function rkWorld() {
   const ws = rkWeekStart(), sessions = rkMySessions();
-  rkMembers().forEach(m => m.ss.forEach(([c, xp]) => sessions.push({ member_id: m.member_id, center_id: c, date: ws, verify: c ? 'V1' : 'V3', xp_league: xp })));
+  /* 방문한 날 수만큼 날짜가 다른 행으로 나눈다(경험치 합은 그대로) */
+  rkMembers().forEach(m => m.ss.forEach(([c, xp, n = 1]) => { const each = Math.floor(xp / n);
+    for (let i = 0; i < n; i++) sessions.push({ member_id: m.member_id, center_id: c, date: rkDay(i), verify: c ? 'V1' : 'V3', xp_league: i ? each : xp - each * (n - 1) }); }));
   const me = { member_id: 'me', nickname: '나', t: S.type, lv: S.level, me: true, hide_in_center_ranking: S.hideRank };
   return { ws, sessions, members: [...rkMembers(), me], me };
 }
@@ -103,16 +106,23 @@ function vCenterTab(W) {
   const nat = CenterRank.nationalWeeklyXP(W.sessions, W.ws);
   const chips = homes.map(h => `<button class="chip rkchip ${h.center_id === sel ? 'on' : ''}" data-act="rkCenter" data-v="${h.center_id}">${esc(rkCenter(h.center_id).name)}</button>`).join('');
   return `<div class="chips rkchips" id="rkChips">${chips}<button class="chip rkchip add" data-act="rkManage" id="rkManage">＋ 관리</button></div>
-  <div class="card" id="rkBoard"><div class="rkhd"><b>${esc(c.name)}</b><small>이번 주 · 이 센터에 입장해서 번 경험치만 · 월요일 0시에 새로 시작</small></div>
+  <div class="card" id="rkBoard"><div class="rkhd"><b>${esc(c.name)}</b><small>이번 주에 이 센터에 입장해서 모은 경험치 순위예요 · 월요일 0시에 새로 시작</small></div>
   ${board.length ? board.slice(0, 100).map(m => rkRow(m, m.weekly_xp, m.me ? `${esc(CH[m.t].name)} · 이번 주 전체 ${fmt(nat.me || 0)} XP` : `${esc(CH[m.t].name)} · Lv.${m.lv}`)).join('') : '<div class="muted" style="padding:14px 0">이번 주 이 센터 기록이 아직 없어요</div>'}</div>
   ${rkMeBar(board, '이번 주 이 센터 기록이 아직 없어요')}
   <div class="muted" style="margin-top:8px">닉네임·캐릭터만 보여요(실명 없음) · 여러 센터를 다니면 센터마다 거기서 번 경험치만 따로 계산해요 · 센터 TV 랭킹과 같아요</div>`;
 }
 function vNationTab(W) {
   const board = CenterRank.nationalBoard(W.sessions, W.members, W.ws), cw = CenterRank.centerWeeklyXP(W.sessions, W.ws);
-  const mainCenter = id => { if (id === 'me') { const s = rkSel(rkHomeList()); return s ? rkCenter(s).name : ''; }
-    let best = null, bx = 0; Object.keys(cw).forEach(c => { if ((cw[c][id] || 0) > bx) { bx = cw[c][id]; best = c; } }); return best ? rkCenter(best).name : ''; };
-  return `<div class="card" id="rkBoard"><div class="rkhd"><b>니짐내짐 전국</b><small>이번 주 · 자가 기록을 뺀 운동 경험치(입점센터 보너스 포함) · <span style="white-space:nowrap">월요일 0시에 새로 시작</span></small></div>
+  /* v1.44(형 11-12 확정): 이름 옆 센터 = 그 주에 가장 많이 다닌 센터 — 입장(V1)한 날 수 최다 → 같으면 그 주 그 센터에서 번 경험치 많은 곳 → 그래도 같으면 마지막 방문이 최근인 곳 → 센터 id 순.
+     레슨(V3)은 센터가 없어 안 센다. 입장 기록이 없으면 센터를 안 적는다. (v1.43 까지: 그 주 경험치를 가장 많이 번 센터) */
+  const visits = {};
+  W.sessions.forEach(s => { if (s.verify !== 'V1' || !s.center_id || !rkCenter(s.center_id) || !weekDays().includes(s.date)) return;
+    const v = (visits[s.member_id] = visits[s.member_id] || {})[s.center_id] = visits[s.member_id][s.center_id] || { days: new Set(), last: '' };
+    v.days.add(s.date); if (s.date > v.last) v.last = s.date; });
+  const mainCenter = id => { const v = visits[id]; if (!v) return '';
+    const best = Object.keys(v).sort((a, b) => v[b].days.size - v[a].days.size || ((cw[b] || {})[id] || 0) - ((cw[a] || {})[id] || 0) || v[b].last.localeCompare(v[a].last) || a.localeCompare(b))[0];
+    return rkCenter(best).name; };
+  return `<div class="card" id="rkBoard"><div class="rkhd"><b>니짐내짐 전국</b><small>이번 주에 운동해서 모은 경험치 순위예요 · 자가 기록은 안 들어가고, 입점센터 보너스는 들어가요 · <span style="white-space:nowrap">월요일 0시에 새로 시작</span></small></div>
   ${board.slice(0, 100).map(m => rkRow(m, m.weekly_xp, `${esc(CH[m.t].name)}${mainCenter(m.member_id) ? ' · ' + esc(mainCenter(m.member_id)) : ''}`)).join('')}</div>
   ${rkMeBar(board, '이번 주 랭킹에 들어갈 운동 기록이 아직 없어요')}
   <div class="muted" style="margin-top:8px">닉네임·캐릭터만 보여요(실명 없음) · 옆에 적힌 센터는 그 회원이 가장 많이 다닌 곳이에요 · 센터 TV 전국 순위와 같아요</div>`;

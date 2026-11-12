@@ -247,17 +247,17 @@ function baselineOf(hist, exId, today) {
 }
 /* 반환 { verdict: 'low'|'normal'|'high'|'na', ratio, why, quiet } — quiet = 아쉬운 3회 연속이라 표정 대신 코치 한마디만 */
 function judgeIntensity(items, { hist, today, light, comeback, lowRun = 0 }) {
-  if (light) return { verdict: 'na', ratio: null, why: '«가볍게 한 날» 체크' };
-  if (comeback) return { verdict: 'na', ratio: null, why: '복귀 첫 운동' };
+  if (light) return { verdict: 'na', ratio: null, why: '«가볍게 한 날»로 표시해서' };
+  if (comeback) return { verdict: 'na', ratio: null, why: '오랜만에 한 운동이라' };
   const rows = items.map(it => ({ it, vol: itemVolume(it) })).filter(x => x.vol > 0 && EX[x.it.ex].xpk !== 'lesson');
-  if (!rows.length) return { verdict: 'na', ratio: null, why: '세트·시간 기록 없음' };
+  if (!rows.length) return { verdict: 'na', ratio: null, why: '세트나 시간 기록이 없어서' };
   let num = 0, den = 0, newXP = 0, allXP = 0;
   rows.forEach(({ it, vol }) => { const base = baselineOf(hist, it.ex, today), xp = itemBaseXP(it, vol); allXP += xp;
     if (base == null || base <= 0) { newXP += xp; return; }
     const usual = itemBaseXP(it, EX[it.ex].mode === 'cardio' ? base : vol); num += usual * (vol / base); den += usual; });
-  if (!den || newXP / allXP > CFG.MOOD.newShare) return { verdict: 'na', ratio: null, why: '종목별 평소 기록 5번 미만' };
+  if (!den || newXP / allXP > CFG.MOOD.newShare) return { verdict: 'na', ratio: null, why: '아직 5번도 안 해 본 운동이 많아서' };
   const ratio = num / den, verdict = ratio < CFG.MOOD.low ? 'low' : ratio >= CFG.MOOD.high ? 'high' : 'normal';
-  return { verdict, ratio, why: `평소 대비 ${Math.round(ratio * 100)}%`, quiet: verdict === 'low' && lowRun + 1 >= CFG.MOOD.quietAfter };
+  return { verdict, ratio, why: `평소의 ${Math.round(ratio * 100)}%`, quiet: verdict === 'low' && lowRun + 1 >= CFG.MOOD.quietAfter };
 }
 /* 지금 얼굴: 운동한 날 = 그날 판정(아쉬운·신남) · 그 밖 = 마지막 운동 후 0~3일 쌩쌩 · 4~6일 졸림 · 7일+ 시무룩 */
 function exprFor({ demo, mood, lastDays }) {

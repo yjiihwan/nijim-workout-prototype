@@ -397,7 +397,7 @@ function vFriends2() {
   <div><b>${esc(f.n)}</b> ${f.paid ? '<span title="유료 사용">💰</span>' : ''}<div class="muted">${esc(CH[f.t].name)} · ${stageName(f.t, f.lv)}</div></div>
   <div class="val">${S.fTab === 'week' ? `${f.week.toLocaleString()}<small>XP</small>` : `Lv.${S.pureOnly ? (f.pure ?? f.lv) : f.lv}<small>${f.paid && !S.pureOnly && f.pure !== f.lv ? `운동만 Lv.${f.pure}` : TIER_NAME[tierOf(f.lv)]}</small>`}</div></div>`).join('')}</div>
   <button class="btn ghost" data-act="sub" data-v="addFriend" id="goAddFriend">친구 추가</button>
-  <div class="muted" style="margin-top:8px">이번 주 = 이번 주에 얻은 경험치 순 · 자가 기록은 안 들어가요(입점센터 보너스는 들어가요) · 이름을 누르면 프로필</div>${zeroDemo}</div>`;
+  <div class="muted" style="margin-top:8px">이번 주에 얻은 경험치 순위예요 · 자가 기록은 안 들어가고, 입점센터 보너스는 들어가요 · 이름을 누르면 프로필이 보여요</div>${zeroDemo}</div>`;
 }
 
 /* ===== C15b 친구 추가 ===== */
@@ -428,7 +428,7 @@ const KINDS = {
 };
 const MED_FIXED = {
   pain: ['아프면 오늘 운동은 바로 멈추자.', '통증·어지러움이 계속되면 의사·물리치료사와 꼭 상담해 봐.', '센터 선생님에게도 꼭 말해 줘.'],
-  disease: ['질환이나 임신 얘기는 내가 답하면 안 돼.', '운동 전에 의사와 먼저 상담해 봐. 센터 선생님에게도 알려 주면 맞춰서 도와줄 거야.'],
+  disease: ['질환이나 임신 얘기는 내가 답해 줄 수 없어.', '운동 전에 의사와 먼저 상담해 봐. 센터 선생님에게도 알려 주면 맞춰서 도와줄 거야.'],
   diet: ['식단·보충제 양은 내가 정해 줄 수 없어.', '영양사나 의사와 상담해 봐. 운동 루틴은 하나씩 같이 짜 보자.'],
 };
 const jo = (w, a, b) => { const c = w.charCodeAt(w.length - 1) - 0xAC00; return w + (c >= 0 && c <= 11171 && c % 28 ? a : b); };   // 받침 있으면 a(을·이·은)

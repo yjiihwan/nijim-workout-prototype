@@ -61,6 +61,9 @@ const DRAW = (o, img, b) => o.push(c => { c.imageSmoothingQuality = 'high'; c.dr
 const svgIcon = (inner, color, sw) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="240" height="240" fill="none" stroke="${color}" color="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`);
 const cutKey = lv => lv >= 99 ? '99' : ['01', '10', '20', '30', '40', '50', '60', '70', '80', '90'][Math.min(9, Math.floor(lv / 10))];
 const charSrc = (t, lv) => `assets/share/char/${t}/lv${cutKey(lv)}.webp?v=${VER}`;
+/* v1.48 캐릭터 오운완 전용 고해상 원본 + 표시 크기 표(정본 nijim_ounwan_char_square_v148_20261112 SIZE_TABLE.json, 정사각=A안) */
+const charHdSrc = (t, lv) => `assets/share/char_hd/${t}/lv${cutKey(lv)}.webp?v=${VER}`;
+const CH_SIZE = {"story":{"bamtol":{"01":[484,719],"10":[521,725],"20":[531,732],"30":[561,733],"40":[595,732],"50":[622,728],"60":[645,732],"70":[703,707],"80":[716,698],"90":[755,683],"99":[760,679]},"capy":{"01":[517,689],"10":[439,748],"20":[490,735],"30":[503,753],"40":[564,735],"50":[633,743],"60":[601,748],"70":[659,722],"80":[654,738],"90":[678,714],"99":[713,701]},"dot":{"01":[603,687],"10":[570,714],"20":[575,735],"30":[601,737],"40":[626,749],"50":[669,761],"60":[667,748],"70":[725,678],"80":[733,667],"90":[770,654],"99":[771,637]},"imu":{"01":[522,711],"10":[496,722],"20":[492,744],"30":[498,753],"40":[535,754],"50":[616,728],"60":[660,713],"70":[684,711],"80":[678,732],"90":[710,720],"99":[745,701]},"koa":{"01":[590,652],"10":[560,681],"20":[517,689],"30":[536,693],"40":[619,674],"50":[626,715],"60":[673,700],"70":[673,710],"80":[703,701],"90":[696,708],"99":[789,654]},"mungchi":{"01":[853,408],"10":[600,565],"20":[627,585],"30":[609,618],"40":[633,639],"50":[753,585],"60":[709,625],"70":[710,649],"80":[712,658],"90":[747,647],"99":[698,700]},"ppiyak":{"01":[496,725],"10":[472,757],"20":[504,764],"30":[505,788],"40":[602,768],"50":[635,758],"60":[638,758],"70":[632,779],"80":[698,735],"90":[703,732],"99":[734,693]},"rilla":{"01":[534,735],"10":[480,764],"20":[478,770],"30":[497,779],"40":[551,771],"50":[656,753],"60":[634,769],"70":[679,757],"80":[711,739],"90":[714,733],"99":[771,691]},"saetbyeol":{"01":[515,752],"10":[467,789],"20":[452,821],"30":[507,795],"40":[517,810],"50":[622,777],"60":[657,734],"70":[662,757],"80":[677,755],"90":[667,776],"99":[725,739]},"shadow":{"01":[917,447],"10":[586,671],"20":[632,648],"30":[679,661],"40":[691,674],"50":[669,736],"60":[697,694],"70":[712,706],"80":[711,713],"90":[743,694],"99":[787,689]},"ttukbi":{"01":[516,756],"10":[484,776],"20":[456,807],"30":[536,778],"40":[567,778],"50":[631,776],"60":[621,799],"70":[653,778],"80":[692,755],"90":[703,746],"99":[747,719]},"youngcha":{"01":[474,787],"10":[447,823],"20":[499,813],"30":[501,826],"40":[547,825],"50":[649,781],"60":[719,764],"70":[715,771],"80":[698,794],"90":[733,780],"99":[793,720]}},"square":{"bamtol":{"01":[276,409],"10":[296,413],"20":[302,416],"30":[319,417],"40":[338,417],"50":[354,414],"60":[367,417],"70":[400,403],"80":[407,398],"90":[429,388],"99":[433,387]},"capy":{"01":[294,392],"10":[250,426],"20":[279,419],"30":[286,429],"40":[321,418],"50":[361,423],"60":[342,425],"70":[375,411],"80":[372,420],"90":[386,406],"99":[406,399]},"dot":{"01":[343,391],"10":[324,406],"20":[327,418],"30":[342,420],"40":[356,426],"50":[381,433],"60":[379,426],"70":[413,386],"80":[417,380],"90":[438,372],"99":[439,362]},"imu":{"01":[297,405],"10":[282,411],"20":[280,424],"30":[283,429],"40":[305,429],"50":[351,415],"60":[376,406],"70":[389,405],"80":[386,416],"90":[404,410],"99":[424,399]},"koa":{"01":[336,371],"10":[319,387],"20":[294,392],"30":[305,395],"40":[352,383],"50":[356,407],"60":[383,398],"70":[383,404],"80":[400,399],"90":[396,403],"99":[449,372]},"mungchi":{"01":[452,216],"10":[341,321],"20":[357,333],"30":[347,352],"40":[360,364],"50":[429,333],"60":[404,356],"70":[404,369],"80":[405,375],"90":[425,368],"99":[397,399]},"ppiyak":{"01":[282,413],"10":[269,431],"20":[287,435],"30":[287,449],"40":[343,437],"50":[361,432],"60":[363,432],"70":[359,443],"80":[397,418],"90":[400,417],"99":[418,394]},"rilla":{"01":[304,418],"10":[273,435],"20":[272,438],"30":[283,443],"40":[314,439],"50":[373,429],"60":[361,438],"70":[386,431],"80":[405,421],"90":[407,417],"99":[439,393]},"saetbyeol":{"01":[293,428],"10":[266,449],"20":[257,467],"30":[288,453],"40":[295,461],"50":[354,442],"60":[374,418],"70":[377,431],"80":[386,430],"90":[380,442],"99":[413,421]},"shadow":{"01":[452,220],"10":[334,382],"20":[359,369],"30":[386,376],"40":[393,384],"50":[381,419],"60":[397,395],"70":[405,402],"80":[405,406],"90":[423,395],"99":[448,392]},"ttukbi":{"01":[294,430],"10":[275,442],"20":[259,459],"30":[305,443],"40":[323,443],"50":[359,442],"60":[353,455],"70":[372,443],"80":[394,430],"90":[400,425],"99":[425,409]},"youngcha":{"01":[270,448],"10":[254,468],"20":[284,463],"30":[285,470],"40":[311,470],"50":[369,445],"60":[409,435],"70":[407,439],"80":[397,452],"90":[417,444],"99":[451,410]}}};
 const exSrc = id => `assets/ex/z/${id}_a.png?v=${VER}`;
 
 /* ---------- 운동 표기(lib.py chips_of) ---------- */
@@ -366,23 +369,6 @@ const CHAR = {
   story: { W: 1080, H: 1920, M: 64, top: 90, bot: 1830, logo_h: 40, head: [104, 96, 88], sub: 32, date: 28, ch_max: 720, ch_min: 300, lab: 26, num: 64, unit: 30, stat_h: 124, row_h: 100, art: 80, name: 34, sum_: 28, pad: 26, maxrows: 4, gap: 30, lw: 0 },
   square: { W: 1080, H: 1080, M: 48, top: 48, bot: 1032, logo_h: 32, head: [72, 66, 60], sub: 26, date: 24, ch_max: 720, ch_min: 230, lab: 22, num: 50, unit: 24, stat_h: 100, row_h: 88, art: 66, name: 29, sum_: 24, pad: 24, maxrows: 6, gap: 22, lw: 380, lw_max: 470 },
 };
-/* 연속 도장 자리: 캐릭터 오른쪽 위 근처에서 캐릭터 몸(불투명 픽셀)과 겹침이 가장 적은 곳. 머리줄·숫자줄·목록·카드 끝은 피함 */
-function stampSpot(ch, box, r, bounds, obst, ideal) {
-  const [bx, by, bw, bh] = box, G = 4, gw = Math.ceil(bw / G), gh = Math.ceil(bh / G);
-  const cv = document.createElement('canvas'); cv.width = gw; cv.height = gh; const x = cv.getContext('2d', { willReadFrequently: true });
-  x.drawImage(ch, 0, 0, gw, gh); const a = x.getImageData(0, 0, gw, gh).data;
-  const solid = (px, py) => { const gx = Math.floor((px - bx) / G), gy = Math.floor((py - by) / G); return gx >= 0 && gy >= 0 && gx < gw && gy < gh && a[(gy * gw + gx) * 4 + 3] > 40; };
-  const disk = []; for (let dy = -r; dy <= r; dy += 6) for (let dx = -r; dx <= r; dx += 6) if (dx * dx + dy * dy <= r * r) disk.push([dx, dy]);
-  const hitRect = (cx, cy, [x0, y0, x1, y1]) => { const nx = Math.max(x0, Math.min(cx, x1)), ny = Math.max(y0, Math.min(cy, y1)); return (cx - nx) ** 2 + (cy - ny) ** 2 < r * r; };
-  let best = null;
-  for (let cy = by - r; cy <= by + bh * 0.6; cy += 8) for (let cx = bx + bw * 0.5; cx <= bx + bw + r * 1.4; cx += 8) {
-    if (cx - r < bounds[0] || cx + r > bounds[2] || cy - r < bounds[1] || cy + r > bounds[3] || obst.some(o => hitRect(cx, cy, o))) continue;
-    let n = 0; for (const [dx, dy] of disk) if (solid(cx + dx, cy + dy)) n++;
-    const sc = n / disk.length * 200 + Math.hypot(cx - ideal[0], cy - ideal[1]) / r;
-    if (!best || sc < best[2]) best = [cx, cy, sc, n / disk.length];
-  }
-  return best || [Math.min(ideal[0], bounds[2] - r), Math.max(ideal[1], bounds[1] + r), 0, 1];
-}
 function stamp(c, cx, cy, r, weeks) {
   c.save(); c.translate(cx, cy); c.rotate(-8 * Math.PI / 180);
   c.beginPath(); c.arc(0, 0, r, 0, Math.PI * 2); c.fillStyle = CO.pink; c.fill();
@@ -429,63 +415,91 @@ function listpanel(c, x, y, w, rows, more, L, A, chk) {
   if (more) { c.fillStyle = CO.row; c.fillRect(ix + a + 22, yy - 1, x + w - L.pad - (ix + a + 22), 2); TX(c, ix + a + 22, yy + L.row_h / 2 + L.sum_ * 0.36, moreTxt(more), 600, L.sum_, CO.slate); }
   return h;
 }
+/* 캐릭터 + 발밑 그림자(render148 floor_and_char) — 이미지 (cx−w/2, foot−h+2), 그림자 중심 (cx, foot) */
+function floorChar(c, img, cx, foot, w, h) {
+  const fl = Math.min(w * 0.92, 420);
+  c.fillStyle = CO.tint2; c.beginPath(); c.ellipse(cx, foot, fl / 2, 20, 0, 0, Math.PI * 2); c.fill();
+  c.imageSmoothingQuality = 'high'; c.drawImage(img, cx - w / 2, foot - h + 2, w, h);
+}
+/* 정사각 A안 목록 한 줄(render148 row·more_row) */
+function rowA(c, x, y, w, it, rh, a, name, sm, sep, A, chk) {
+  if (sep) hline(c, x + a + 18, x + w, y, CO.row, 2);
+  const art = A.ex[it.ex];
+  if (art) { const [aw, ah] = fitBox(art, a, a, true); c.imageSmoothingQuality = 'high'; c.drawImage(art, x + (a - aw) / 2, y + (rh - ah) / 2, aw, ah); }
+  else dumbbell(c, x + a / 2, y + rh / 2, a * 0.62, CO.bell);
+  const tx = x + a + 18, maxw = x + w - tx, [t, pr] = summary(it), nb = y + rh / 2 - 3;
+  const prw = pr ? tw('PR', 800, sm * 0.78) + 18 : 0;
+  const [ns, nm] = fitSize(exName(it), 700, [name, name - 2, name - 4], maxw - (pr ? prw + 10 : 0));
+  const nw = TX(c, tx, nb, nm, 700, ns, CO.ink);
+  if (pr) { const hh = sm * 1.15; fillRR(c, tx + nw + 10, nb - hh * 0.82, prw, hh, hh / 2, CO.pink); TX(c, tx + nw + 10 + prw / 2, nb - hh * 0.82 + hh / 2, 'PR', 800, sm * 0.78, '#FFFFFF', 1, 'mm'); }
+  chk.push(['name:' + nm, tx + nw + (pr ? prw + 10 : 0), x + w]);
+  TX(c, tx, nb + sm + 10, ellip(t, 500, sm, maxw), 500, sm, CO.slate);
+}
+const SQA = { FOOT0: 1000, GAP: 24, SUB_DESC: 6 };
+/* 캐릭터+그림자 묶음(위 foot−h+2 ~ 아래 foot+20)의 세로 가운데 = (부제 바닥 + 1080)/2. 위 글자와 ≥24, 원래 바닥(1000)보다 아래로 안 감 */
+function sqAFoot(h, subBottom, H = 1080) {
+  let f = (subBottom + H) / 2 - 11 + h / 2;
+  f = Math.max(f, subBottom + SQA.GAP + h - 2);
+  return Math.min(f, SQA.FOOT0);
+}
 function buildChar(c, d, A, size) {
-  let L = CHAR[size]; const { W, H, M } = L, sq = size === 'square', st = statsOf(d), chk = [];
+  let L = CHAR[size]; const { W, H } = L, sq = size === 'square', st = statsOf(d), chk = [];
   c.canvas.width = W; c.canvas.height = H; c.fillStyle = CO.tint; c.fillRect(0, 0, W, H);
-  const ch = trimmed(A.char), sub0 = `${d.nick} · Lv.${d.lv} ${CHN(d.t)}`;
-  const headline = (hb, hs, ls) => { const x = TX(c, M, hb, '오늘도 ', 800, hs, CO.ink, 1, 'ls', ls); TX(c, M + x + 4, hb, '오운완!', 800, hs, CO.pink, 1, 'ls', ls); };
+  const ch = A.charHd || trimmed(A.char), sub0 = `${d.nick} · Lv.${d.lv} ${CHN(d.t)}`;
+  const tb = (CH_SIZE[sq ? 'square' : 'story'][d.t] || {})[cutKey(d.lv)];
+  const [cw, chh] = tb || fitBox(ch, sq ? 452 : 952, sq ? 600 : 826, true);
   c.imageSmoothingQuality = 'high';
   let info;
   if (!sq) {
-    const [rows, more] = pickRows(d.items, L.maxrows), panelH = (rows.length + (more ? 1 : 0)) * L.row_h + 2 * L.pad, headH = 224;
+    const M = L.M, [rows, more] = pickRows(d.items, L.maxrows), panelH = (rows.length + (more ? 1 : 0)) * L.row_h + 2 * L.pad, headH = 224;
     const y0 = L.top, py = L.bot - panelH, sy = py - L.gap - L.stat_h;
     const zTop = y0 + headH + L.gap, zBot = sy - 24 - L.gap;
-    const [cw, chh, k] = fitBox(ch, W - 2 * M, Math.max(L.ch_min, Math.min(L.ch_max, zBot - zTop)));
     drawLogo(c, A.logoB, M, y0, L.logo_h);
     TX(c, W - M, y0 + L.logo_h - 6, d.date_long, 600, L.date, CO.slate, 1, 'rs');
     const hb = y0 + L.logo_h + 34 + L.head[0] * 0.95, [hs] = fitSize('오늘도 오운완!', 800, L.head, W - 2 * M);
-    headline(hb, hs, -hs * 0.02);
-    const [ss, sub] = fitSize(sub0, 500, [L.sub, L.sub - 2, L.sub - 4], W - 2 * M); TX(c, M, hb + 54, sub, 500, ss, CO.slate);
-    const cyTop = zTop + Math.max(0, (zBot - zTop - chh) / 2), flw = Math.min(cw * 0.95, 480);
-    c.fillStyle = CO.tint2; c.beginPath(); c.ellipse(W / 2, cyTop + chh, flw / 2, 24, 0, 0, Math.PI * 2); c.fill();
-    c.drawImage(ch, W / 2 - cw / 2, cyTop, cw, chh);
-    let sp = null;
-    if (d.streak) {
-      const r = Math.round(Math.max(80, Math.min(112, chh * 0.155)));
-      sp = stampSpot(ch, [W / 2 - cw / 2, cyTop, cw, chh], r, [M - 24, y0 + headH + 16, W - M + 24, sy - 10], [], [W / 2 + cw / 2 + r * 0.6, cyTop + r * 1.1]);
-      stamp(c, sp[0], sp[1], r, d.streak); sp.push(r);
-    }
+    const x = TX(c, M, hb, '오늘도 ', 800, hs, CO.ink, 1, 'ls', -hs * 0.02); TX(c, M + x + 4, hb, '오운완!', 800, hs, CO.pink, 1, 'ls', -hs * 0.02);
+    const [ss, sub] = fitSize(sub0, 500, [L.sub, L.sub - 2, L.sub - 4], W - 2 * M - 230); TX(c, M, hb + 54, sub, 500, ss, CO.slate);
+    const foot = Math.min(zBot, zTop + (zBot - zTop + chh) / 2);
+    floorChar(c, ch, W / 2, foot, cw, chh);
+    const sp = d.streak ? [W - M - 92, hb - 8, 92] : null;   // 도장 고정 자리(v1.48 SPEC §4) — 자동 자리 찾기 없앰
+    if (sp) stamp(c, sp[0], sp[1], sp[2], d.streak);
     statrow(c, M, sy, W - 2 * M, st, L);
     listpanel(c, M, py, W - 2 * M, rows, more, L, A, chk);
     chk.push(['panel_bottom', py + panelH, L.bot]);
-    info = { rows: rows.map(exName), more, char_k: +k.toFixed(3), char: [W / 2 - cw / 2, cyTop, cw, chh].map(Math.round), stamp: sp && [Math.round(sp[0]), Math.round(sp[1]), sp[4], +sp[3].toFixed(3)], bottom: Math.round(py + panelH) };
+    info = { rows: rows.map(exName), more, char: [W / 2 - cw / 2, foot - chh + 2, cw, chh].map(Math.round), foot: Math.round(foot), stamp: sp && sp.map(Math.round), zone: [zTop, zBot].map(Math.round), head_y: Math.round(hb + 54), bottom: Math.round(py + panelH) };
   } else {
-    drawLogo(c, A.logoB, M, L.top, L.logo_h);
-    TX(c, W - M, L.top + L.logo_h - 4, d.date_long, 600, L.date, CO.slate, 1, 'rs');
-    const hb = L.top + L.logo_h + 28 + L.head[0] * 0.92; headline(hb, L.head[0], -1.4);
-    const [ss, sub] = fitSize(sub0, 500, [L.sub, L.sub - 2], W - 2 * M); TX(c, M, hb + 46, sub, 500, ss, CO.slate);
-    const top2 = hb + 46 + 40, hAv = Math.min(L.ch_max, L.bot - 26 - top2 - 10, ih(ch));
-    // 넓적한 캐릭터(고레벨)는 기둥 폭이 키를 막는다 → 기둥을 380~470 사이에서 필요한 만큼만 넓힘(목록 폭 ≥ 494)
-    const lw = Math.round(Math.max(L.lw, Math.min(L.lw_max, hAv * iw(ch) / ih(ch) + 10))), rx = M + lw + 20, rw = W - M - rx;
-    const nfit = Math.max(1, Math.min(L.maxrows, Math.floor((L.bot - top2 - L.stat_h - 16 - 2 * L.pad) / L.row_h)));
-    const [rows, more] = pickRows(d.items, nfit), n2 = rows.length + (more ? 1 : 0);
-    const rh = Math.min(118, Math.max(L.row_h, (L.bot - top2 - 20 - L.stat_h - 16 - 2 * L.pad) / n2)), f = rh / L.row_h;
-    L = { ...L, row_h: rh, art: Math.min(96, L.art * f), name: Math.min(34, L.name * Math.sqrt(f)), sum_: Math.min(28, L.sum_ * Math.sqrt(f)) };
-    const ph = n2 * L.row_h + 2 * L.pad, blk = L.stat_h + 16 + ph, by = L.bot - blk, base = L.bot;
-    const [cw, chh, k] = fitBox(ch, lw - 10, hAv);
-    const cy = base - 26 - chh, cx0 = M + lw / 2 - cw / 2;
-    c.fillStyle = CO.tint2; c.beginPath(); c.ellipse(M + lw / 2, base - 26, cw * 0.47, 20, 0, 0, Math.PI * 2); c.fill();
-    c.drawImage(ch, cx0, cy, cw, chh);
-    let sp = null;
-    if (d.streak) {
-      const r = Math.round(Math.max(56, Math.min(76, chh * 0.15)));
-      sp = stampSpot(ch, [cx0, cy, cw, chh], r, [M - 16, top2 - 6, W - M, base], [[rx - 14, by - 14, W, H]], [cx0 + cw + r * 0.5, cy + r * 1.0]);
-      stamp(c, sp[0], sp[1], r, d.streak); sp.push(r);
-    }
-    statrow(c, rx, by, rw, st, L);
-    listpanel(c, rx, by + L.stat_h + 16, rw, rows, more, L, A, chk);
-    chk.push(['panel_bottom', by + L.stat_h + 16 + ph, L.bot + 0.5]);
-    info = { rows: rows.map(exName), more, char_k: +k.toFixed(3), char: [cx0, cy, cw, chh].map(Math.round), stamp: sp && [Math.round(sp[0]), Math.round(sp[1]), sp[4], +sp[3].toFixed(3)], bottom: Math.round(by + L.stat_h + 16 + ph) };
+    // 정사각 A안(11-12 형 확정) — 왼쪽 머리글+캐릭터 / 오른쪽 전체 높이 흰 기록 패널. 좌표 = render148.py sq_A()
+    const M = 56;
+    drawLogo(c, A.logoB, M, M, 34);
+    const hs = 92, b1 = M + 34 + 30 + hs * 0.9, b2 = b1 + hs * 1.06;
+    TX(c, M, b1, '오늘도', 800, hs, CO.ink, 1, 'ls', -hs * 0.02);
+    TX(c, M, b2, '오운완!', 800, hs, CO.pink, 1, 'ls', -hs * 0.02);
+    const [ss, sub] = fitSize(sub0, 500, [26, 24, 22], 452); TX(c, M, b2 + 46, sub, 500, ss, CO.slate);
+    const sp = d.streak ? [446, b1 + 4, 60] : null;
+    if (sp) stamp(c, sp[0], sp[1], sp[2], d.streak);
+    const subBottom = b2 + 46 + SQA.SUB_DESC, foot = sqAFoot(chh, subBottom);
+    floorChar(c, ch, M + 226, foot, cw, chh);
+    const px = 548, py = M, pw = W - M - 548, ph = H - 2 * M, P = 30;
+    fillRR(c, px, py, pw, ph, 32, '#FFFFFF');
+    TX(c, px + P, py + P + 22, d.date_long, 600, 24, CO.slate);
+    let y = py + P + 50;
+    const avail = py + ph - P - (y + st.length * 92 + 14);
+    const nfit = Math.max(1, Math.min(6, Math.floor(avail / 86))), [rows, more] = pickRows(d.items, nfit), nr = rows.length + (more ? 1 : 0);
+    const rh = Math.min(132, avail / nr), f = rh / 86;
+    const srh = Math.min(150, 92 + Math.max(0, avail - nr * rh) / st.length * 0.9);
+    st.forEach(([lab, parts], i) => {
+      if (i) hline(c, px + P, px + pw - P, y, CO.row, 2);
+      TX(c, px + P, y + srh / 2 + 9, lab, 600, 24, CO.slate);
+      let ns = 56; while (numunit(c, 0, 0, parts, ns, 26, '#000', { measure: true }) > pw - 2 * P - 120 && ns > 36) ns -= 2;
+      numunit(c, px + pw - P, y + srh / 2 + ns * 0.36, parts, ns, 26, CO.ink, { anchor: 'r' });
+      y += srh;
+    });
+    hline(c, px + P, px + pw - P, y, CO.tint2, 3); y += 14;
+    const art = Math.min(100, 64 * f), nm = Math.min(34, 28 * Math.sqrt(f)), sm = Math.min(28, 23 * Math.sqrt(f));
+    rows.forEach((it, i) => { rowA(c, px + P, y, pw - 2 * P, it, rh, art, nm, sm, i > 0, A, chk); y += rh; });
+    if (more) { hline(c, px + P + art + 18, px + pw - P, y, CO.row, 2); TX(c, px + P + art + 18, y + rh / 2 + sm * 0.36, moreTxt(more), 600, sm, CO.slate); y += rh; }
+    chk.push(['list_bottom', y, py + ph - P + 0.5]);
+    info = { rows: rows.map(exName), more, char: [M + 226 - cw / 2, foot - chh + 2, cw, chh].map(Math.round), foot: +foot.toFixed(2), sub_bottom: +subBottom.toFixed(2), stamp: sp && sp.map(Math.round), panel_x: px, bottom: Math.round(y) };
   }
   return { style: 'char', size, ...info, stats: st.map(([l, p]) => l + ' ' + p.map(x => x.join('')).join('')), overflow: chk.filter(x => x[1] > x[2] + 0.5).map(x => x[0]) };
 }
@@ -522,10 +536,11 @@ async function assets(d, photo) {
   await fontsReady();
   const icons = d.kind === 'badge' ? { [d.badge.icon]: AI[d.badge.icon] } : d.kind === 'levelup' ? { up: ICO.up } : {};
   const [logo, logoB, ch, dumbbell, ph] = await Promise.all([loadImg(`assets/share/logo_white.svg?v=${VER}`), loadImg(`assets/share/logo_black.svg?v=${VER}`), loadImg(charSrc(d.t, d.lv)), loadImg(svgIcon(ICO.dumbbell, '#B9B9C2', 2.0)), photo ? loadImg(photo) : null]);
+  const charHd = d.kind === 'workout' ? await loadImg(charHdSrc(d.t, d.lv)).catch(() => null) : null;
   const ids = [...new Set(d.items.map(i => i.ex))], exImgs = await Promise.all(ids.map(id => EX[id] && !EX[id].custom ? loadImg(exSrc(id)) : null));
   const icon = {}; for (const [k, v] of Object.entries(icons)) if (v) icon[k] = await loadImg(svgIcon(v, '#FFFFFF', 2.4));
   const ex = {}; ids.forEach((id, i) => { ex[id] = trimmed(exImgs[i]); });
-  return { logo, logoW: logo, logoB, char: ch, dumbbell, ex, icon, photo: ph, face: ph ? await faceOf(ph, photo) : null };
+  return { logo, logoW: logo, logoB, char: ch, charHd, dumbbell, ex, icon, photo: ph, face: ph ? await faceOf(ph, photo) : null };
 }
 async function renderCard(st) {
   const d = cardData(st), sf = st.kind === 'workout' && st.style === 'selfie' && st.photo;

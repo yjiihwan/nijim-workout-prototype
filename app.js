@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.48';
+const VER = 'v1.49';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -327,6 +327,9 @@ const exprPill = (ex, small = false) => (ex === 'sleepy' || ex === 'sad') ? `<sp
 const moodPill = (m, small = false) => m ? `<span class="pill moodpill ${m.verdict} ${small ? 'sm' : ''}">${m.verdict === 'high'
   ? '<svg viewBox="0 0 12 12"><path d="M6 .8 7.3 4.7 11.2 6 7.3 7.3 6 11.2 4.7 7.3.8 6 4.7 4.7Z"/></svg>'
   : '<svg viewBox="0 0 10 12"><path d="M5 .8C5 .8 1.2 5.3 1.2 7.8a3.8 3.8 0 0 0 7.6 0C8.8 5.3 5 .8 5 .8Z"/></svg>'}오늘 ${MOOD[m.verdict].label}</span>` : '';
+/* «월 20회»=코치 질문 한 달 무료 횟수(screens2.js COACH_MAX) — screens2.js 가 늦게 읽혀도 깨지지 않게 기본값 */
+/* 첫 화면은 screens2.js(ensure2) 보다 먼저 그려짐 → 시연 기본값(used 3)을 같은 값으로 미리 넣어 코치 화면 «남은 질문»과 숫자를 맞춤 */
+const coachQuota = () => { if (typeof ensure2 === 'function') ensure2(); else S.coach = S.coach || { agreed: false, used: 3, msgs: [] }; const max = typeof COACH_MAX === 'number' ? COACH_MAX : 20, used = (S.coach && S.coach.used) || 0; return `이번 달 무료 질문 ${Math.max(0, max - used)}/${max}번 남음`; };
 const coachLine = () => {
   const m = moodToday(); if (m) return m.line;   // 결정 21: 그날 표정이 있으면 말풍선은 그 문구
   if (S.mood && S.mood.date === TODAY && S.mood.quiet) return QUIET_LINE;
@@ -473,7 +476,7 @@ function vWorkout() {
     <div class="week">${week}</div>
     <div class="wxp" id="weekXP"><span>이번 주 운동 경험치</span><b>${weekXP().toLocaleString()}/${CFG.WEEK_CAP.toLocaleString()}</b></div><div class="bar thin"><i style="width:${Math.min(100, Math.round(weekXP() / CFG.WEEK_CAP * 100))}%"></i></div>${centerWeek() ? `<div class="wxp itm" id="weekCenterXP"><span>+ 입점센터 보너스</span><b>${centerWeek().toLocaleString()} · 따로 계산</b></div>` : ''}${itemWeek() ? `<div class="wxp itm" id="weekItemXP"><span>+ 아이템 경험치</span><b>${itemWeek().toLocaleString()} · 한도 없음</b></div>` : ''}
     <div class="muted" style="margin-top:8px;font-weight:700;color:var(--ink)">${now.getMonth()+1}월</div><div class="cal">${cal}</div></div>
-  <div class="card coach" id="coachCard"><div class="cbox">${charFit(t, lv, 52, ex)}</div><div><div class="say">${coachLine()}</div><button class="linkbtn" data-act="coach">코치에게 물어보기 › <span class="muted" style="font-weight:500">월 20회</span></button></div></div>
+  <div class="card coach" id="coachCard"><div class="cbox">${charFit(t, lv, 52, ex)}</div><div class="cmain"><div class="say">${coachLine()}</div><button class="coachbtn" data-act="coach" id="coachBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg><span class="ctxt">코치에게 물어보기</span></button><div class="cquota" id="coachQuota">${coachQuota()}</div></div></div>
   <div class="card" id="recentCard"><div style="display:flex;justify-content:space-between;align-items:center"><div class="h2" style="margin:0;font-size:16px">최근 기록</div><button class="linkbtn" data-act="sub" data-v="stats" style="margin:0">전체 보기 ›</button></div>
     ${recent.map(r => `<div class="rec tap" data-act="rec" data-id="${r.id}"><div><b>${esc(r.summary)}</b><small>${r.date.slice(5).replace('-', '/')} · ${esc(r.place)} · ${vLabel(r.v)}</small></div>${recXP(r)}</div>`).join('')}</div>
   <div class="entries" id="entries">

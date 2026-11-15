@@ -463,6 +463,7 @@ function coachReply(kind, q = '') {
   const PICK0 = { 등: ['lat_pulldown', 'seated_row'], 가슴: ['bench', 'chest_press'], 하체: ['leg_press', 'squat'], 어깨: ['m_shoulder', 'lateral'] }[notYet], eqP = eqOn ? eqPickFor(PICK0, EQ) : { ids: PICK0, swaps: [] };
   const pick = eqOn ? eqP.ids.map(id => EX[id].name).join('·') : { 등: '랫풀다운·시티드 로우', 가슴: '벤치프레스·체스트 프레스', 하체: '레그 프레스·스쿼트', 어깨: '숄더 프레스·사이드 레터럴' }[notYet];
   const eqSay = !eqOn ? null : eqP.swaps.length ? `${jo(EX[eqP.swaps[0][0]].name, '은', '는')} 이 센터에 없어서 ${EX[eqP.swaps[0][1]].name}${gjo(EX[eqP.swaps[0][1]].name, '으로', '로')} 골랐어.` : `${EQ.center}에 있는 기구로 골랐어.`;
+  const eqMach = eqOn ? eqMachineLine(eqP.ids, EQ) : null;
   const lastWeek = weekReport(rs, addD(weekStart(TODAY), -7)), run = streakDaysEnding(rs, todayDone() ? TODAY : addD(TODAY, -1));
   const bigSum = big.reduce((a, p) => a + p4[p], 0), allDone = ['등', '가슴', '하체', '어깨'].every(p => wk7[p]);
   const lastDays = last ? Math.round((dOf(TODAY) - dOf(last.date)) / DAY) : null;
@@ -476,11 +477,11 @@ function coachReply(kind, q = '') {
   const cardioOf = r => (r.items || []).filter(it => EX[it.ex] && EX[it.ex].mode === 'cardio' && it.min);
   const kcalLine = it => { const k = kcalOf(it, P); return k ? `${EX[it.ex].name} ${it.min}분으로 ${k}kcal쯤 썼을 거야(몸무게·시간으로 어림한 값).` : null; };
   const nextAns = () => {
-    if (none) { const l = startList(PICK_IDS); if (!l.length) return ['아직 운동 기록이 없어.', `처음이면 ${pick}부터 편한 무게로 3세트씩 어때?`, eqSay, H('w')];
-      return ['아직 운동 기록이 없어.', `처음이면 ${l.map(([id, r]) => `${EX[id].name} ${rangeTxt(r)}`).join(', ')}부터 10회씩 3세트 어때?`, eqSay, barNote(l), warm, !P.sex ? H('sex') : null]; }
+    if (none) { const l = startList(PICK_IDS); if (!l.length) return ['아직 운동 기록이 없어.', `처음이면 ${pick}부터 편한 무게로 3세트씩 어때?`, eqSay, eqMach, H('w')];
+      return ['아직 운동 기록이 없어.', `처음이면 ${l.map(([id, r]) => `${EX[id].name} ${rangeTxt(r)}`).join(', ')}부터 10회씩 3세트 어때?`, eqSay, eqMach, barNote(l), warm, !P.sex ? H('sex') : null]; }
     const base = allDone ? ['이번 주 큰 부위 4곳 다 했어!', `오늘은 4주 동안 제일 적게 한 ${jo(lo, '을', '를')} ${pick}로 3세트씩 어때?`] : [`이번 주 아직 ${jo(notYet, '을', '를')} 안 했어.`, `오늘은 ${pick} 3세트씩 어때?`];
     const fresh = startList(PICK_IDS.filter(id => !lastTop(id)));
-    return [...base, eqSay, fresh.length ? `${fresh.map(([id, r]) => `${EX[id].name} ${rangeTxt(r)}`).join(', ')} — 처음 하는 거라 이 무게부터 해 봐.` : null, warm, !fresh.length && !P.w && PICK_IDS.some(id => !lastTop(id) && COACH_CFG.BEGIN_1RM[id]) ? H('w') : null];
+    return [...base, eqSay, eqMach, fresh.length ? `${fresh.map(([id, r]) => `${EX[id].name} ${rangeTxt(r)}`).join(', ')} — 처음 하는 거라 이 무게부터 해 봐.` : null, warm, !fresh.length && !P.w && PICK_IDS.some(id => !lastTop(id) && COACH_CFG.BEGIN_1RM[id]) ? H('w') : null];
   };
   const safetyAns = () => {
     const ip = incPair(P); if (!ip) return ['무게는 지난번보다 10% 안쪽으로 올려 줘.', '한 번에 20% 넘게 올리면 내가 알려 줄게. 천천히 가자!', H('w')];
@@ -502,7 +503,7 @@ function coachReply(kind, q = '') {
     const ex = exHit(q) || 'bench', e = EX[ex], lw = lastTop(ex);
     if (eqOn && !exAvail(ex, EQ)) { const a = eqAlt(ex, EQ), r0 = a.length ? startRange(a[0], P) : null;   // 그 센터에 없는 기구 → 같은 부위·있는 기구로
       return [`${EQ.center}엔 ${jo(e.name, '을', '를')} 할 기구가 없어.`, a.length ? `같은 ${e.part} 운동으로 ${a.map(id => EX[id].name).join('·')} 어때?` : '센터 선생님에게 비슷한 운동을 물어봐 줘.',
-        r0 ? `${EX[a[0]].name} 처음이면 ${rangeTxt(r0)}부터 10회씩 3세트 해 보자.` : a.length ? '처음이면 15회는 거뜬한 편한 무게로 시작하자.' : null, warm]; }
+        eqMachineLine(a, EQ), r0 ? `${EX[a[0]].name} 처음이면 ${rangeTxt(r0)}부터 10회씩 3세트 해 보자.` : a.length ? '처음이면 15회는 거뜬한 편한 무게로 시작하자.' : null, warm]; }
     if (lw) return [`${jo(e.name, '은', '는')} 이미 기록이 있어 — 지난번 ${kg(lw)}.`, nextStepLine(ex, lw, P) || '지난번 무게에서 천천히 올려 가자.'];
     const r = startRange(ex, P);
     if (r) return [`${e.name} 처음이면 ${rangeTxt(r)}부터 10회씩 3세트 해 보자.`, barNote([[ex, r]]), warm, !P.sex ? H('sex') : null];

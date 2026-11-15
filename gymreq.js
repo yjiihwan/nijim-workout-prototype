@@ -2,7 +2,7 @@
 /* v1.51 (형 11-15 확정) — ① «우리 헬스장 입점 요청» 장치 ② 센터 기구 기반 코칭 ③ 관리자 시연 스위치
    app.js 보다 먼저 읽는다(함수·자료만 정의 — S·esc·toast 같은 app.js 것은 부를 때만 쓴다).
    경험치 계산(engine.js)은 건드리지 않는다. 여기는 «누구에게 무엇을 보여 줄지»만 정한다.
-   실서비스 자리: GYM_DIR = 헬스장 검색(공공 인허가 자료·지도 검색) · 요청 수 = 서버 집계 · CENTER_EQUIP = 센터 기구 표시 기능의 자료 */
+   실서비스 자리: GYM_DIR = 헬스장 검색(공공 인허가 자료·지도 검색) · 요청 수 = 서버 집계 · 센터 기구 = center_machines.js(기구 목록 + 센터별 보유 기구 id·수량) */
 
 /* ===== 자료 ===== */
 /* 헬스장 찾기 목록(가짜). linked = 니짐 입점 · wait = 나 말고 입점을 요청한 사람 수(운동 1회 이상 기록한 계정만) */
@@ -53,13 +53,8 @@ const EX_EQUIP = {
   pushup: [], pullup: ['pullup_bar'], dips: ['dip_bar|m_assist'], plank: [], air_squat: [], lunge: [], burpee: [], crunch: [], leg_raise: [], jump_rope: [], band: [], stretch: [], glute_bridge: [], russian_twist: [], mountain: [],
   walk: 'out', run: 'out', cycle: 'out',
 };
-/* 시험판 가짜 센터 2곳 — 신림점 = 기구 정보 있음 · 봉천점 = 없음(관리자 스위치로 «등록됨»으로 바꾸면 아래 목록을 쓴다) */
-const CENTER_EQUIP = {
-  '니짐 신림점': ['treadmill', 'bike_up', 'elliptical', 'stepmill', 'm_chest_press', 'm_pec_deck', 'm_lat_pulldown', 'm_seated_row', 'm_assist', 'm_back_ext', 'm_leg_press', 'm_leg_ext', 'm_leg_curl', 'm_hip_abd', 'm_hip_add', 'm_crunch',
-    'smith', 'cable', 'barbell', 'rack', 'bench_press', 'bench', 'dumbbell', 'kettlebell', 'pullup_bar', 'dip_bar'],
-  '니짐 봉천점': ['treadmill', 'bike_up', 'spin', 'rower', 'm_chest_press', 'm_shoulder', 'm_lat_pulldown', 'm_leg_press', 'm_leg_ext', 'm_leg_curl', 'smith', 'cable', 'bench', 'dumbbell', 'pullup_bar'],
-};
-const CENTER_EQUIP_ON = { '니짐 신림점': true, '니짐 봉천점': false, '니짐 서울대입구점': false };
+/* v1.52: 센터가 가진 기구는 center_machines.js(엔짐 «기구 찾기»와 같은 모양 — 기구 목록 MACHINES + 센터별 machine_ids·machine_counts)에서 읽는다.
+   위 EQUIP 46종은 이제 «센터가 고르는 목록»이 아니라, 코치가 기구를 운동과 잇는 데 쓰는 안쪽 갈래 이름이다. */
 const EQ_WAIT_BASE = { '니짐 봉천점': 3 };   // 나 말고 기구 정보를 요청한 사람 수(가짜)
 
 /* ===== 상태 ===== */
@@ -225,7 +220,17 @@ function gymSettingsRow() {
 }
 
 /* ===== 센터 기구 기반 코칭 ===== */
-function centerEquip(name) { ensureGym(); const on = S.gymSim.equip[name] ?? CENTER_EQUIP_ON[name] ?? false; return on ? new Set(CENTER_EQUIP[name] || CENTER_EQUIP['니짐 봉천점']) : null; }
+/* 센터의 보유 기구(machine_ids). 관리자 시연 스위치: 0 = 비움(기구 정보 없는 센터) · 1 = 등록됨 · 2 = 기구 목록 전부(많은 센터 보기) */
+function centerRow(name) {
+  ensureGym(); const row = CENTER_GYMS.find(g => g.name === name) || { name, machine_ids: [], machine_counts: {} };
+  let sim = S.gymSim.equip[name]; if (sim === true) sim = 1; if (sim === false) sim = 0;
+  if (sim === 0) return { ...row, machine_ids: [], machine_counts: {} };
+  if (sim === 2) return { ...row, machine_ids: MACHINES.map(m => m.id), machine_counts: { ...CENTER_FILL.machine_counts, ...row.machine_counts } };
+  if (sim === 1 && !row.machine_ids.length) return { ...row, ...CENTER_FILL };
+  return row;
+}
+function centerInfo(name) { const r = centerRow(name); return r.machine_ids.length ? centerMachineInfo(r.machine_ids, r.machine_counts) : null; }
+function centerEquip(name) { const i = centerInfo(name); return i ? i.kinds : null; }
 /* 지금 «입장»해 있는 입점센터 기준. 운동 중이면 그 운동의 센터(입장·레슨일 때만), 아니면 오늘 입장 기록 */
 function eqCtx(sess) {
   ensureGym();
@@ -234,7 +239,7 @@ function eqCtx(sess) {
   const p = name && placesNow().find(x => x.name === name);
   if (!p || !p.linked) return { mode: 'none' };
   const has = centerEquip(name);
-  return has ? { mode: 'equip', center: name, has } : { mode: 'noequip', center: name };
+  return has ? { mode: 'equip', center: name, has, info: centerInfo(name) } : { mode: 'noequip', center: name };
 }
 function exOkAt(id, has) {
   const e = EX[id]; if (!e || e.cat === 'lesson') return false;
@@ -267,11 +272,42 @@ function eqPickFor(defIds, ctx) {
     const a = eqAlt(id, ctx, 1, [...defIds, ...ids])[0]; if (a) { ids.push(a); swaps.push([id, a]); } });
   return { ids: ids.length ? ids : defIds, swaps };
 }
+/* 그 운동을 이 센터의 어느 기구로 하는지 — 운동 부위와 기구 부위(body)가 맞는 것을 먼저 고른다 */
+const _PART_BODY = { 코어: '복근' }, _EQ_SMALL = ['dumbbell', 'barbell', 'kettlebell', 'ezbar', 'bench'];   // 거치대·벤치는 «이 기구에서 해» 하고 짚어 줄 대상이 아니다
+function eqMachineFor(id, ctx) {
+  const req = EX_EQUIP[id], e = EX[id]; if (!ctx.info || !Array.isArray(req) || !e) return null;
+  const want = _PART_BODY[e.part] || e.part;
+  for (const r of req) for (const k of r.split('|')) { if (_EQ_SMALL.includes(k)) continue; const ms = ctx.info.byKind[k]; if (ms && ms.length) return ms.find(m => machineBody(m).includes(want)) || ms[0]; }
+  return null;
+}
+const eqMName = m => `'${m.name}'${m.brand && m.brand !== 'etc' ? `(${m.brand})` : ''}`;
+function eqMachineLine(ids, ctx) {
+  const hit = ids.slice(0, 2).map(id => [id, eqMachineFor(id, ctx)]).filter(x => x[1]); if (!hit.length) return null;
+  return `이 센터에선 ${hit.map(([id, m]) => `${jo(EX[id].name, '은', '는')} ${eqMName(m)}`).join(', ')}에서 하면 돼.`;
+}
+/* 이 센터 기구 목록(종류·부위로 좁혀 보기) */
+let EQV = { type: '', body: '' };
+function eqListHTML(center) {
+  const info = centerInfo(center); if (!info) return '';
+  const types = MACHINE_TYPES.filter(t => info.machines.some(m => m.type === t)), bodies = MACHINE_BODY.filter(b => info.machines.some(m => machineBody(m).includes(b)));
+  const list = info.machines.filter(m => (!EQV.type || m.type === EQV.type) && (!EQV.body || machineBody(m).includes(EQV.body)));
+  const chip = (k, v, l) => `<button class="chip ${EQV[k] === v ? 'on' : ''}" data-act="eqF" data-k="${k}" data-v="${esc(v)}" data-c="${esc(center)}">${l}</button>`;
+  return `<div class="h2 gyname" id="eqListT">${esc(center)} 기구 ${info.machines.length}종</div>
+    <div class="muted eqlsub">센터가 등록한 기구예요. 코치는 여기 있는 기구로 할 수 있는 운동만 알려드려요.</div>
+    <div class="eqfl"><small>종류</small><div class="hscroll">${chip('type', '', '전체')}${types.map(t => chip('type', t, t)).join('')}</div></div>
+    <div class="eqfl"><small>부위</small><div class="hscroll">${chip('body', '', '전체')}${bodies.map(b => chip('body', b, b)).join('')}</div></div>
+    <div class="eqlist" id="eqList">${list.length ? list.map(m => { const n = +info.counts[m.id] || 1;
+      return `<div class="eqm"><div class="eqth">${m.image ? `<img src="${esc(m.image)}" alt="" loading="lazy">` : '<svg viewBox="0 0 24 24"><path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"/></svg>'}</div>
+        <div class="eqmb"><b>${esc(m.name)}</b><div class="eqtags"><span class="ty">${esc(m.type)}</span>${machineBody(m).map(b => `<span>${esc(b)}</span>`).join('')}</div>
+        ${[m.brand !== 'etc' ? m.brand : '', m.series].filter(Boolean).length ? `<small>${esc([m.brand !== 'etc' ? m.brand : '', m.series].filter(Boolean).join(' · '))}</small>` : ''}</div>
+        ${n > 1 ? `<span class="eqcnt">${n}대</span>` : ''}</div>`; }).join('') : '<div class="muted eqnone">여기에 맞는 기구가 없어요</div>'}</div>
+    <button class="btn" data-act="shClose" id="eqListOk" style="margin-top:12px">닫기</button>`;
+}
 const eqOthers = c => Math.max(0, S.gymSim.eqWait[c] ?? EQ_WAIT_BASE[c] ?? 0);
 const eqWaitN = c => eqOthers(c) + (S.eqReq[c] ? 1 : 0);
 function eqCoachCard() {
   const c = eqCtx();
-  if (c.mode === 'equip') return `<div class="eqline" id="eqLine"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7.5"/></svg><span><b>${esc(c.center)}</b> 기구 기준으로 알려드려요</span></div>`;
+  if (c.mode === 'equip') return `<div class="eqline" id="eqLine"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7.5"/></svg><span><b>${esc(c.center)}</b> 기구 기준으로 알려드려요</span><button class="eqmore" data-act="eqList" data-v="${esc(c.center)}" id="eqListBtn">기구 ${c.info.machines.length}종 보기</button></div>`;
   if (c.mode !== 'noequip') return '';
   const did = !!S.eqReq[c.center];
   return `<div class="card gycard eqcard" id="eqCard" data-st="${did ? 1 : 0}"><div class="gyh"><div><small>지금 운동하는 센터</small><b>${esc(c.center)}</b></div></div>
@@ -283,7 +319,7 @@ function eqAltReply(q, lastEx) {
   const c = eqCtx(), ex = exHit(q) || lastEx; if (!ex) return ['바꾸고 싶은 운동 이름을 말해 줘.', '예: «레그프레스 대신 뭐 해?»'];
   const e = EX[ex], alt = eqAlt(ex, c);
   if (!alt.length) return [`${e.name} 대신 할 만한 ${e.part} 운동을 아직 못 찾았어.`, '센터 선생님에게 한번 물어봐 줘.'];
-  return [`${e.name} 대신 ${alt.map(id => EX[id].name).join('나 ').replace(/([가-힣A-Za-z)])나 /g, (m0, c) => c + (((c.charCodeAt(0) - 0xAC00) % 28 > 0 && c >= '가') ? '이나 ' : '나 '))} 어때?`, `둘 다 같은 ${e.part} 운동이야.`.replace('둘 다', alt.length > 1 ? '둘 다' : '이것도'), c.mode === 'equip' ? `${c.center}에 있는 기구로 할 수 있어.` : null];
+  return [`${e.name} 대신 ${alt.map(id => EX[id].name).join('나 ').replace(/([가-힣A-Za-z)])나 /g, (m0, c) => c + (((c.charCodeAt(0) - 0xAC00) % 28 > 0 && c >= '가') ? '이나 ' : '나 '))} 어때?`, `둘 다 같은 ${e.part} 운동이야.`.replace('둘 다', alt.length > 1 ? '둘 다' : '이것도'), c.mode === 'equip' ? (eqMachineLine(alt, c) || `${c.center}에 있는 기구로 할 수 있어.`) : null];
 }
 
 /* ===== 알림(실제 앱에서는 푸시) — 입점 성사 · 5명 모임 · 센터가 기구 정보를 올림 ===== */
@@ -323,6 +359,8 @@ document.addEventListener('click', e => {
     gyChange: () => { const g = ensureGym(); g.flow = v === 'settings' ? 'settings' : 'card'; g.q = ''; g.manual = false; return flowGo('ask'); },
     gyShare: () => (gymShare(), true),
     gyItem: () => { S.gym.itemOn = !S.gym.itemOn; },
+    eqList: () => { EQV = { type: '', body: '' }; sheet(eqListHTML(v)); return true; },
+    eqF: () => { EQV[b.dataset.k] = v; const sc = document.querySelector('#sheet .hscroll'), keep = [...document.querySelectorAll('#sheet .hscroll')].map(x => x.scrollLeft); sheet(eqListHTML(b.dataset.c), true); document.querySelectorAll('#sheet .hscroll').forEach((x, i) => { x.scrollLeft = keep[i] || 0; }); return true; },
     eqReq: () => { ensureGym(); if (!S.eqReq[v]) S.eqReq[v] = { at: Date.now() }; toast(`요청을 남겼어요 · 지금 ${eqWaitN(v)}명이 요청했어요`); },
   };
   if (!H[a]) return;
@@ -358,11 +396,16 @@ function vH8() {
     ${row('가입 시점', gs('join', days < GYM_QUIET_DAYS ? 0 : 1, [[0, '오늘 가입(첫 7일)'], [1, '가입 8일째']]), '첫 7일·첫 3회 기록까지는 «입점 헬스장에서 운동했다면 +○○» 비교를 안 띄워요')}
     ${row('헬스장 바꾸기 제한', `<button class="abtn ghost sm" data-gadm="chg" data-v="1">30일 지난 걸로</button>`, g.changedAt ? `지금은 ${gymChangeLeft()}일 남음` : '지금은 바꿀 수 있는 상태')}
     ${row('사장님용 안내 페이지', `<a class="abtn ghost sm" href="${ownerUrl}" target="_blank" rel="noopener" id="ownerLink" style="text-decoration:none">시안 열기 (새 창)</a>`, '헬스장마다 주소 1개 · 이름 없이 숫자만 · 비용·조건 칸은 [형 입력]')}`)}
-  ${sec('센터 기구 기반 코칭 — 가짜 센터 2곳', `
+  ${sec('센터 기구 기반 코칭 — 시험용 센터 2곳 (기구 목록에서 골라 배정하는 방식)', `
     ${row('오늘 입장한 센터', gs('entry', entry, [['니짐 신림점', '니짐 신림점'], ['니짐 봉천점', '니짐 봉천점'], ['none', '입장 기록 없음']]), '코치는 «입장»한 입점센터의 기구만 봐요 · 입점 안 된 헬스장·집·야외는 내 기록만')}
-    ${centers.map(c => row(`${c} 기구 정보`, gs('equip:' + c, centerEquip(c) ? 1 : 0, [[1, '등록됨'], [0, '아직 없음']]), c === '니짐 봉천점' ? '«아직 없음 → 등록됨»으로 바꾸면 기구 정보를 요청한 회원에게 알림이 가요' : '')).join('')}
+    ${centers.map(c => { const r = centerRow(c), n = r.machine_ids.length, cur = !n ? 0 : n === MACHINES.length ? 2 : 1;
+      return row(`${c} 보유 기구`, gs('equip:' + c, cur, [[1, '배정됨'], [2, `기구 많은 센터(${MACHINES.length}종)`], [0, '비어 있음']]), c === '니짐 봉천점' ? '«비어 있음 → 배정됨»으로 바꾸면 기구 정보를 요청한 회원에게 알림이 가요' : '보유 기구가 비어 있으면 «기구 정보 없는 센터»로 보여요'); }).join('')}
     ${row('다른 사람 기구 정보 요청 수', gs('eqWait', eqOthers('니짐 봉천점'), [[0, '0명'], [3, '3명'], [8, '8명']]), `니짐 봉천점 · 내 요청 ${S.eqReq['니짐 봉천점'] ? '있음(+1)' : '없음'} <button class="abtn ghost sm" data-gadm="eqClear" data-v="1" style="margin-left:6px">내 요청 지우기</button>`)}
-    ${centers.map(c => { const has = centerEquip(c); return `<div class="gyeq"><b>${c}</b> ${has ? `<span class="amut">기구 ${has.size}종 · 이 센터에서 할 수 있는 운동 ${EX_DICT.filter(e => e.cat !== 'lesson' && exOkAt(e.id, has)).length}/87종</span><div class="gyeqchips">${EQUIP.filter(q => has.has(q[0])).map(q => `<span>${q[1]}</span>`).join('')}</div>` : `<span class="amut">기구 정보 없음</span><div class="gyeqask">센터 관리자 화면에 보일 자리(시안): <b>회원 ${eqWaitN(c)}명이 기구 정보를 요청했어요</b> · [기구 정보 등록하기]</div>`}</div>`; }).join('')}`)}`;
+    ${centers.map(c => { const i = centerInfo(c), r = centerRow(c); if (!i) return `<div class="gyeq"><b>${c}</b> <span class="amut">보유 기구 0종 (machine_ids 비어 있음)</span><div class="gyeqask">센터 관리자 화면에 보일 자리(시안): <b>회원 ${eqWaitN(c)}명이 기구 정보를 요청했어요</b> · [기구 배정하기]</div></div>`;
+      const total = i.machines.reduce((a, m) => a + (+i.counts[m.id] || 1), 0);
+      return `<div class="gyeq"><b>${c}</b> <span class="amut">기구 ${i.machines.length}종 · 모두 ${total}대 · ${MACHINE_TYPES.map(t => `${t} ${i.machines.filter(m => m.type === t).length}`).join(' · ')} · 이 센터에서 할 수 있는 운동 ${EX_DICT.filter(e => e.cat !== 'lesson' && exOkAt(e.id, i.kinds)).length}/87종</span>
+        <div class="gyeqchips">${i.machines.map(m => `<span${i.unread.includes(m) ? ' class="un"' : ''}>${esc(m.name)}${i.counts[m.id] > 1 ? ` ×${i.counts[m.id]}` : ''}</span>`).join('')}</div>
+        <div class="amut" style="margin-top:6px">회색 줄 그은 ${i.unread.length}종은 이름만으로 어떤 운동 기구인지 가려내지 못해 코치가 쓰지 않아요${i.implied.length ? ` · 벤치·랙이 있어 ${i.implied.map(k => EQ_NAME[k]).join('·')}${i.implied.length ? '은(는)' : ''} 있는 것으로 봤어요` : ''}</div></div>`; }).join('')}`)}`;
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-gadm]'); if (!b) return;
@@ -384,7 +427,7 @@ document.addEventListener('click', e => {
   else if (k === 'join') S.joinAt = Date.now() - (+v ? 8 : 0) * DAY_MS;
   else if (k === 'chg') g.changedAt = null;
   else if (k === 'entry') { if (v === 'none') S.entryDemo = false; else { S.entryDemo = true; S.entryCenter = v; } }
-  else if (k.startsWith('equip:')) { const c = k.slice(6), was = !!centerEquip(c); sim.equip[c] = !!+v; if (!was && +v && S.eqReq[c]) pushNote({ t: 'eq', name: c }); }
+  else if (k.startsWith('equip:')) { const c = k.slice(6), was = !!centerEquip(c); sim.equip[c] = +v; if (!was && +v && S.eqReq[c]) pushNote({ t: 'eq', name: c }); }
   else if (k === 'eqWait') sim.eqWait['니짐 봉천점'] = +v;
   else if (k === 'eqClear') S.eqReq = {};
   save();

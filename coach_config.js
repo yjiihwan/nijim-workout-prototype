@@ -42,7 +42,8 @@ const COACH_CFG = {
   WARMUP_FROM: 50,   // 이 나이부터 워밍업 세트 한 줄 추가
 
   /* ⑩ 유산소 MET(보통 강도). 출처: 2024 Adult Compendium of Physical Activities(Herrmann 외).
-     kcal ≈ MET × 체중(kg) × 시간(h). 강도 보정은 engine.js CARDIO_K 와 같은 비율 */
+     kcal ≈ MET × 체중(kg) × 시간(h). 강도 보정은 engine.js CARDIO_K 와 같은 비율.
+     v1.66: 속도·경사·파워·계단 수를 적은 기록은 이 표 대신 engine.js cardioMET(경험치와 같은 식) — 이 표는 안 적은 기록·옛 기록에만 */
   MET: { treadmill: 5.0, bike_up: 6.8, bike_rec: 5.5, spin: 8.5, elliptical: 5.0, rower: 7.0, stepmill: 9.0, assault: 8.8, skierg: 6.8, walk: 3.5, run: 9.8, cycle: 7.5 },
   MET_K: { light: 0.8, normal: 1.0, hard: 1.2 },
   /* 트레드밀·달리기에 거리가 있으면 속도로 MET(같은 Compendium 걷기·달리기 항목 근사) */

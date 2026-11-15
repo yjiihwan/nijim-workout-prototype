@@ -16,8 +16,11 @@ const CFG = {
   /* v1.63(형 11-15): 유산소 경험치 = 분 × XP.cardio × 강도(k). 속도·경사·파워 등을 적으면 그 값으로 MET 를 구해 k = MET ÷ ref,
      안 적으면 «얼마나 힘들었어요?»(felt)로 조금만. 부풀리기 방지: k 는 min~max(=12 MET) · 입력값은 lim 까지만 · 한 번 운동 sessXP 까지.
      자전거류는 몸무게와 무관하게 bw(70kg) 고정 — 같은 파워면 같은 경험치(내 정보 몸무게를 낮게 적어 올리는 길 차단).
-     이 판 전에 저장한 기록(it.iv 없음)은 k = 1(시간만) 그대로 */
-  CARDIO_INT: { ref: 5, min: 0.9, max: 2.4, felt: { light: 0.9, normal: 1.0, hard: 1.1 }, sessXP: 240, bw: 70,
+     이 판 전에 저장한 기록(it.iv 없음)은 k = 1(시간만) 그대로.
+     v1.66(형 11-15): 하한 0.9 → 1.0 — 적은 사람이 안 적은 «보통»(1.0)보다 손해 보지 않게. «가벼움»도 0.9 → 1.0(누르면 손해 없음). 이 기준으로 저장한 기록 = it.iv 2 */
+  CARDIO_INT: { ref: 5, min: 1.0, max: 2.4, felt: { light: 1.0, normal: 1.0, hard: 1.1 }, sessXP: 240, bw: 70,
+    v1: { min: 0.9, light: 0.9 },   // v1.63~v1.65 에 저장한 기록(it.iv === 1)은 그때 기준 그대로
+
     lim: { kmh: 20, inc: 15, watt: 400, spm: 160, cyc: 45 } },
   BOOST: { mul: 2 },
   POTION: { xp: 300 },
@@ -157,7 +160,7 @@ const cardioKind = ex => CARDIO_KIND[ex] || null;
 /* 속도를 안 적고 거리만 적었으면 거리÷시간으로 속도를 구한다 */
 function cardioSpeed(it, lim) { const v = it.kmh > 0 ? it.kmh : (it.km > 0 && it.min > 0 ? it.km / (it.min / 60) : 0); return Math.min(lim, v); }
 /* 적은 값으로 구한 MET · 계산에 쓸 값이 없으면 null */
-function cardioMET(it) {
+function cardioMET(it, bw = CFG.CARDIO_INT.bw) {
   const kind = cardioKind(it.ex), L = CFG.CARDIO_INT.lim;
   if (kind === 'tread' || kind === 'foot') {
     const v = cardioSpeed(it, L.kmh); if (!(v > 0)) return null;
@@ -165,7 +168,7 @@ function cardioMET(it) {
     const walk = 0.1 * S + 1.8 * S * G + 3.5, run = 0.2 * S + 0.9 * S * G + 3.5, w = Math.min(1, Math.max(0, (v - 6) / 2));
     return (walk * (1 - w) + run * w) / 3.5;
   }
-  if (kind === 'watt') { const W = Math.min(L.watt, it.watt || 0); return W > 0 ? (10.8 * W / CFG.CARDIO_INT.bw + 7) / 3.5 : null; }
+  if (kind === 'watt') { const W = Math.min(L.watt, it.watt || 0); return W > 0 ? (10.8 * W / bw + 7) / 3.5 : null; }
   if (kind === 'row') { const W = Math.min(L.watt, it.watt || 0); return W > 0 ? lerpTab(ROW_MET, W) : null; }
   if (kind === 'step') { const f = Math.min(L.spm, it.spm || 0); return f > 0 ? 1.2 + 0.13 * f : null; }
   if (kind === 'cycle') { const v = cardioSpeed(it, L.cyc); return v > 0 ? lerpTab(CYC_MET, v) : null; }
@@ -175,10 +178,10 @@ function cardioMET(it) {
 function cardioK(it) {
   const C = CFG.CARDIO_INT;
   if (!it.iv) return { k: 1, by: 'old', met: null, top: false };
-  const met = cardioMET(it);
-  if (met == null) return { k: C.felt[it.level || 'normal'] || 1, by: 'felt', met: null, top: false };
-  const raw = met / C.ref, k = Math.round(Math.min(C.max, Math.max(C.min, raw)) * 100) / 100;
-  return { k, by: 'input', met, top: raw > C.max, low: raw < C.min };
+  const met = cardioMET(it), v1 = it.iv === 1, min = v1 ? C.v1.min : C.min;
+  if (met == null) return { k: (v1 && it.level === 'light' ? C.v1.light : C.felt[it.level || 'normal']) || 1, by: 'felt', met: null, top: false };
+  const raw = met / C.ref, k = Math.round(Math.min(C.max, Math.max(min, raw)) * 100) / 100;
+  return { k, by: 'input', met, top: raw > C.max, low: raw < min };
 }
 const shortSets = it => { const e = EX[it.ex]; return e && (e.mode === 'wr' || e.mode === 'r') ? (it.sets || []).filter(x => x.done && !xpEligible(e, x)).length : 0; };
 /* 경험치용 «내 평소» = 기준일 −56일 안 · «가볍게» 제외 · 같은 날은 합쳐 1회 · 최신 10회 중앙값 · 5회 미만이면 null (SPEC §3-1a)

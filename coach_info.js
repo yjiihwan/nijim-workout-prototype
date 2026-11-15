@@ -54,6 +54,10 @@ const WARMUP_LINE = '시작 전에 가벼운 무게로 워밍업 1~2세트(12~15
 /* ⑩ 유산소 kcal 대략치 — 몸무게 없으면 null */
 function kcalOf(it, p = me()) {
   if (!p.w || !it.min) return null;
+  /* v1.66: 속도·경사·파워·계단 수를 적은 기록은 경험치와 같은 식(engine.js cardioMET)으로 MET 를 구한다.
+     칼로리는 보상이 아니라 어림값이라 경험치용 하한(1.0배)·상한(2.4배)은 안 씌우고, 자전거는 고정 70kg 대신 내 몸무게로 계산 */
+  const m2 = it.iv ? cardioMET(it, p.w) : null;
+  if (m2 != null) return Math.round(m2 * p.w * it.min / 60 / 10) * 10;
   let met = CC.MET[it.ex]; if (met == null) return null;
   if (it.km && ['treadmill', 'run'].includes(it.ex)) { const kmh = it.km / (it.min / 60); met = [...CC.MET_BY_KMH].reverse().find(([v]) => kmh >= v)[1]; }
   else met *= CC.MET_K[it.level || 'normal'] || 1;

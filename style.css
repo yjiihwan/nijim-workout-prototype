@@ -952,3 +952,10 @@ button.gydid{font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .gybal{display:block;text-wrap:balance}
 /* v1.64: 요청 직후 창·5명 모임 알림 작은 글 — 마지막 줄에 한 낱말만 떨어지지 않게(좁은 폭) */
 #gySentSub,#gyFiveSub{text-wrap:pretty}
+
+/* v1.66: 유산소 저장 버튼 — 화면이 길어져도 아래 메뉴 바로 위에 늘 붙어 있게. 띠를 화면 맨 아래까지 깔아 버튼과 메뉴 사이로 뒤 글이 비치지 않게 */
+.csavebar{position:sticky;bottom:0;z-index:4;margin:0 -16px -92px;padding:10px 16px calc(84px + env(safe-area-inset-bottom));background:linear-gradient(to bottom,rgba(244,244,246,0),var(--g1) 12px)}
+.csavebar .btn{margin-top:0;box-shadow:0 4px 14px rgba(22,22,28,.18)}
+body:has(#cSaveBar) .toast{bottom:156px}
+/* v1.66: 알림은 뒤 글이 비치지 않게(글자가 겹쳐 보이던 것) */
+.toast{background:#16161C;box-shadow:0 6px 18px rgba(0,0,0,.22)}

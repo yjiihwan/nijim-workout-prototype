@@ -397,7 +397,7 @@ function vFriends2() {
   <div><b>${esc(f.n)}</b> ${f.paid ? '<span title="유료 사용">💰</span>' : ''}<div class="muted">${esc(CH[f.t].name)} · ${stageName(f.t, f.lv)}</div></div>
   <div class="val">${S.fTab === 'week' ? `${f.week.toLocaleString()}<small>XP</small>` : `Lv.${S.pureOnly ? (f.pure ?? f.lv) : f.lv}<small>${f.paid && !S.pureOnly && f.pure !== f.lv ? `운동만 Lv.${f.pure}` : TIER_NAME[tierOf(f.lv)]}</small>`}</div></div>`).join('')}</div>
   <button class="btn ghost" data-act="sub" data-v="addFriend" id="goAddFriend">친구 추가</button>
-  <div class="muted" style="margin-top:8px">순위에는 입점 헬스장에서 '입장하기'로 들어가서 운동한 기록만 반영돼요 · 이름을 누르면 프로필이 보여요</div>${zeroDemo}</div>`;
+  ${frFootHTML()}${zeroDemo}</div>`;
 }
 
 /* ===== C15b 친구 추가 ===== */

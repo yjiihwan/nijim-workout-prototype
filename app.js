@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.66';
+const VER = 'v1.67';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -761,6 +761,7 @@ function vResult() {
   ${past ? `<div class="notice" id="pastNote"><span>자정을 넘겨 끝냈어요 · 운동을 시작한 날(${md(rec.date)}) 기록으로 저장했어요</span></div>` : ''}
   ${S.savedNote ? `<div class="notice ok" id="savedNote"><span>✓ ${esc(S.savedNote)}</span></div>` : ''}
   ${rec && rec.batch ? `<div class="notice" id="batchNote"><span>운동을 마치고 한꺼번에 적은 기록이라 <b>자가 기록</b>으로 저장했어요</span></div>` : ''}
+  ${typeof frResultNote === 'function' ? frResultNote(rec) : ''}
   ${rec && rec.auto ? `<div class="notice" id="autoNote"><span>3시간 동안 적은 게 없어서 자동으로 끝냈어요 · 마지막으로 적은 시각에 끝난 걸로 저장했어요</span></div>` : ''}
   <div class="card result ${v}" id="resultCard"><div class="cwrap big ${v}">${charHTML(t, lv, 170, true, exprOfMood(show))}</div>
     <div class="rname"><span class="name">${esc(CH[t].name)}</span><span class="pill lvpill">Lv.${lv}</span>${show ? moodPill(show) : '<span class="pill tier1">평소 표정</span>'}</div>

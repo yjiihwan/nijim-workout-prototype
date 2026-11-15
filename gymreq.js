@@ -399,7 +399,7 @@ function gymQrSheet(id) {
 }
 function gymShare(id) {
   const m = gymById(id) || myGym(); if (!m) return;
-  const url = `${location.origin}${location.pathname}?gym=${encodeURIComponent(m.id)}`, text = `나 니짐내짐 앱에 ${m.name} 입점 요청했어. 너도 같이 눌러 줘!`;
+  const url = `${location.origin}${location.pathname}?gym=${encodeURIComponent(m.id)}${typeof myCode === 'function' ? '&inv=' + encodeURIComponent(myCode()) : ''}`, text = `나 니짐내짐 앱에 ${m.name} 입점 요청했어. 너도 같이 눌러 줘!`;
   const copy = () => (typeof NJ_copyText === 'function' ? NJ_copyText(`${text} ${url}`) : Promise.resolve(false)).then(ok => toast(ok ? '보낼 글과 링크를 복사했어요 · 친구에게 붙여 넣어 보내 주세요' : '복사하지 못했어요 · 친구에게 헬스장 이름을 직접 알려 주세요'));
   if (navigator.share) navigator.share({ title: '니짐내짐', text, url }).catch(() => {}); else copy();
 }

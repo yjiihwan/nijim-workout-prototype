@@ -692,12 +692,12 @@ function closeShare() { SEQ++; TSEQ++; if (ST && ST.url) URL.revokeObjectURL(ST.
 /* ---------- 친구 초대(S3) ---------- */
 const inviteLink = () => `${APP_LINK}?ref=${encodeURIComponent(myCode())}`;   // 초대 링크 형식 = 개발 결정(공식 링크 + 코드)
 function vInvite() {
-  return `<div class="subhead"><button data-act="invBack" id="backBtn"><i>‹</i>전체</button><div class="h2">친구 초대</div></div><div class="sec" id="inviteScreen">
+  return `<div class="subhead"><button data-act="invBack" id="backBtn"><i>‹</i>전체</button><div class="h2">친구 초대</div></div><div class="sec" id="inviteScreen">${typeof invTopHTML === 'function' ? invTopHTML() : ''}
   <div class="card inv-hero"><div class="inv-char">${charFit(S.type, S.level, 150)}</div><div class="inv-t">같이 운동할 친구를 초대해요</div>
     <div class="muted inv-d">친구가 내 코드를 넣으면 바로 친구가 돼요<br>친구 리그에서 이번 주 운동을 같이 겨뤄요</div></div>
   <div class="card inv-code"><div><small>내 코드</small><b id="invCode">${myCode()}</b></div><button data-act="invCopyCode" id="invCopyCode">${SVGI(I_COPY)}복사</button></div>
   <div class="card inv-reward" id="invReward"><div class="inv-rw-hd"><b>초대 보상</b></div>
-    <div class="muted">초대 보상은 준비 중이에요 · 정해지면 여기에서 알려 드릴게요</div></div>
+    <div class="muted" id="invRwTxt" style="line-height:1.6;word-break:keep-all">초대한 친구가 가입해서 첫 운동을 기록하면<br>나도 친구도 <b style="color:var(--rose)">꾸미기 아이템을 1개씩</b> 받아요</div></div>
   <button class="btn inv-send" data-act="invSend" id="invSend">${SVGI(I_SHARE)}초대 링크 보내기</button>
   <button class="btn ghost inv-link" data-act="invLink" id="invLink">${SVGI(I_LINK)}링크 복사</button>
   <div class="muted inv-foot">연락처는 보지 않아요 · 링크와 코드로만 초대해요</div></div>`;

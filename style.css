@@ -959,3 +959,11 @@ button.gydid{font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 body:has(#cSaveBar) .toast{bottom:156px}
 /* v1.66: 알림은 뒤 글이 비치지 않게(글자가 겹쳐 보이던 것) */
 .toast{background:#16161C;box-shadow:0 6px 18px rgba(0,0,0,.22)}
+
+/* v1.67 친구 초대 보상 */
+.invrw{margin-top:12px;background:#FFF0F4;color:var(--ink);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.5;word-break:keep-all}
+.invrw b{color:var(--rose)}
+.invgrid .item img{height:56px}
+#invBy{display:block;line-height:1.5;word-break:keep-all}
+.profwk{margin-top:6px;font-size:13px;line-height:1.45}.profwk b{display:block;font-size:14px}.profwk span{color:var(--g5)}
+#frSkipNote{margin:-4px 2px 10px}

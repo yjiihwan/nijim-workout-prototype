@@ -230,7 +230,7 @@ function invRuleHTML() {
   if (n >= INV_MONTH_MAX) return `<b>이번 달 초대 선물 ${INV_MONTH_MAX}개를 다 받았어요</b><br><span class="nb">초대는 계속할 수 있어요</span> · <span class="nb">친구는 선물을 그대로 받아요</span><br><span class="nb">내 선물은 다음 달부터 다시 받아요</span>`;
   return `초대한 친구가 가입해서 첫 운동을 기록하면<br>나도 친구도 <b>꾸미기 아이템을 1개씩</b> 받아요<small class="invcap" id="invCap">내 선물은 한 달에 ${INV_MONTH_MAX}개까지${n ? ` · 이번 달 ${n}개 받았어요` : ''}</small>`;
 }
-const invLooks = () => ITEMS.filter(i => i.kind === 'look' && !S.owned[i.id]);
+const invLooks = () => ITEMS.filter(i => i.kind === 'look' && !S.owned[i.id] && (!i.gear || i.gear.gift));   // v1.70: 초대 선물은 일반 등급(효과 없는 것)만
 function invCheck() {
   const v = ensureInv(); if (!v.by || v.byDone) return;
   const r = S.records.find(r => r.id > v.at && !r.demo && !r.sim && !r.held && !r.paid && (r.v !== 'self' || frSelfOk(r)));

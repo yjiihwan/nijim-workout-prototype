@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.69';
+const VER = 'v1.70';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -35,10 +35,8 @@ const ITEMS = [
   { id:'potion', img:null, kind:'effect', use:1, name:'경험치 물약 +300', desc:'운동 없이 +300 · 한도 없음 · 💰', price:1000 },
   { id:'charm', img:'charm', kind:'effect', use:1, name:'연속 보호권', desc:'운동 못 간 주 1회 보호', price:500 },
   { id:'crown', img:'crown', kind:'effect', name:'리그 왕관', desc:'리그 표시 꾸미기 · 7일', price:800 },
-  { id:'cap', img:'cap', kind:'look', name:'스포츠 캡', desc:'효과 없음', price:200 },
-  { id:'sunglasses', img:'sunglasses', kind:'look', name:'선글라스', desc:'효과 없음', price:300 },
-  { id:'towel', img:'towel', kind:'look', name:'스카이 타월', desc:'효과 없음', price:200 },
-  { id:'wristband', img:'wristband', kind:'look', name:'손목밴드', desc:'효과 없음', price:100 },
+  /* v1.70: 장착 아이템 27종 — 목록·값·효과·유효기간은 item_config.js GEAR 한 곳 */
+  ...GEAR.map(g => ({ id:g.id, img:g.img || null, kind:'look', gear:g, name:g.name, desc:gearFxText(g), price:g.price || 0 })),
 ];
 patchItems();   // 본사(H2) 가격·판매 여부 — config_store.js
 const FRIENDS = [
@@ -187,6 +185,7 @@ function sanitize() {
   if (Array.isArray(S.eatQ) && S.eatQ.length) { S.eatQ.forEach(id => { if (typeof id === 'string') S.inv[id] = (S.inv[id] || 0) + 1; }); S.eatBack = S.eatQ.length; }
   S.eatQ = [];
   ensureGym();   // v1.51 내 헬스장·입점 요청·센터 기구(gymreq.js)
+  ensureGear();  // v1.70 장착 아이템 27종(gear.js)
 }
 /* v1.40(QA 치3): 저장 성공 여부를 돌려준다. 실패하면 화면 위에 사라지지 않는 안내 띠(render) — 알림은 처음 실패했을 때 1번만 */
 let SAVE_OK = true;
@@ -228,20 +227,21 @@ function charHTML(t, lv, boxH, withRing = true, expr = null, same = false, boxW 
   const c = charImg(t, lv, boxH, same, boxW), gold = withRing && lv >= 99 && !S.placeholder ? c.w * 1.1 * 0.12 : 0;   // 골드 링 아래 반쪽만큼 자리를 비워 아래 글자와 안 겹치게
   const r1 = n => Math.round(n * 10) / 10;
   const inner = (opts.rig && !S.placeholder && rigLayers(t, c.cut, c.s)) || `<img src="${c.src}" style="width:${c.w}px;height:${c.h}px" alt="">`;   // opts.rig: 4단계 부품 레이어(팔 ±5°)
-  return `<div class="cbox" style="height:${boxH}px${gold ? `;margin-bottom:${Math.round(gold)}px` : ''}">${withRing ? ringHTML(c, lv, boxH) : ''}<span class="cimg${opts.rig ? ' rig' : ''}" style="width:${c.w}px;height:${c.h}px;left:${r1(c.dx)}px;bottom:${r1(c.db)}px">${inner}${opts.wear ? wearUnder(t, lv) : ''}${faceLayer(t, lv, expr)}${opts.wear ? wearLayer(t, lv, !!opts.rig, c.s) : ''}</span></div>`;
+  return `<div class="cbox" style="height:${boxH}px${gold ? `;margin-bottom:${Math.round(gold)}px` : ''}">${withRing ? ringHTML(c, lv, boxH) : ''}<span class="cimg${opts.rig ? ' rig' : ''}" style="width:${c.w}px;height:${c.h}px;left:${r1(c.dx)}px;bottom:${r1(c.db)}px">${inner}${opts.wear ? wearUnder(t, lv, !!opts.rig, c.s) : ''}${faceLayer(t, lv, expr)}${opts.wear ? wearLayer(t, lv, !!opts.rig, c.s) : ''}</span></div>`;
 }
 /* 작은 칸(홈 축소 카드·코치·랭킹): 같은 배율 규칙으로 Lv.99 가 box 높이에 맞게 → 레벨이 낮으면 작게 보인다 */
 function charFit(t, lv, box, expr = null) {
   if (S.placeholder) return `<img src="${placeholderSrc(lv)}" style="max-width:${box}px;max-height:${box}px" alt="">`;
   const k = scaleOf(t, lv, box, false, box, 1), [w, h] = CHARS[t].dims[cutOf(lv)], dw = Math.round(w*k), dh = Math.round(h*k);
-  return `<span class="cimg" style="width:${dw}px;height:${dh}px"><img src="assets/c/${t}/lv${cutOf(lv)}.png?v=${VER}" style="width:${dw}px;height:${dh}px" alt="">${wearUnder(t, lv)}${faceLayer(t, lv, expr)}${wearLayer(t, lv, false, k)}</span>`;
+  return `<span class="cimg" style="width:${dw}px;height:${dh}px"><img src="assets/c/${t}/lv${cutOf(lv)}.png?v=${VER}" style="width:${dw}px;height:${dh}px" alt="">${wearUnder(t, lv, false, k)}${faceLayer(t, lv, expr)}${wearLayer(t, lv, false, k)}</span>`;
 }
 /* 랭킹 아바타(40px 아이콘): v1.8처럼 컷마다 칸에 꽉 맞추고, 밤톨·뚝비·영차만 다른 화면과 같은 비율로 줄인다 */
 function charAvatar(t, lv, box, me = false) {
-  const c = cutOf(lv), [w, h] = CHARS[t].dims[c], k = box / Math.max(w, h) * (me && wearOn().includes('cap') ? 0.8 : 1);   // 모자를 쓰면 칸 위로 잘리지 않게 조금 줄인다
+  const c = cutOf(lv), [w, h] = CHARS[t].dims[c], k = box / Math.max(w, h) * (me && wearTall() ? 0.8 : 1);   // 모자·배경을 쓰면 칸 위로 잘리지 않게 조금 줄인다
   const img = `<img src="assets/c/${t}/lv${c}.png?v=${VER}" style="width:${Math.round(w*k)}px;height:${Math.round(h*k)}px" alt="">`;
-  return me ? `<span class="cimg" style="width:${Math.round(w*k)}px;height:${Math.round(h*k)}px">${img}${wearUnder(t, lv)}${wearLayer(t, lv, false, k)}</span>` : img;   // v1.68: 내 줄에만 착용 그림(친구 장착 정보는 없음)
+  return me ? `<span class="cimg" style="width:${Math.round(w*k)}px;height:${Math.round(h*k)}px">${img}${wearUnder(t, lv, false, k)}${wearLayer(t, lv, false, k)}</span>` : img;   // v1.68: 내 줄에만 착용 그림(친구 장착 정보는 없음)
 }
+const gearGot = rec => rec && rec.xpBoost && rec.br && rec.br.gearPart ? Math.min(rec.xpBoost, rec.br.gearPart) : 0;   // v1.70 착용 효과로 더 받은 경험치
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2400); }
 
 /* ===== 기록·장부 조회 (계산은 engine.js) ===== */
@@ -300,7 +300,7 @@ function sessCtx() {
   const today = realRecs().filter(r => r.date === TODAY), wk = realRecs().filter(r => weekDays().includes(r.date) && r.date !== TODAY);
   return { firstToday: !today.length, weekParts: [...new Set([...wk, ...today].flatMap(r => (r.items || []).map(i => EX[i.ex] && EX[i.ex].part)).filter(Boolean))],
     streakWeeks: S.streakWeeks, lastDays: lastWorkoutDays(), prToday: today.reduce((a, r) => a + (r.prCount || 0), 0),
-    boost: boostMul(), selfieToday: selfieClaims(), ...volCtx(today) };
+    boost: boostMul(), gear: gearWorn(), selfieToday: selfieClaims(), ...volCtx(today) };
 }
 /* 결정 35 입력값 — 종목별 경험치용 «내 평소»(대상 세트·분) + 오늘 앞 세션에서 이미 센 양·그 세션 배율(같은 날 재판정 차액용) */
 function volCtx(today) {
@@ -453,7 +453,7 @@ function vWorkout() {
   const toNext = lv >= 99 ? 0 : Math.max(0, need(lv) - S.xp);
   const nextEvo = lv >= 99 ? '만렙 달성!' : lv >= 90 ? 'Lv.99에 골드 아우라' : `Lv.${(Math.floor(lv/10)+1)*10}에 진화해요`;
   const pend = S.pending ? `<div class="notice"><span>⏳ 못 본 레벨업 장면이 있어요</span><button class="btn sm" data-act="playPending">보기</button></div>` : '';
-  const eqNames = ITEMS.filter(i => S.equipped[i.id]).map(i => i.kind === 'look' ? `<button class="pill eqpill" data-act="myItems" data-id="${i.id}" aria-label="${i.name} · 내 아이템에서 쓰고 벗기">${i.name}<i>›</i></button>` : `<span class="pill">${i.name}</span>`).join('') + gymPill();   // v1.68: 꾸미기 알약을 누르면 내 캐릭터 «내 아이템» 칸으로
+  const eqNames = gearPills() + ITEMS.filter(i => i.kind !== 'look' && S.equipped[i.id]).map(i => `<span class="pill">${i.name}</span>`).join('') + gymPill();   // v1.68: 알약을 누르면 내 캐릭터 «내 아이템» 칸으로 · v1.70: 4개부터는 한 줄로
   const seg = `<div class="seg wseg"><button class="${S.wseg==='mine'?'on':''}" data-act="wseg" data-v="mine">내 운동</button><button class="${S.wseg==='feed'?'on':''}" data-act="wseg" data-v="feed">오운완 피드</button></div>`;
   if (S.wseg === 'feed') return `${seg}<div class="sec"><div class="ph tall">오운완 피드는 준비 중이에요<br>곧 친구들의 오운완을 여기서 볼 수 있어요</div></div>`;
   const wd = weekDays(), wk = weekCount();
@@ -734,7 +734,9 @@ function xpRows(rec) {
     const big = R.filter(x => x.n != null).sort((p, q) => q.n - p.n)[0]; if (big) { big.n += afterV - (R.reduce((t, x) => t + (x.n || 0), 0) - (b.dayDone || 0)); big.k = big.k || 'v'; } }
   if (b.sm !== 1) add(b.comeback ? `오랜만에 한 운동 ×${b.sm.toFixed(2)}` : `연속 ${b.streakW ?? S.streakWeeks}주 ×${b.sm.toFixed(2)}`, sAmt, 'mul', 's');
   if (b.catchUp) add('오늘 먼저 한 운동과 합쳐 평소보다 많이 함', b.catchUp, 'vol');
-  if (b.boostPart) add(`×${b.bm || CFG.BOOST.mul} 부스터 · 한도 없음`, b.boostPart, 'gold');
+  if (b.boostPart - (b.gearPart || 0) > 0) add(`×${b.bm || CFG.BOOST.mul} 부스터 · 한도 없음`, b.boostPart - (b.gearPart || 0), 'gold');
+  (b.gearRows || []).forEach(g => add(`${esc(g.name)} +${g.pct}%`, g.xp, 'gold gear', 'gear'));   // v1.70 착용 효과: 무엇 덕에 얼마 더 받았는지
+  if (b.gearCapped) note(`착용 효과는 한 운동에 합쳐서 +${GEAR_CFG.capPct}%까지예요`);
   if (b.newXP) add(`새 부위 (${b.newParts.join('·')})`, b.newXP); if (b.prXP) add(`개인 기록 ${b.prN}번`, b.prXP);
   if (b.goal) add('주간 보너스(예전 규칙)', b.goal);   // v1.41 이전 기록에만 남아 있음
   if (b.selfieXP) add(`📸 오운완 셀카 · 기본 ${fmt(b.baseXP)}의 ${CFG.SELFIE_BONUS.pct}%`, b.selfieXP, 'gold sf');
@@ -771,7 +773,8 @@ function vResult() {
     <div class="rmeta">${rec ? vBadge(rec.v) + sfBadge(rec.selfieXP > 0) : ''}<span class="muted">${rec ? esc(rec.summary) : ''}</span></div>
     ${rec && rec.held ? `<div class="notice hold" id="holdNote"><span>세트 사이가 ${CFG.SET_GAP_SEC}초보다 짧아서 경험치 ${fmt(heldAll(rec))} XP는 24시간 뒤에 들어와요. 기록은 그대로 저장됐어요.</span><button class="btn sm ghost demoonly" data-act="release" data-id="${rec.id}">🧪 24시간 뒤</button></div>` : ''}
     ${rec && rec.cut ? `<div class="muted capline" id="resultCap">${rec.cutReason === 'week' ? `이번 주에 받을 수 있는 운동 경험치 ${CFG.WEEK_CAP.toLocaleString()} XP를 다 채웠어요` : `오늘 받을 수 있는 운동 경험치 ${(rec.v === 'self' ? CFG.DAY_CAP_V0 : CFG.DAY_CAP).toLocaleString()} XP를 다 채웠어요`} · 넘친 ${fmt(rec.cut)} XP는 안 들어갔어요. 기록·연속은 그대로 쌓여요</div>` : ''}
-    ${rec && rec.xpBoost ? `<div class="muted capline" id="resultBoost">×${(rec.br && rec.br.bm) || CFG.BOOST.mul} 부스터로 늘어난 +${fmt(rec.xpBoost)} XP는 한도 없이 다 들어갔어요 💰</div>` : ''}
+    ${rec && rec.xpBoost - gearGot(rec) > 0 ? `<div class="muted capline" id="resultBoost">×${(rec.br && rec.br.bm) || CFG.BOOST.mul} 부스터로 늘어난 +${fmt(rec.xpBoost - gearGot(rec))} XP는 한도 없이 다 들어갔어요 💰</div>` : ''}
+    ${rec && gearGot(rec) ? `<div class="muted capline" id="resultGear">${rec.br.gearRows.map(g => `${esc(g.name)} +${g.pct}%`).join(' · ')} 덕에 +${fmt(gearGot(rec))} XP 더 받았어요 · 캐릭터 레벨에만 들어가고 친구 리그 순위·운동 레벨에는 안 들어가요</div>` : ''}
     ${gymResultCard(rec)}
     <div class="bar"><i style="width:${lv >= 99 ? 100 : Math.max(0, Math.round(S.xp / need(lv) * 100))}%"></i></div><div class="muted">${lv >= 99 ? '최고 레벨이라 레벨은 더 오르지 않아요 · 받은 경험치는 이번 주 랭킹에 그대로 들어가요' : `Lv.${lv + 1}까지 ${Math.max(0, need(lv) - S.xp).toLocaleString()} XP`}</div>
     ${ev ? `<div class="ptline" id="ptLine">Lv.${ev.from} → ${ev.to} 레벨업</div>` : ''}
@@ -857,7 +860,7 @@ function vSelfie() {
 
 /* ===== 랭킹·내 캐릭터 (v1.10 그대로) ===== */
 function rankList() {
-  const me = { n:'나', t:S.type, lv:S.level, week:leagueWeek(), paid:S.paidLog.length ? 1 : 0, pure:S.exLv, me:true };
+  const me = { n:'나', t:S.type, lv:S.level, week:leagueWeek(), paid:gearPaid(), pure:S.exLv, me:true };
   let arr = [...FRIENDS, me].map(f => ({ ...f, key: S.fTab === 'week' ? f.week : (S.pureOnly ? (f.pure ?? f.lv) : f.lv) }));
   return arr.sort((a, b) => b.key - a.key);
 }
@@ -873,18 +876,12 @@ function vFriends() {
   <div class="muted" style="margin-top:8px">순위에는 입점 헬스장에서 '입장하기'로 들어가서 운동한 기록만 반영돼요</div></div>`;
 }
 /* v1.68 «내 아이템» — 가진 꾸미기 아이템을 그림으로 보여 주고 눌러서 쓰고 벗는다(상점까지 안 가도 됨 · 상점의 장착/해제도 그대로) */
-function myItemsHTML(t, looks) {
-  const own = looks.filter(i => S.owned[i.id]), g = wearGeo(t, cutOf(S.level)), noArm = S.equipped.wristband && S.owned.wristband && g && !g.wr;
-  return `<div class="myitems" id="myItems"><div class="mihd"><b>내 아이템</b><span>${own.length ? '눌러서 쓰고 벗어요' : ''}</span></div>
-  ${own.length ? `<div class="migrid">${own.map(i => { const on = !!S.equipped[i.id]; return `<button class="mi ${on ? 'on' : ''}" data-act="wear" data-id="${i.id}" aria-pressed="${on}" aria-label="${i.name} ${on ? '벗기' : '쓰기'}">${itemImg(i)}<b>${i.name}</b><small>${on ? '착용 중 · 벗기' : '쓰기'}</small></button>`; }).join('')}</div>` : '<div class="miempty">아직 가진 꾸미기 아이템이 없어요 · 아래 상점에서 구할 수 있어요</div>'}
-  ${noArm ? '<div class="minote">지금 단계는 팔이 없어서 손목밴드가 그림에 안 보여요 · Lv.10부터 보여요</div>' : ''}</div>`;
-}
 function vMe() {
-  const t = S.type, looks = ITEMS.filter(i => i.kind === 'look');
+  const t = S.type;
   return `${subHead('내 캐릭터')}<div class="sec">
   <div class="card" style="text-align:center">${charHTML(t, S.level, 170, true, exprNow(), false, 212, { rig: true, wear: true })}<div style="margin-top:14px"><span class="name">${esc(CH[t].name)}</span> <span class="pill lvpill">Lv.${S.level}</span> <span class="pill tier${tierOf(S.level)}">${TIER_NAME[tierOf(S.level)]}</span></div>
   <div class="muted" style="margin-top:4px">칭호 «${stageName(t, S.level)}» · 운동 레벨 Lv.${S.exLv} · 포인트 ${S.points.toLocaleString()}P</div>
-  ${myItemsHTML(t, looks)}
+  ${myItemsHTML(t)}
   <div class="slots">${ITEMS.filter(i => i.kind === 'effect' && S.equipped[i.id]).map(i => `<div class="slot on">${i.name}</div>`).join('')}${S.gym && S.gym.item ? `<button class="slot gyslot ${S.gym.itemOn ? 'on' : ''}" data-act="gyItem" id="gySlot">${GYM_ITEM}${S.gym.itemOn ? '' : ' · 달기'}</button>` : ''}</div>
   <button class="btn" data-act="sub" data-v="shop" id="shopBtn">🛍️ 아이템 상점</button>
   <button class="btn ghost" data-act="rechoose" style="margin-top:8px">캐릭터 바꾸기 <span class="muted">(Lv.10 전 1회 무료)</span></button></div>
@@ -911,7 +908,7 @@ function vSettings() {
   return `${subHead('설정')}<div class="sec">
   <div class="card" id="ticketCard"><div class="h2" style="font-size:16px">쉬어가기 티켓</div>
     <div class="row"><div><b>이번 달 ${S.ticketLeft}장 남음</b><div class="muted">한 번도 운동 못 간 주를 1번 지켜 줘요 · 매달 1일에 1장</div></div></div>
-    <div class="row"><div><b>연속 보호권 ${S.shields}장</b><div class="muted">상점에서 산 보호권 · 티켓 다음에 써요</div></div><button class="btn sm ghost" data-act="sub" data-v="shop">상점</button></div>
+    <div class="row"><div><b>연속 보호권 ${S.shields}장</b><div class="muted">상점에서 산 보호권 · 티켓 다음에 써요</div></div><button class="btn sm ghost" data-act="sub" data-v="shop">상점</button></div>${charmRow()}
     <div class="row"><span>운동 못 간 주에 자동으로 쓰기</span>${sw('ticketAuto', S.ticketAuto)}</div>
     <div class="muted">티켓·보호권이 없으면 연속은 절반으로 줄어요(0이 되지 않아요)</div></div>
   <div class="card" id="notiCard"><div class="h2" style="font-size:16px">알림</div>
@@ -945,13 +942,15 @@ function vSettings() {
 }
 
 /* ===== 상점 · 부스터·물약 계산기 ===== */
-const itemImg = i => i.img ? `<img src="assets/item_${i.img}.png" alt="">` : FLASK;
+const itemImg = i => i.img ? `<img src="assets/item_${i.img}.png" alt="">` : i.gear ? gearIcon(i.id) : FLASK;
 function vShop() {
   if (S.sTab === 'food') return `${subHead('아이템 상점')}<div class="sec"><div style="display:flex;justify-content:flex-end;margin-bottom:8px"><b>${S.points.toLocaleString()}P</b></div>
-  <div class="seg"><button data-act="stab" data-v="effect">효과</button><button data-act="stab" data-v="look">꾸미기</button><button class="on" data-act="stab" data-v="food" id="stabFood">먹고 마시는</button></div>${vEatTab()}</div>`;
+  <div class="seg"><button data-act="stab" data-v="effect">효과</button><button data-act="stab" data-v="look">장착 아이템</button><button class="on" data-act="stab" data-v="food" id="stabFood">먹고 마시는</button></div>${vEatTab()}</div>`;
+  if (S.sTab === 'look') return `${subHead('아이템 상점')}<div class="sec"><div style="display:flex;justify-content:flex-end;margin-bottom:8px"><b id="shopPts">${S.points.toLocaleString()}P</b></div>
+  <div class="seg"><button data-act="stab" data-v="effect">효과</button><button class="on" data-act="stab" data-v="look" id="stabLook">장착 아이템</button><button data-act="stab" data-v="food" id="stabFood">먹고 마시는</button></div>${gearShopHTML()}</div>`;   // v1.70 장착 아이템 27종(gear.js)
   const list = ITEMS.filter(i => i.kind === S.sTab && !i.off);
   return `${subHead('아이템 상점')}<div class="sec"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><button class="linkbtn" data-act="sub" data-v="calc" id="goCalc" style="margin:0">부스터·물약 계산기 ›</button><b>${S.points.toLocaleString()}P</b></div>
-  <div class="seg"><button class="${S.sTab==='effect'?'on':''}" data-act="stab" data-v="effect">효과</button><button class="${S.sTab==='look'?'on':''}" data-act="stab" data-v="look">꾸미기</button><button class="${S.sTab==='food'?'on':''}" data-act="stab" data-v="food" id="stabFood">먹고 마시는</button></div>
+  <div class="seg"><button class="${S.sTab==='effect'?'on':''}" data-act="stab" data-v="effect">효과</button><button class="${S.sTab==='look'?'on':''}" data-act="stab" data-v="look" id="stabLook">장착 아이템</button><button class="${S.sTab==='food'?'on':''}" data-act="stab" data-v="food" id="stabFood">먹고 마시는</button></div>
   ${S.sTab === 'effect' ? `<div class="muted wkleft" id="wkLeft">이번 주 운동 경험치 ${weekXP().toLocaleString()}/${CFG.WEEK_CAP.toLocaleString()} · <b>아이템 경험치는 한도 없어요</b>${boostOn() ? ` · <b>${boostLabel()} 부스터 적용 중</b>` : ''}</div>` : ''}
   <div class="grid2">${list.map(i => { const n = i.use ? (S.inv[i.id] || 0) : 0, own = i.use ? n > 0 : S.owned[i.id], eq = S.equipped[i.id];
     return `<div class="item">${i.use ? (n ? `<span class="tag">${n}개</span>` : '') : eq?'<span class="tag">장착중</span>':own?'<span class="tag">보유</span>':''}${itemImg(i)}<b>${i.name}</b><small>${i.desc}</small>
@@ -1074,7 +1073,7 @@ function vBroken() {
 let FLASH = null;
 const flash = (msg, cls = 'ok') => { FLASH = { msg, cls, fresh: true }; };
 function render() {
-  syncToday(); autoEndCheck();
+  syncToday(); autoEndCheck(); if (gearTick()) save();   // v1.70: 유효기간이 끝난 용품 정리·달성 보상 지급
   let html;
   try { html = viewHTML(); }
   catch (err) { console.error('[render]', err);
@@ -1087,7 +1086,7 @@ function render() {
   if (FLASH) FLASH.fresh = false;
   document.body.classList.toggle('wk', S.tab === 'workout');
   document.body.classList.toggle('hasbar', !!$('endBar'));
-  eatMount(); animMount();
+  eatMount(); animMount(); gearNoteDue();
   document.querySelectorAll('.tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
   if (S.tab === 'workout' && S.sub === 'selfie' && S.selfieStep === 'cam') camStart();
   S.bump = 0;
@@ -1230,7 +1229,7 @@ function endAsk() {
 }
 function endSession(auto = false) {
   const s = S.session; if (!s) return;
-  syncToday();
+  syncToday(); gearTick();
   const snap = JSON.stringify(S);
   const out = onDay(sessDay(s), () => endSession0(s, auto));
   if (!out) return;
@@ -1647,8 +1646,9 @@ document.addEventListener('click', e => {
   else if (a === 'stab') S.sTab = v;
   else if (a === 'part') { S.part = v; }
   else if (a === 'gear') { S.gear = v; }
-  else if (a === 'buy') { const x = ITEMS.find(i => i.id === id); if (id === 'potion' && S.level >= 99) return toast('최고 레벨이라 경험치 물약은 효과가 없어요 · 포인트는 그대로예요'); if (S.points < x.price) return toast('포인트가 부족해요 — 니짐 포인트 충전 화면으로 넘어가요');
-    S.points -= x.price; if (x.use) S.inv[id] = (S.inv[id] || 0) + 1; else S.owned[id] = 1; toast(`${x.name} 구매 완료 · -${x.price}P`); }
+  else if (a === 'buy') { const x = ITEMS.find(i => i.id === id); if (id === 'potion' && S.level >= 99) return toast('최고 레벨이라 경험치 물약은 효과가 없어요 · 포인트는 그대로예요'); if (x.gear && !S.owned[id] && gearBlock(x.gear)) return toast(gearBlock(x.gear)); if (S.points < x.price) return toast('포인트가 부족해요 — 니짐 포인트 충전 화면으로 넘어가요');
+    const had = !!S.owned[id]; if (x.gear && had && !x.gear.days) return;   // 기간 없는 장착 아이템은 한 번만 산다
+    S.points -= x.price; if (x.use) S.inv[id] = (S.inv[id] || 0) + 1; else S.owned[id] = 1; toast(x.gear ? gearBought(x.gear, had) : `${x.name} 구매 완료 · -${x.price}P`); }
   else if (a === 'use') return useItem(id);
   else if (a === 'eatUse') return eatUse(id);
   else if (a === 'buyFood') return buyFood(id);
@@ -1661,8 +1661,9 @@ document.addEventListener('click', e => {
   else if (a === 'calcB') S.calc.booster = v;
   else if (a === 'cmp') { const m = S.cmp, lim = { perWeek: [0, 7, 1], per: [0, 1200, 20], potions: [0, 21, 1] }[b.dataset.k]; m[b.dataset.k] = clampStep(m[b.dataset.k], dd, lim[2], lim[0], lim[1]); }
   else if (a === 'cmpB') S.cmp.booster = v;
-  else if (a === 'equip') { S.equipped[id] = !S.equipped[id]; }
-  else if (a === 'wear') { if (S.owned[id]) S.equipped[id] = !S.equipped[id]; }
+  else if (a === 'equip') { if (GEAR_BY[id]) gearToggle(id); else S.equipped[id] = !S.equipped[id]; }
+  else if (a === 'wear') { gearToggle(id); }
+  else if (a === 'gslot' || a === 'gearShop' || a === 'gearLock' || a === 'gearDay' || a === 'gearDemo') { if (gearAct(a, v, id) === 'done') return; }
   else if (a === 'ticketAuto') S.ticketAuto = !S.ticketAuto;
   else if (a === 'noti') S.noti[v] = !S.noti[v];
   else if (a === 'hideTips') S.hideTips = !S.hideTips;

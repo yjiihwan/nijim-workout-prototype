@@ -201,17 +201,21 @@ function sessionXP(s, c) {
   const cnt = { weight: 0, body: 0, cardio: 0 }, xpOf = { weight: 0, body: 0, cardio: 0 };
   let l = 0, base = 0, plainSum = 0, bonusXP = 0, short = 0, cardioLeft = CFG.CARDIO_INT.sessXP;
   const per = [], bonusRows = [], noBase = [];
+  /* v1.70 착용 효과(item_config.js): 그 운동 줄의 경험치 × 효과 %(겹치면 더하되 운동마다 capPct 까지) — 부스터와 따로 계산하고 아이템 장부로 간다 */
+  const worn = c.gear && c.gear.length ? c.gear : null, gearBy = {}; let gearRaw = 0, gearCapped = false;
+  const gearAdd = (e, amt) => { if (!worn || !(amt > 0)) return; const gp = gearPctFor(worn, e); if (!gp.pct) return; gearRaw += amt * gp.pct / 100; if (gp.capped) gearCapped = true;
+    gp.hit.forEach(h => { const o = gearBy[h.id] = gearBy[h.id] || { id: h.id, name: h.name, pct: h.pct, xp: 0 }; o.xp += amt * h.pct / 100 * (gp.pct / gp.sum); }); };
   s.items.slice(0, CFG.LIM.exPerSession).forEach(it => {
     const e = EX[it.ex]; if (!e) return;
     short += shortSets(it);
-    if (e.xpk === 'lesson') { l++; return; }
+    if (e.xpk === 'lesson') { l++; gearAdd(e, X.lesson); return; }
     const k = e.xpk, n = Math.min(xpQty(it), LEFT[k]); LEFT[k] -= n;   // 세션 상한은 개수에 먼저(SPEC ⑥-3)
     if (!n) return;
     const b = xb[it.ex] ?? null, qd = (tq[it.ex] || 0) + n, on = volBonusOn(qd, b);
     let plain = UNIT[k] * n, ck = null;
     if (k === 'cardio') { ck = cardioK(it); plain = Math.min(cardioLeft, Math.round(plain * ck.k)); cardioLeft -= plain; }   // v1.63: 분 × 강도 · 한 번 운동 유산소 sessXP 까지
     const extra = on ? plain * (CFG.VOL_BONUS.mult - 1) : 0;
-    cnt[k] += n; xpOf[k] += plain; plainSum += plain; base += plain + extra; bonusXP += extra;
+    cnt[k] += n; xpOf[k] += plain; plainSum += plain; base += plain + extra; bonusXP += extra; gearAdd(e, plain + extra);
     per.push(ck ? { ex: it.ex, cnt: n, bonus: on, base: b, qd, xp: plain, k: ck.k, by: ck.by } : { ex: it.ex, cnt: n, bonus: on, base: b, qd });
     if (on) bonusRows.push([e.name, extra, b, qd]); else if (b == null) noBase.push(e.name);
   });
@@ -223,7 +227,10 @@ function sessionXP(s, c) {
   const comeback = c.lastDays >= CFG.COMEBACK_DAYS, sm = comeback ? CFG.COMEBACK_MUL : streakMul(c.streakWeeks);
   const baseXP = plainSum + l * X.lesson + first + complete;   // SPEC ④-b: 입점 보너스·셀카 기준 = 운동량 ×1.2 전 · 검증·연속·고정 전
   const { sf: selfieXP, why: selfieWhy } = selfieBonus(s, c, baseXP, any);
-  const mult = Math.round((base + first + complete) * vm * sm), bm = c.boost === true ? CFG.BOOST.mul : (c.boost || 0), boostPart = bm && any ? Math.round((mult + selfieXP) * (bm - 1)) : 0;   // c.boost = 배율(숫자) · true 는 예전 2배 부스터 · 셀카 몫에도 배율(PLAN ⑧-2 A)
+  const mult = Math.round((base + first + complete) * vm * sm), bm = c.boost === true ? CFG.BOOST.mul : (c.boost || 0), boostOnly = bm && any ? Math.round((mult + selfieXP) * (bm - 1)) : 0;   // c.boost = 배율(숫자) · true 는 예전 2배 부스터 · 셀카 몫에도 배율(PLAN ⑧-2 A)
+  const gearPart = any ? Math.round(gearRaw * vm * sm) : 0, gearRows = Object.values(gearBy).map(o => ({ ...o, xp: Math.round(o.xp * vm * sm) })).filter(o => o.xp > 0 || gearPart > 0);
+  if (gearRows.length) { const d = gearPart - gearRows.reduce((a, o) => a + o.xp, 0); gearRows.sort((p, q) => q.xp - p.xp)[0].xp += d; }   // 반올림 차이는 가장 큰 줄에
+  const boostPart = boostOnly + gearPart;   // 아이템 장부로 가는 몫 = 부스터 + 착용 효과(둘 다 운동 레벨·리그에는 안 들어감)
   /* 같은 날 나눠 저장: 앞 세션에서 ×1.0이던 종목이 그날 합계로 ×1.2가 되면 앞 세션 몫 차액을 이번 세션에 더한다(앞 원장은 안 고침) */
   const nowOn = new Set(per.filter(x => x.bonus).map(x => x.ex));
   const catchUp = Math.round((c.todayPrev || []).filter(p => !p.bonus && nowOn.has(p.ex)).reduce((a, p) => a + (p.xp != null ? p.xp : UNIT[EX[p.ex].xpk] * p.cnt) * (CFG.VOL_BONUS.mult - 1) * p.mul, 0));
@@ -238,7 +245,7 @@ function sessionXP(s, c) {
   const goal = old && any ? (old.goal || 0) : 0;
   const dayDone = !old && c.firstToday && any ? X.dayDone : 0;
   const fixed = newN * X.newPart + prN * X.pr + goal + dayDone;
-  return { lines, base, baseXP, selfieXP, selfieWhy, bonusXP, bonusRows, noBase, short, per, catchUp, first, complete, v, vm, sm, comeback, mult, boostPart, bm, newParts: fresh.slice(0, newN), newXP: newN * X.newPart,
+  return { lines, base, baseXP, selfieXP, selfieWhy, bonusXP, bonusRows, noBase, short, per, catchUp, first, complete, v, vm, sm, comeback, mult, boostPart, gearPart, gearRows: gearRows.length ? gearRows : undefined, gearCapped: gearCapped || undefined, bm, newParts: fresh.slice(0, newN), newXP: newN * X.newPart,
     prN, prXP: prN * X.pr, goal, dayDone: old ? undefined : dayDone, fixed, raw: mult + catchUp + boostPart + fixed + selfieXP, any };
 }
 

@@ -190,7 +190,7 @@ select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--g2)
 
 /* ===== 결정 21 세션 강도 반응 — 표정은 캐릭터 얼굴 자체(눈·입·볼)가 바뀐다. .cimg 안의 .face 가 그림과 같은 칸에 정확히 겹친다 ===== */
 .cwrap{position:relative;display:inline-block}
-.cimg{position:relative;display:block;flex:none}
+.cimg{position:relative;display:block;flex:none;isolation:isolate}
 .cimg img{display:block}
 .cimg .face{position:absolute;left:0;top:0;width:100%;height:100%;z-index:2;pointer-events:none;display:block}
 .cimg .face.art{width:auto;height:auto}   /* design 레이어: 인라인 % (본체 기준 오프셋·크기) 가 자리를 정한다 */
@@ -976,7 +976,20 @@ body:has(#cSaveBar) .toast{bottom:156px}
 /* ===== v1.68 꾸미기 아이템 착용 그림(equip.js) — 캐릭터 그림 칸(.cimg) 위에 % 로 겹친다 ===== */
 .cimg .wr{position:absolute;z-index:3;pointer-events:none;display:block;max-width:none;max-height:none;margin:0;overflow:visible}
 .cimg .wrarm{z-index:3;pointer-events:none}
-.cimg .wtw,.cimg .whead{z-index:2}.cimg .wsg{z-index:4}.cimg .wcap{z-index:5}
+.cimg .wtw,.cimg .whead,.cimg .wun,.cimg .wov{z-index:2}.cimg .wsg{z-index:4}.cimg .wcap{z-index:5}
+/* v1.70 장착 27종: 그림 뒤(배경·아우라·망토·매트)는 음수 층 — .cimg 가 isolation 이라 카드 뒤로 빠지지 않는다 */
+.cimg .wbg{z-index:-3;border-radius:16%;overflow:hidden}.cimg .wau{z-index:-2}.cimg .wbk{z-index:-1}
+.cimg img.part.wov{z-index:2}
+@keyframes wTw{0%,100%{transform:scale(.3);opacity:.25}50%{transform:scale(1);opacity:1}}
+.wspk{transform-box:fill-box;transform-origin:center;animation:wTw 1.7s ease-in-out infinite}.wspk1{animation-delay:-.6s}.wspk2{animation-delay:-1.15s}
+@keyframes wSpin{to{transform:rotate(360deg)}}
+.wrays{transform-box:fill-box;transform-origin:center;animation:wSpin 18s linear infinite}
+@keyframes wFl{0%,100%{transform:scale(1,1)}50%{transform:scale(.94,1.14)}}
+.wfl{transform-box:fill-box;transform-origin:50% 100%;animation:wFl .9s ease-in-out infinite}.wfl2{animation-duration:.7s}
+@keyframes wSnow{from{transform:translateY(0)}to{transform:translateY(112px)}}
+.wsnow{animation:wSnow 4s linear infinite}
+@media (prefers-reduced-motion:reduce){.wspk,.wrays,.wfl,.wsnow{animation:none}.wsnow{transform:translateY(40px)}}
+.gicon{display:block}
 .eqs .eqpill{border:0;font-family:inherit;cursor:pointer;min-height:24px;-webkit-tap-highlight-color:transparent}.eqs .eqpill i{font-style:normal;color:var(--g5);margin-left:1px}
 .myitems{margin-top:12px;text-align:left}
 .mihd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}.mihd b{font-size:14px}.mihd span{font-size:12px;color:var(--g5)}
@@ -989,3 +1002,30 @@ body:has(#cSaveBar) .toast{bottom:156px}
 .slots:empty{display:none}
 .mini .mbox:has(.wcap),.wsay .cbox:has(.wcap),.rank .av:has(.wcap){overflow:visible}
 @media (max-width:350px){.migrid{gap:4px}.mi small{font-size:10px;letter-spacing:-.3px}}
+
+/* ===== v1.70 장착 아이템 27종 — 상점 «장착 아이템» 칸 · 내 아이템 칸 · 알림 ===== */
+.gslot{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;margin:10px -16px 6px;padding:0 16px 2px;scrollbar-width:none}.gslot::-webkit-scrollbar{display:none}.gslot .chip{flex:none}
+.gshopnote{margin:0 0 10px;font-size:12px;line-height:1.45}
+.gitem{display:flex;flex-direction:column;padding-top:26px}
+.gitem .gicon,.gitem>img{height:64px;width:64px;margin:2px auto 6px;object-fit:contain;flex:none}
+.gitem b{word-break:keep-all}
+.gitem small{flex:1;min-height:32px;display:flex;flex-direction:column;gap:1px;word-break:keep-all}
+.gitem .gfx.on{color:var(--rose);font-weight:700}
+.gsoon{font-style:normal;color:#E8283C;font-weight:800}
+.ggrade{position:absolute;top:8px;right:8px;font-size:10px;font-weight:800;padding:2px 6px;border-radius:6px;background:#fff;color:var(--g5)}
+.ggrade.g-g{background:#DCEEFF;color:#0B57B0}.ggrade.g-r{background:#FFE9A8;color:#8A5600}.ggrade.g-p{background:#EADCFF;color:#5B21B6}.ggrade.g-s{background:#D3F5E3;color:#0B7A43}
+.gitem .glock{color:var(--g5);font-size:12px;white-space:nowrap;padding-left:2px;padding-right:2px}
+.gitem .gmore{font-size:12px;line-height:1.15;padding:5px 2px;white-space:nowrap}.gitem .gmore i{display:block;font-style:normal;font-size:11px;color:var(--g5);font-weight:600}
+.mislot{font-size:11px;font-weight:800;color:var(--g5);margin:10px 0 4px}
+.myitems .migrid{grid-template-columns:repeat(3,1fr)}
+.mi .gicon{height:40px;width:44px;display:block;margin-bottom:2px}
+.mi b{white-space:normal;word-break:keep-all;text-align:center;line-height:1.2}
+.mifx{font-size:10px;color:var(--rose);font-weight:700;white-space:nowrap}.mileft{font-size:10px;color:var(--g5);white-space:nowrap}
+.micnt{color:var(--g5);font-weight:600;font-size:12px}
+.gnote{display:flex;gap:12px;align-items:center;padding:8px 0}.gnote+.gnote{border-top:1px solid var(--g2)}
+.gnico{flex:none;width:56px;height:56px;border-radius:14px;background:var(--g1);display:flex;align-items:center;justify-content:center}.gnico .gicon,.gnico img{width:44px;height:44px;object-fit:contain}
+.gnico .gone{opacity:.35;filter:grayscale(1);display:flex}
+.gnote b{display:block;font-size:16px;line-height:1.3;word-break:keep-all}.gnote small{display:block;color:var(--g5);font-size:13px;margin-top:3px;line-height:1.4;word-break:keep-all}
+@media (max-width:350px){.gitem .glock{font-size:11px;letter-spacing:-.4px}.mifx,.mileft{letter-spacing:-.4px}}
+
+.eqs .eqpill{white-space:nowrap}

@@ -340,7 +340,7 @@ const myCode = () => 'NJ-' + (CH[S.type].name.charCodeAt(0) % 900 + 100) + 'K' +
 const myItemXP = () => S.paidLog.reduce((a, p) => a + (p.xp || 0), 0) + S.records.reduce((a, r) => a + (r.xpBoost || 0), 0);
 function profileData(key) {
   if (key === 'me') { const tot = cumXP(S.level) + S.xp, item = Math.min(tot, myItemXP());
-    return { n: '나', t: S.type, lv: S.level, ratio: Math.round((tot - item) / Math.max(1, tot) * 100), paid: S.paidLog.length ? 1 : 0, streak: S.streakWeeks, ach: achieveList().filter(a => a.done).length, me: true, friend: true }; }
+    return { n: '나', t: S.type, lv: S.level, ratio: Math.round((tot - item) / Math.max(1, tot) * 100), paid: gearPaid(), streak: S.streakWeeks, ach: achieveList().filter(a => a.done).length, me: true, friend: true }; }
   const p = personOf(key); if (!p) return null;
   return { ...p, ratio: exRatio(p.lv, p.pure), friend: friendsAll().some(f => f.n === key) };
 }
@@ -367,7 +367,7 @@ function vProfile() {
 
 /* ===== C15 친구·리그 (친구 0명 상태 + 행 눌러 프로필) ===== */
 rankList = function () {
-  const me = { n: '나', t: S.type, lv: S.level, week: leagueWeek(), paid: S.paidLog.length ? 1 : 0, pure: S.exLv, me: true };
+  const me = { n: '나', t: S.type, lv: S.level, week: leagueWeek(), paid: gearPaid(), pure: S.exLv, me: true };
   return [...friendsAll(), me].map(f => ({ ...f, key: S.fTab === 'week' ? f.week : (S.pureOnly ? (f.pure ?? f.lv) : f.lv) })).sort((a, b) => b.key - a.key);
 };
 function lastVsThis() {

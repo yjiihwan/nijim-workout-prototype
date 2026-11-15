@@ -236,7 +236,7 @@ const RAR = { 일반: 'r0', 희귀: 'r1', 영웅: 'r2', 전설: 'r3' };
 function vShopAdm() {
   const cats = [...new Set(SHOP82.map(x => x.cat))], ko = Object.fromEntries(SHOP82.map(x => [x.cat, x.cat_ko]));
   const list = SHOP82.filter(x => AV.shopCat === 'all' || x.cat === AV.shopCat);
-  return sec('지금 회원 앱 상점 (9개 · 바로 반영)', tbl(['판매', '아이템', '설명(자동)', '가격'], ITEM_SEED.map(b => { const o = D.shop[b.id] || {}, cur = ITEMS.find(i => i.id === b.id);
+  return sec('지금 회원 앱 상점 (${ITEM_SEED.length}개 · 바로 반영)', tbl(['판매', '아이템', '설명(자동)', '가격'], ITEM_SEED.map(b => { const o = D.shop[b.id] || {}, cur = ITEMS.find(i => i.id === b.id);
       return `<tr class="${o.off ? 'aoff' : ''}"><td><button class="asw ${o.off ? '' : 'on'}" data-aact="shopOff" data-v="${b.id}"></button></td><td><b>${esc(cur.name)}</b></td><td>${esc(cur.desc)}</td><td><input class="ain num ${o.price != null ? 'chg' : ''}" style="width:90px" type="number" data-shop="${b.id}" value="${o.price ?? b.price}" title="기본 ${b.price}"> P</td></tr>`; })),
       '<span class="amut">v1.12 회원 앱에 실제로 있는 상점</span>')
     + sec(`상점 82개 (PLAN v1.8 §2-10 · shop_items) — ${list.length}개 표시`, `<div class="aflt" style="margin-bottom:10px">${seg('shopCat', AV.shopCat, [['all', '전체'], ...cats.map(c => [c, ko[c]])])}</div>`

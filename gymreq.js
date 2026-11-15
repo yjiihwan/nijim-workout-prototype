@@ -149,7 +149,7 @@ const gymFirstWeek = () => { ensureGym(); return Date.now() - S.joinAt < GYM_QUI
 /* ===== v1.55 멤버십(형 11-15 시정) =====
    한 사람이 여러 센터 멤버십을 가질 수 있다. 처음 설문·운동 시작 때 장소 질문은 «멤버십이 없는 사람»에게만 묻는다.
    · 멤버십 보유(own) = 입점센터를 이용하는 걸 이미 안다 → 설문 2/3 건너뜀 · 운동 시작 때 그 센터로 자동(여러 장이면 오늘 입장한 센터 → 없으면 내 멤버십 센터만 먼저)
-   · 결제했지만 미발급(pend) = 그 센터로 기록은 되지만 보너스는 멤버십 확인 뒤부터(소급 여부 = 형 결정 대기)
+   · 결제했지만 미발급(pend) = 그 센터로 기록은 되지만 보너스는 멤버십 확인 뒤부터(형 확정 11-15: 소급 없음)
    실서비스 자리: 회원의 유효 멤버십 목록·결제 내역(멤버십 발급 전) API. 시험판은 관리자 시연 H8 또는 주소 ?ms=none|one|multi|pend 로 바꿔 본다 */
 const MS_DEMO = { none: { own: [], pend: null }, one: { own: ['니짐 신림점'], pend: null }, multi: { own: ['니짐 신림점', '니짐 봉천점'], pend: null }, pend: { own: [], pend: '니짐 서울대입구점' } };
 let _msUrl = (location.search.match(/[?&]ms=(none|one|multi|pend)\b/) || [])[1] || null;

@@ -368,7 +368,7 @@ function vProfile() {
 /* ===== C15 친구·리그 (친구 0명 상태 + 행 눌러 프로필) ===== */
 rankList = function () {
   const me = { n: '나', t: S.type, lv: S.level, week: leagueWeek(), paid: gearPaid(), pure: S.exLv, me: true };
-  return [...friendsAll(), me].map(f => ({ ...f, key: S.fTab === 'week' ? f.week : (S.pureOnly ? (f.pure ?? f.lv) : f.lv) })).sort((a, b) => b.key - a.key);
+  return [...friendsAll(), me].map(f => ({ ...f, key: S.fTab === 'week' ? f.week : (rkPure() ? (f.pure ?? f.lv) : f.lv) })).sort((a, b) => b.key - a.key);
 };
 function lastVsThis() {
   const rs = S.records, m0 = weekStart(TODAY), m1 = addD(m0, -7);
@@ -392,10 +392,10 @@ function vFriends2() {
     ${lastVsThis()}${zeroDemo}</div>`;
   const list = rankList();
   return `${subHead('랭킹 · 친구')}<div class="sec">${req}<div class="seg"><button class="${S.fTab === 'week' ? 'on' : ''}" data-act="ftab" data-v="week">이번 주</button><button class="${S.fTab === 'level' ? 'on' : ''}" data-act="ftab" data-v="level">레벨</button></div>
-  ${S.fTab === 'level' ? `<div class="row" style="padding-top:0"><span class="muted">운동만 보기 (💰 유료 경험치 빼고)</span><button class="sw ${S.pureOnly ? 'on' : ''}" data-act="pure"></button></div>` : ''}
+  ${rkModeHTML()}
   <div class="card">${list.map((f, i) => `<div class="rank tap ${f.me ? 'me' : ''}" data-act="prof" data-v="${f.me ? 'me' : esc(f.n)}"><div class="no">${i + 1}</div><div class="av">${S.placeholder ? `<img src="${placeholderSrc(f.lv)}" alt="">` : charAvatar(f.t, f.lv, 40, f.me)}</div>
-  <div><b>${esc(f.n)}</b> ${f.paid ? '<span title="유료 사용">💰</span>' : ''}<div class="muted">${esc(CH[f.t].name)} · ${stageName(f.t, f.lv)}</div></div>
-  <div class="val">${S.fTab === 'week' ? `${f.week.toLocaleString()}<small>XP</small>` : `Lv.${S.pureOnly ? (f.pure ?? f.lv) : f.lv}<small>${f.paid && !S.pureOnly && f.pure !== f.lv ? `운동만 Lv.${f.pure}` : TIER_NAME[tierOf(f.lv)]}</small>`}</div></div>`).join('')}</div>
+  <div><b>${esc(f.n)}</b> ${rkPaidMark(f)}<div class="muted">${esc(CH[f.t].name)} · ${stageName(f.t, f.lv)}</div></div>
+  <div class="val">${rkValHTML(f)}</div></div>`).join('')}</div>
   <button class="btn ghost" data-act="sub" data-v="addFriend" id="goAddFriend">친구 추가</button>
   ${frFootHTML()}${zeroDemo}</div>`;
 }

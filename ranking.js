@@ -185,10 +185,20 @@ function frSelfWeek() {
     byDay[r.date] = (byDay[r.date] || 0) + Math.max(0, (r.xp || 0) - (r.xpBoost || 0)); });
   return { self: Object.values(byDay).reduce((s, x) => s + Math.min(x, FR_SELF.dayMax), 0), skipped, skBatch };
 }
+/* v1.71 이번 주에 포인트로 받은 경험치 — 물약·먹이(paidLog) + 부스터·착용 효과로 늘어난 몫(xpBoost).
+   순위에 안 들어가는 기록(한꺼번에 적은 기록·보류·10분이 안 된 자가 기록)에 붙은 몫은 종합 순위에도 안 센다 */
+const FR_PAID_DEMO = { 벤치왕: 620, 근손실방지위원장: 940, 퇴근후스쿼트: 150 };
+function frPaidWeek() {
+  const wd = weekDays();
+  return S.paidLog.reduce((s, p) => s + (wd.includes(p.date) ? p.xp || 0 : 0), 0)
+    + S.records.reduce((s, r) => s + (wd.includes(r.date) && !r.demo && !r.paid && !r.sim && !r.held && !r.batch && (r.v !== 'self' || frSelfOk(r)) ? r.xpBoost || 0 : 0), 0);
+}
 const rankList1 = rankList;
 rankList = function () {
   const l = rankList1(), mine = frSelfWeek();
-  l.forEach(f => { f.entered = f.week; f.self = f.me ? mine.self : (FR_SELF_DEMO[f.n] || 0); f.week = f.entered + f.self; });
+  /* v1.71 종합 순위 = 운동분(pureWeek) + 이번 주에 포인트로 받은 경험치(paidWeek) · 순수 운동량 순위 = 운동분만 */
+  l.forEach(f => { f.entered = f.week; f.self = f.me ? mine.self : (FR_SELF_DEMO[f.n] || 0); f.pureWeek = f.entered + f.self;
+    f.paidWeek = f.me ? frPaidWeek() : (FR_PAID_DEMO[f.n] || 0); f.week = f.pureWeek + (rkPure() ? 0 : f.paidWeek); });
   if (S.fTab === 'week') { l.forEach(f => { f.key = f.week; }); l.sort((a, b) => b.key - a.key); }
   return l;
 };
@@ -211,7 +221,7 @@ SUB.profile = () => {
   const f = rankList().find(x => (key === 'me' ? x.me : x.n === key)); S.fTab = prev;
   if (!f) return html;
   /* 카드를 따로 두면 «응원» 버튼이 첫 화면 밖으로 밀려서, 캐릭터 카드 맨 아래 두 줄로 넣는다 */
-  return html.replace(/<\/div>(\s*)<div class="card" id="profRatio">/, `<div id="profWeek" class="profwk"><b>이번 주 친구리그 ${fmt(f.week)} XP</b><span>입장하고 한 운동 ${fmt(f.entered)} XP · 그 밖의 운동 ${fmt(f.self)} XP</span></div></div>$1<div class="card" id="profRatio">`);
+  return html.replace(/<\/div>(\s*)<div class="card" id="profRatio">/, `<div id="profWeek" class="profwk"><b>이번 주 친구리그 ${fmt(f.week)} XP</b><span>입장하고 한 운동 ${fmt(f.entered)} XP · 그 밖의 운동 ${fmt(f.self)} XP${!rkPure() && f.paidWeek > 0 ? ` · 포인트로 받은 경험치 ${fmt(f.paidWeek)} XP` : ''}</span></div></div>$1<div class="card" id="profRatio">`);
 };
 
 /* ===== v1.67 친구 초대 보상(형 11-15 결정 ⑥) — 초대한 사람·받은 사람 모두 꾸미기 아이템 1개 =====

@@ -40,7 +40,7 @@ const CFG = {
      이 장부는 주 weekCap 만 본다 — 하루 600·주 1,800 과 무관, 아이템 배율·부스터도 안 붙는다 */
   CENTER_BONUS: { pct: 50, weekCap: 900 },
   /* 결정 38: 운동·레벨업·진화·업적 포인트 지급 없음(POINT 키 삭제). 캐릭터 쪽 포인트는 구매적립(실결제)·상점 쓰기만.
-     ⑦-1 B — 입점 보너스는 운동 레벨·[운동만 보기]·친구 리그·주간 리그(xp_week)·DID 랭킹판에 전부 들어간다. 빠지는 건 아이템 장부뿐 */
+     ⑦-1 B — 입점 보너스는 운동 레벨·[순수 운동량 순위]·친구 리그·주간 리그(xp_week)·DID 랭킹판에 전부 들어간다. 빠지는 건 아이템 장부뿐 */
   /* 결정 37(SPEC §3-2b): 오운완 셀카 = round(기본 경험치 × pct%) 고정 가산 — 인증·연속·×1.2 안 곱함 · 장소 무관 · 하루 perDay회 ·
      카메라·앨범 모두(11-10 형: 사진 판정 없음) · 운동 장부(하루 600·V0 200·주 1,800 안, 잘릴 땐 셀카 몫부터) · 입점 보너스와 서로 안 곱함 */
   SELFIE_BONUS: { pct: 20, perDay: 1 },
@@ -230,7 +230,7 @@ function sessionXP(s, c) {
   const mult = Math.round((base + first + complete) * vm * sm), bm = c.boost === true ? CFG.BOOST.mul : (c.boost || 0), boostOnly = bm && any ? Math.round((mult + selfieXP) * (bm - 1)) : 0;   // c.boost = 배율(숫자) · true 는 예전 2배 부스터 · 셀카 몫에도 배율(PLAN ⑧-2 A)
   const gearPart = any ? Math.round(gearRaw * vm * sm) : 0, gearRows = Object.values(gearBy).map(o => ({ ...o, xp: Math.round(o.xp * vm * sm) })).filter(o => o.xp > 0 || gearPart > 0);
   if (gearRows.length) { const d = gearPart - gearRows.reduce((a, o) => a + o.xp, 0); gearRows.sort((p, q) => q.xp - p.xp)[0].xp += d; }   // 반올림 차이는 가장 큰 줄에
-  const boostPart = boostOnly + gearPart;   // 아이템 장부로 가는 몫 = 부스터 + 착용 효과(둘 다 운동 레벨·리그에는 안 들어감)
+  const boostPart = boostOnly + gearPart;   // 아이템 장부로 가는 몫 = 부스터 + 착용 효과(둘 다 운동 레벨·순수 운동량 순위에는 안 들어감 · v1.71부터 친구 리그·레벨 랭킹 «종합 순위»에는 들어감)
   /* 같은 날 나눠 저장: 앞 세션에서 ×1.0이던 종목이 그날 합계로 ×1.2가 되면 앞 세션 몫 차액을 이번 세션에 더한다(앞 원장은 안 고침) */
   const nowOn = new Set(per.filter(x => x.bonus).map(x => x.ex));
   const catchUp = Math.round((c.todayPrev || []).filter(p => !p.bonus && nowOn.has(p.ex)).reduce((a, p) => a + (p.xp != null ? p.xp : UNIT[EX[p.ex].xpk] * p.cnt) * (CFG.VOL_BONUS.mult - 1) * p.mul, 0));

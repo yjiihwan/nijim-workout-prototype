@@ -1029,3 +1029,9 @@ body:has(#cSaveBar) .toast{bottom:156px}
 @media (max-width:350px){.gitem .glock{font-size:11px;letter-spacing:-.4px}.mifx,.mileft{letter-spacing:-.4px}}
 
 .eqs .eqpill{white-space:nowrap}
+
+/* v1.71 순위 보기 스위치(종합 / 순수 운동량) — 레벨 랭킹·친구 리그 공용 */
+.seg.rkmode{margin-bottom:6px;padding:3px;border-radius:99px}.seg.rkmode button{padding:6px 4px;font-size:13px;border-radius:99px;white-space:nowrap}
+.seg.rkmode button.on{background:var(--ink);color:#fff;box-shadow:none}
+.rkmhint{margin:0 2px 10px;font-size:12px;word-break:keep-all;text-align:center}
+.rank .val small{white-space:nowrap}

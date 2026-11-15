@@ -330,7 +330,7 @@ function vEatTab() {
   <div class="chips">${[['all', '전체'], ['food', '먹는 거'], ['drink', '마시는 거']].map(([k, l]) => `<button class="${cat === k ? 'on' : ''}" data-act="eatCat" data-v="${k}">${l}</button>`).join('')}</div>
   <div class="fhead"><b>먹고 마시는 아이템</b><span>쓰면 바로 효과</span></div>
   <div class="fgrid">${list.map(card).join('')}</div>
-  <div class="muted" style="margin-top:10px">바로 오르는 경험치는 유료 경험치예요(랭킹 💰·«운동만 보기»·주간 리그 제외) · 배율은 가장 큰 것 1개만 붙고, 나머지는 다음 운동으로 넘어가요 · 화면을 탭하면 먹는 장면을 건너뛰어요</div>`;
+  <div class="muted" style="margin-top:10px">바로 오르는 경험치는 유료 경험치예요(랭킹에 💰가 붙고 «종합 순위»에만 들어가요) · 배율은 가장 큰 것 1개만 붙고, 나머지는 다음 운동으로 넘어가요 · 화면을 탭하면 먹는 장면을 건너뛰어요</div>`;
 }
 function buyFood(id) {
   const f = foodById(id); if (!f) return;

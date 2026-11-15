@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.70';
+const VER = 'v1.71';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -112,7 +112,7 @@ const fresh = () => ({ type:'mungchi', chosen:false, onboarded:false, perm:{ not
   owned:{ cap:1 }, equipped:{ cap:true }, inv:{ boost1:0, boost7:0, potion:0, charm:0 }, boostNext:false, boost7Until:null, nextBoosts:[], timedBoosts:[], eatCat:'all', paidLog:[], shields:0,
   records: seedRecords(), hist: seedHist(), streakWeeks: 5, ticketLeft: 1, ticketAuto: true, custom: [],
   session:null, lastResult:null, entryDemo:true, verifyDemo:'auto', holdDemo:false, selfieSeen:false, selfieStep:'guide', selfieFor:null, bump:0,
-  tab:'home', sub:null, wseg:'mine', fTab:'week', pureOnly:false, sTab:'effect', pick:null, cur:null, recId:null, editRec:null, part:'all', gear:'all', q:'', placeQ:'', cx:null,
+  tab:'home', sub:null, wseg:'mine', fTab:'week', rkMode:'all', sTab:'effect', pick:null, cur:null, recId:null, editRec:null, part:'all', gear:'all', q:'', placeQ:'', cx:null,
   calc:null });
 let S, RAW0 = null;
 try { RAW0 = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { RAW0 = null; }
@@ -133,6 +133,7 @@ function sanitize() {
   S.records = rec0 || [];
   S.savedNote = null; S.setEdit = null;
   ['records', 'events', 'paidLog', 'nextBoosts', 'timedBoosts'].forEach(k => { if (!Array.isArray(S[k])) S[k] = []; });
+  if (S.rkMode !== 'pure') S.rkMode = 'all'; delete S.pureOnly;
   ['hist', 'inv', 'owned', 'equipped', 'perm', 'noti'].forEach(k => { if (!plainObj(S[k])) S[k] = k === 'hist' ? {} : F[k]; });
   S.inv = { ...F.inv, ...S.inv }; S.perm = { ...F.perm, ...S.perm }; S.noti = { ...F.noti, ...S.noti };
   ['coach', 'fr', 'me', 'mood', 'calc', 'cmp', 'rest', 'prFx', 'cx', 'gym', 'gymSim', 'eqReq'].forEach(k => { if (S[k] != null && !plainObj(S[k])) S[k] = null; });
@@ -859,19 +860,30 @@ function vSelfie() {
 }
 
 /* ===== 랭킹·내 캐릭터 (v1.10 그대로) ===== */
+/* v1.71(형 11-16 확정) 순위 보기 스위치 — 레벨 랭킹·«이번 주» 친구 리그가 같은 스위치·같은 선택(S.rkMode)을 쓴다.
+   all = 종합 순위(부스터·물약·착용 효과로 받은 경험치까지) · pure = 순수 운동량 순위(운동한 만큼만). 처음엔 종합, 고른 값은 저장돼 다음에도 유지.
+   경험치·레벨 계산은 그대로이고 «순위에 무엇을 세느냐»만 다르다 */
+const rkPure = () => S.rkMode === 'pure';
+const RK_MODE_HINT = { all: '부스터·물약·아이템 효과로 받은 경험치까지 더한 순위예요', pure: '운동한 만큼만 센 순위예요 · 포인트로 받은 경험치는 뺐어요' };
+const rkModeHTML = () => `<div class="seg rkmode" id="rkMode"><button class="${rkPure() ? '' : 'on'}" data-act="rkMode" data-v="all">종합 순위</button><button class="${rkPure() ? 'on' : ''}" data-act="rkMode" data-v="pure">순수 운동량 순위</button></div>
+  <div class="muted rkmhint" id="rkModeHint">${RK_MODE_HINT[rkPure() ? 'pure' : 'all']}</div>`;
+const rkValHTML = f => { const p = rkPure(), paidIn = !p && f.paid;
+  if (S.fTab === 'week') return `${f.week.toLocaleString()}<small>${paidIn && f.paidWeek > 0 ? `XP · 운동만 ${f.pureWeek.toLocaleString()}` : 'XP'}</small>`;
+  return `Lv.${p ? (f.pure ?? f.lv) : f.lv}<small>${paidIn && f.pure != null && f.pure !== f.lv ? `운동만 Lv.${f.pure}` : TIER_NAME[tierOf(f.lv)]}</small>`; };
+const rkPaidMark = f => f.paid && !rkPure() ? '<span title="유료 사용">💰</span>' : '';
 function rankList() {
   const me = { n:'나', t:S.type, lv:S.level, week:leagueWeek(), paid:gearPaid(), pure:S.exLv, me:true };
-  let arr = [...FRIENDS, me].map(f => ({ ...f, key: S.fTab === 'week' ? f.week : (S.pureOnly ? (f.pure ?? f.lv) : f.lv) }));
+  let arr = [...FRIENDS, me].map(f => ({ ...f, key: S.fTab === 'week' ? f.week : (rkPure() ? (f.pure ?? f.lv) : f.lv) }));
   return arr.sort((a, b) => b.key - a.key);
 }
 function rankMe() { const prev = S.fTab; S.fTab = 'level'; const r = rankList().findIndex(f => f.me) + 1; S.fTab = prev; return r; }
 function vFriends() {
   const list = rankList();
   return `${subHead('랭킹 · 친구')}<div class="sec"><div class="seg"><button class="${S.fTab==='week'?'on':''}" data-act="ftab" data-v="week">이번 주</button><button class="${S.fTab==='level'?'on':''}" data-act="ftab" data-v="level">레벨</button></div>
-  ${S.fTab==='level'?`<div class="row" style="padding-top:0"><span class="muted">운동만 보기 (💰 유료 경험치 빼고)</span><button class="sw ${S.pureOnly?'on':''}" data-act="pure"></button></div>`:''}
+  ${rkModeHTML()}
   <div class="card">${list.map((f, i) => `<div class="rank ${f.me?'me':''}"><div class="no">${i+1}</div><div class="av">${S.placeholder ? `<img src="${placeholderSrc(f.lv)}" alt="">` : charAvatar(f.t, f.lv, 40, f.me)}</div>
-  <div><b>${esc(f.n)}</b> ${f.paid?'<span title="유료 사용">💰</span>':''}<div class="muted">${esc(CH[f.t].name)} · ${stageName(f.t, f.lv)}</div></div>
-  <div class="val">${S.fTab==='week'?`${f.week.toLocaleString()}<small>XP</small>`:`Lv.${S.pureOnly?(f.pure??f.lv):f.lv}<small>${f.paid&&!S.pureOnly&&f.pure!==f.lv?`운동만 Lv.${f.pure}`:TIER_NAME[tierOf(f.lv)]}</small>`}</div></div>`).join('')}</div>
+  <div><b>${esc(f.n)}</b> ${rkPaidMark(f)}<div class="muted">${esc(CH[f.t].name)} · ${stageName(f.t, f.lv)}</div></div>
+  <div class="val">${rkValHTML(f)}</div></div>`).join('')}</div>
   <button class="btn ghost" data-act="invite">친구 초대</button>
   <div class="muted" style="margin-top:8px">순위에는 입점 헬스장에서 '입장하기'로 들어가서 운동한 기록만 반영돼요</div></div>`;
 }
@@ -985,7 +997,7 @@ function vCalc() {
   <div class="cmp"><div class="cmprow"><span>운동만</span><div class="cbar"><i style="width:${barW(exOnly.weeks)}%"></i></div><b>${dur(exOnly.weeks)}</b></div>
   <div class="cmprow it"><span>아이템 쓰면</span><div class="cbar"><i style="width:${barW(withIt.weeks)}%"></i></div><b>${dur(withIt.weeks)}</b></div></div>
   <div class="muted">남은 경험치는 ${fmt(exOnly.left)} XP예요 · 운동으로 한 주에 ${fmt(exOnly.exWeek)} XP씩(한 주 최대 ${CFG.WEEK_CAP.toLocaleString()}) 모은다고 보고 대략 계산했어요 · 아이템을 쓰면 한 주에 ${fmt(withIt.itemWeek)} XP를 더 모은다고 봤어요(한도 없음)</div>
-  <div class="muted">주간 랭킹·«운동만 보기»엔 운동 경험치(입점센터 보너스 포함)만 들어가고, 아이템 경험치는 빠져요</div></div>
+  <div class="muted">아이템 경험치는 랭킹 «종합 순위»에만 들어가요 · «순수 운동량 순위»와 센터·전국 랭킹은 운동 경험치(입점센터 보너스 포함)만 세요</div></div>
   <div class="muted">운동 경험치만 하루 ${CFG.DAY_CAP} · 주 ${CFG.WEEK_CAP.toLocaleString()} XP 한도 · 하루에 운동 1번으로 계산했어요</div></div>`;
 }
 
@@ -1406,7 +1418,7 @@ function useItem(id) {
   if (id === 'potion') {
     const g = potionGain(L);
     return sheet(`<div class="h2">경험치 물약을 쓸까요?</div><div class="xrow"><span>지금 바로</span><b>+${fmt(g.gained)} XP</b></div>${nolimit}
-      <div class="muted">유료 경험치라 랭킹에 💰가 붙고, «운동만 보기»·주간 리그엔 안 들어가요 · 하루 몇 병이든 쓸 수 있어요</div>
+      <div class="muted">유료 경험치라 랭킹에 💰가 붙고, «종합 순위»에만 들어가요(«순수 운동량 순위»에서는 빠져요) · 하루 몇 병이든 쓸 수 있어요</div>
       <div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="shClose">취소</button><button class="btn" data-act="usePotion">사용</button></div>`);
   }
   const f = forecastWeek({ L, sessions: Math.max(1, usualWeek() - weekCount()), per: avgSession(), booster: id === 'boost1' ? 'one' : '7d', potions: 0 });
@@ -1642,7 +1654,7 @@ document.addEventListener('click', e => {
   else if (a === 'coach') return toast('코칭 대화(C9)는 프로토타입 범위 밖 · 월 20회');
   else if (a === 'invite') return toast('친구 초대(C15b)는 프로토타입 범위 밖');
   else if (a === 'ftab') S.fTab = v;
-  else if (a === 'pure') S.pureOnly = !S.pureOnly;
+  else if (a === 'rkMode') S.rkMode = v === 'pure' ? 'pure' : 'all';
   else if (a === 'stab') S.sTab = v;
   else if (a === 'part') { S.part = v; }
   else if (a === 'gear') { S.gear = v; }

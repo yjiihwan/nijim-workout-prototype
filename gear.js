@@ -89,7 +89,7 @@ function gearShopHTML() {
     return `<div class="item gitem g-${g.grade}" data-id="${g.id}">${eq ? '<span class="tag">착용 중</span>' : own ? '<span class="tag">보유</span>' : ''}<span class="ggrade g-${g.grade}">${GEAR_GRADE[g.grade]}</span>${itemImg(i)}<b>${i.name}</b><small><span class="gfx ${g.fx || g.protect ? 'on' : ''}">${gearFxText(g)}</span><span class="gterm">${l2}</span></small>${btn}</div>`; };
   return `${chips}<div class="muted gshopnote" id="gShopNote">같은 자리에는 1개만 찰 수 있어요 · 효과는 차고 있는 동안, 그 운동을 기록한 만큼만 붙어요(한 운동에 합쳐서 최대 +${GEAR_CFG.capPct}%)</div>
   <div class="grid2" id="gearGrid">${list.map(card).join('')}</div>
-  <div class="muted" style="margin-top:10px">니짐 포인트로 사요 · 가격·효과·유효기간은 예시예요 · 유효기간이 있는 용품은 기간이 끝나면 사라져요 · 효과로 더 받은 경험치는 캐릭터 레벨에만 들어가고 친구 리그 순위·운동 레벨에는 안 들어가요</div>${gearDemoCard()}`;
+  <div class="muted" style="margin-top:10px">니짐 포인트로 사요 · 가격·효과·유효기간은 예시예요 · 유효기간이 있는 용품은 기간이 끝나면 사라져요 · 효과로 더 받은 경험치는 캐릭터 레벨과 랭킹 «종합 순위»에 들어가요 · «순수 운동량 순위»와 운동 레벨에는 안 들어가요</div>${gearDemoCard()}`;
 }
 function myItemsHTML(t) {
   ensureGear();

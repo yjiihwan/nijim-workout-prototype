@@ -881,7 +881,7 @@ button.gydid{font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 #recentPlaces .chip{max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .plc.prow b{word-break:keep-all;overflow-wrap:anywhere;line-height:1.35}
 
-/* v1.55 멤버십 — 카드 맨 위 «내 멤버십 센터»·«결제한 센터» 줄 · 운동 중 «다른 곳에서 운동해요» */
+/* v1.55 멤버십 — 카드 맨 위 «내 멤버십 센터»·«직접 결제했다고 알려 주신 곳» 줄 · 운동 중 «다른 곳에서 운동해요» */
 .msbox>small{display:block;font-size:12px;color:var(--g5);font-weight:600;margin-bottom:4px}
 .msrow{display:flex;align-items:center;gap:8px;padding:3px 0}
 .msrow b{flex:0 1 auto;min-width:0;font-size:16px;font-weight:700;line-height:1.35;word-break:keep-all;overflow-wrap:anywhere}
@@ -892,6 +892,11 @@ button.gydid{font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .mschg{display:block;margin:10px 0 0;padding:4px 0;color:var(--g5);font-weight:600;text-align:left}
 .msonb{display:flex;flex-direction:column;gap:4px}.msonb b{font-size:15px;line-height:1.4;word-break:keep-all}.msonb small{font-size:14px;line-height:1.45;color:var(--g5);word-break:keep-all}
 #msPlace #placeNote{margin-top:10px}
+/* v1.61 «회원권이 있으세요?» 질문 · 직접 결제했다고 알려준 센터 */
+.msask .btn{margin-top:8px}.msask .gysub{margin-bottom:8px}
+.msask-later{display:block;margin:12px auto 0;padding:6px 8px;color:var(--g5);font-weight:600}
+.msrow .msundo{margin:0 0 0 auto;flex:none;font-size:12px;color:var(--g5);font-weight:600;white-space:nowrap;padding:4px 0}
+.msagain{display:block;margin:10px 0 0;padding:4px 0;color:var(--g5);font-weight:600;font-size:13px;text-align:left}
 
 /* ===== v1.56 사장님께 QR 보여 드리기 ===== */
 .gycard .gyshare.gyqrbtn{margin-top:8px}

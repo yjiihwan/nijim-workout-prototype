@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.56';
+const VER = 'v1.57';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -508,7 +508,7 @@ function vPlace() {
 }
 const placeListHTML = list => list.length ? list.map(p => msPlaceRow(p) || (p.linked ? `<button class="prow tap plc" data-act="placeLinked" data-v="${esc(p.name)}"><div><b>${esc(p.name)}</b><small><span class="cbtag">1.5배</span>${p.dist} · ${isMs(p.name) ? '내 멤버십 센터' : '니짐 입점센터'}</small></div><span class="muted">선택</span></button>${S.placeOpen === p.name ? `<div class="cbopen" id="cbOpen"><div>입장하기로 들어오면 경험치 1.5배예요</div><div class="grid2"><button class="btn sm" data-act="placeEnter" data-v="${esc(p.name)}">입장하기</button><button class="btn sm ghost" data-act="place" data-v="${esc(p.name)}">입장 없이 기록</button></div></div>` : ''}`
   : gymPlaceRow(p))).join('')
-  : `<div class="muted" style="padding:12px 0" id="placeNone">검색 결과가 없어요. 아래 «직접 적기»로 헬스장 이름을 적어 주세요.</div>`;
+  : `<div class="muted" style="padding:12px 0" id="placeNone">검색 결과가 없어요. 아래에서 더 찾아볼게요.</div>`;
 
 /* ===== C3 세션 화면 ===== */
 function vSession() {
@@ -1050,7 +1050,7 @@ function startSession() {
   const ms = (ensureGym(), mships());
   if (!S.entryDemo) {
     if (ms.length === 1) { openSession({ name: ms[0], kind: 'center' }, 'V0', { auto: true }); return toast(`${ms[0]}에서 운동 시작`); }
-    S.placeQ = ''; S.placeAll = false; ensureGym().pm = false; return go('workout', 'place'); }
+    S.placeQ = ''; S.placeAll = false; ensureGym().pm = false; S.gym.pnv = false; return go('workout', 'place'); }
   openSession({ name: S.entryCenter, kind: 'center' }, 'V1', isMs(S.entryCenter) ? { auto: true } : null);
   toast(`입장 확인! ${S.entryCenter}에서 운동 시작`);
 }

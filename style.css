@@ -905,3 +905,20 @@ button.gydid{font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .gyqr .h2,.gyqr .gysub,.gyqrhelp{text-wrap:balance}
 .gyqrhelp{margin:10px 0 14px;padding:10px 12px;border-radius:12px;background:var(--g1);font-size:13px;line-height:1.5;color:var(--g5);word-break:keep-all}
 .gyrq .gyrqqr{display:block;margin-top:6px;font-size:12.5px;text-align:left}
+
+/* v1.57 헬스장 검색: 카카오 목록 머리말 · 네이버 검색결과 묶음 · 확인됨/확인 안 됨 */
+.gysrc{font-size:12px;font-weight:700;color:var(--g5);margin-top:12px}
+.nvcard{margin-top:12px}
+.nvh{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.nvh b{font-size:13px;font-weight:700}
+.nvh a{flex:none;font-size:12px;color:var(--g5);text-decoration:none;white-space:nowrap}
+.nvrow b{word-break:keep-all;overflow-wrap:anywhere;line-height:1.35}
+.nvnone{padding:12px 0 2px;word-break:keep-all}
+.vtag{display:inline-block;flex:none;font-size:11px;font-weight:700;padding:1px 6px;border-radius:6px;white-space:nowrap}
+.vtag.ok{background:#E3F5EA;color:#157A43}
+.vtag.no{background:#fff;box-shadow:inset 0 0 0 1px #D5D5DB;color:#6B6B76}
+.gyv{display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px;margin-top:4px;font-size:12px;color:var(--g5);line-height:1.4}
+.gyv span:not(.vtag){word-break:keep-all;overflow-wrap:anywhere}
+.gydone .gyv{justify-content:center;margin:-2px 0 8px}
+.gyvnote{font-size:12px;line-height:1.5;word-break:keep-all;text-wrap:balance;margin:0 0 10px}
+#gyFindMore .btn,#gyPlMore .btn{margin-top:10px}

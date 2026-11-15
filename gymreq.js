@@ -21,6 +21,73 @@ const GYM_DIR = [
   { id: 'dan', name: '더단단 PT 스튜디오 낙성대점', area: '낙성대동', wait: 3 },
   { id: 'han', name: '한강스포츠센터', area: '대방동', wait: 11 },
 ];
+/* ===== v1.57 헬스장 검색 = 카카오 장소 검색(메인) + 네이버 지역 검색(고른 1곳 대조 · 이어 찾기) =====
+   시험판은 실제 호출 없이 아래 가짜 응답으로 흉내만 낸다. 실서비스 자리:
+   · 목록 = 카카오 «키워드로 장소 검색»(내 주변 = x·y·radius + sort=distance, 이름 검색 = query). 한 번에 15건·한 검색어 최대 45건
+   · 대조 = 유저가 고른 1곳만 네이버 «지역 검색»(query=이름, 최대 5건 · 좌표 검색 없음)으로 이름+도로명 주소 비교 → 확인됨 / 확인 안 됨(막지 않는다)
+   · 저장 = 유저가 고른 곳만(S.gymPick). 목록은 어디에도 저장하지 않는다 */
+const GYM_KK = {   // 카카오 응답 흉내: id → [road_address_name, distance(m)]
+  sillim: ['서울 관악구 신림로 330', 200], bongcheon: ['서울 관악구 봉천로 485', 1800], snu: ['서울 관악구 관악로 158', 2600],
+  green: ['서울 관악구 신림로 340', 400], river: ['서울 관악구 봉천로 472', 1500], yoga: ['서울 관악구 신림로59길 14', 900],
+  long: ['서울 관악구 남부순환로 1614', 700], tt: ['서울 관악구 신림로 262', 1100], move: ['서울 관악구 난곡로 219', 2100],
+  dan: ['서울 관악구 낙성대로 22', 3400], han: ['서울 동작구 여의대방로 112', 5200],
+};
+/* 네이버 지역 검색 응답 흉내(title·roadAddress). 앞 3곳 = 카카오에는 없는 곳 · 튼튼헬스는 네이버에 없음(미검색) · 무브짐은 주소가 다름(불일치) · 리버짐·소담·바디플랜·더단단은 이름 표기만 다름 */
+const GYM_NV = [
+  { nid: 'nv_forest', title: '포레스트짐 신림점', addr: '서울특별시 관악구 신림로 301 2층', area: '신림동' },
+  { nid: 'nv_able', title: '에이블 필라테스 서원점', addr: '서울특별시 관악구 신림로 248', area: '서원동' },
+  { nid: 'nv_iron', title: '아이언하우스 봉천점', addr: '서울특별시 관악구 봉천로 520 지하 1층', area: '봉천동' },
+  { nid: 'nv_green', title: '그린피트니스 신림역점', addr: '서울특별시 관악구 신림로 340 4층', area: '신림동' },
+  { nid: 'nv_river', title: '리버짐 봉천', addr: '서울특별시 관악구 봉천로 472 3층', area: '봉천동' },
+  { nid: 'nv_yoga', title: '소담요가필라테스', addr: '서울특별시 관악구 신림로59길 14', area: '신림동' },
+  { nid: 'nv_long', title: '바디플랜 휘트니스&필라테스 신림사거리본점', addr: '서울특별시 관악구 남부순환로 1614', area: '신림동' },
+  { nid: 'nv_move', title: '24시 무브짐 난곡점', addr: '서울특별시 관악구 난곡로 143', area: '난곡동' },
+  { nid: 'nv_dan', title: '더단단PT 낙성대점', addr: '서울특별시 관악구 낙성대로 22 2층', area: '낙성대동' },
+  { nid: 'nv_han', title: '한강스포츠센터', addr: '서울특별시 동작구 여의대방로 112', area: '대방동' },
+];
+const NV_MAX = 5;   // 네이버 지역 검색은 한 번에 5건까지·다음 쪽 없음(공식 문서 display 최댓값 5 · start 최댓값 1)
+const gymAddr = g => (g && (g.addr || (GYM_KK[g.id] || [])[0])) || '';
+const gymDistM = g => (g && GYM_KK[g.id] ? GYM_KK[g.id][1] : null);
+const gymKm = m => (m == null ? '' : m < 1000 ? `${Math.round(m / 10) * 10}m` : `${(m / 1000).toFixed(1)}km`);
+const nameKey = s => String(s || '').replace(/<[^>]+>/g, '').toLowerCase().replace(/[^0-9a-z가-힣]/g, '');
+/* 주소 열쇠 = 구·군 + 도로명 + 건물 번호(시·도 표기 «서울/서울특별시», 층·호는 무시) */
+const addrKey = a => { const m = String(a || '').replace(/\s+/g, ' ').match(/(?:(\S+[구군])\s)?(\S*[로길])\s?(\d+(?:-\d+)?)/); return m ? (m[1] || '') + m[2] + m[3] : ''; };
+const dice = (a, b) => { if (a.length < 2 || b.length < 2) return 0; const bg = x => { const o = {}; for (let i = 0; i < x.length - 1; i++) { const k = x.slice(i, i + 2); o[k] = (o[k] || 0) + 1; } return o; };
+  const A = bg(a), B = bg(b); let n = 0; Object.keys(A).forEach(k => { n += Math.min(A[k], B[k] || 0); }); return 2 * n / (a.length + b.length - 2); };
+const nameSame = (a, b) => { a = nameKey(a); b = nameKey(b); return !!a && !!b && (a === b || a.includes(b) || b.includes(a) || dice(a, b) >= 0.6); };
+function nvSearch(q) {   // 네이버 지역 검색 흉내 — 검색어 낱말이 이름·주소·동네에 들어 있는 곳을 많이 맞는 순서로 5건까지
+  const toks = String(q || '').trim().split(/\s+/).map(nameKey).filter(t => t.length >= 2), whole = nameKey(q);
+  if (!whole) return GYM_NV.slice(0, NV_MAX);   // 검색어가 없을 때 = 실서비스는 «동네 이름 + 헬스장»으로 물어본다
+  return GYM_NV.map((it, i) => { const hay = nameKey(it.title + it.addr + it.area); return [it, toks.filter(t => hay.includes(t)).length + (nameSame(it.title, q) ? 2 : 0) + (hay.includes(whole) ? 1 : 0), i]; })
+    .filter(x => x[1] > 0).sort((a, b) => b[1] - a[1] || a[2] - b[2]).slice(0, NV_MAX).map(x => x[0]);
+}
+/* 고른 1곳 대조: ok(이름+주소 일치) · diff(검색은 되는데 이름이나 주소가 다름) · none(네이버에 없음). ok 가 아니어도 선택은 막지 않는다 */
+function gymVerify(x) {
+  const list = nvSearch(x.name), ak = addrKey(gymAddr(x)); if (!list.length) return 'none';
+  return ak && list.some(it => nameSame(it.title, x.name) && addrKey(it.addr) === ak) ? 'ok' : 'diff';
+}
+/* 유저가 고른 곳만 남긴다: S.gymPick[id] = { src: kakao|naver|manual, v: ok|no|null, why, at } */
+function gymPicked(x, src) {
+  ensureGym(); if (!x || x.linked) return x;   // 니짐 입점센터 = 우리 자료라 대조하지 않는다
+  if (src === 'kakao') { const r = gymVerify(x); S.gymPick[x.id] = { src, v: r === 'ok' ? 'ok' : 'no', why: r === 'ok' ? '' : r, at: Date.now() }; }
+  else S.gymPick[x.id] = { src, v: null, why: '', at: Date.now() };
+  return x;
+}
+function gymNvPick(nid) {   // 네이버 결과에서 고름 — 카카오 목록에 같은 곳(이름+주소)이 있으면 그곳으로, 없으면 고른 한 곳만 새로 남긴다
+  ensureGym(); const it = GYM_NV.find(n => n.nid === nid); if (!it) return null;
+  const same = GYM_DIR.find(g => nameSame(g.name, it.title) && addrKey(gymAddr(g)) === addrKey(it.addr)); if (same) return gymPicked(same, 'kakao');
+  const x = gymCustomAdd(it.title, it.area); if (!x) return null;
+  const c = S.gymCustom.find(k => k.id === x.id); if (c) { c.addr = it.addr; c.src = 'naver'; }
+  return gymPicked({ ...x, addr: it.addr }, 'naver');
+}
+const gymVTag = g => { const p = g && S.gymPick && S.gymPick[g.id]; return p && p.src === 'kakao' ? (p.v === 'ok' ? '<span class="vtag ok">확인됨</span>' : '<span class="vtag no">확인 안 됨</span>') : ''; };
+const gymVLine = (g, id) => { const t = gymVTag(g), a = gymAddr(g); return t || a ? `<div class="gyv"${id ? ` id="${id}"` : ''}>${t}${a ? `<span>${esc(a)}</span>` : ''}</div>` : ''; };
+const nvLink = q => `https://search.naver.com/search.naver?query=${encodeURIComponent((String(q || '').trim() || '신림동') + ' 헬스장')}`;
+const nvBlock = (q, act, id) => { const list = nvSearch(q);
+  return `<div class="card nvcard" id="${id}"><div class="nvh"><b>네이버 검색결과</b><a href="${nvLink(q)}" target="_blank" rel="noopener">네이버에서 보기 ›</a></div>
+    ${list.length ? list.map(it => `<button class="prow tap nvrow" data-act="${act}" data-v="${esc(it.nid)}"><div><b>${esc(it.title)}</b><small>${esc(it.addr)}</small></div><span class="muted">선택</span></button>`).join('')
+      : `<div class="muted nvnone" id="${id}None">네이버에서도 찾지 못했어요. 아래에서 헬스장 이름을 직접 적어 주세요.</div>`}</div>`; };
+
 const GYM_STEPS = [['요청', '접수'], ['5명', '모임'], ['사장님께', '전달'], ['답', '기다리는 중'], ['입점', '']];
 const GYM_NEED = 5;            // 이 인원이 모이면(그리고 아래 최근 기록자 조건까지 맞으면) 사장님께 안내문 우편이 자동으로 나감
 /* v1.56 사장님 자동 연락(형 11-15 결정 ⑤ · 설계 OWNER_AUTO_CONTACT.md 3장): 사람이 «전달함»을 누르지 않는다.
@@ -75,7 +142,7 @@ const EQ_WAIT_BASE = { '니짐 봉천점': 3 };   // 나 말고 기구 정보를
 function ensureGym() {
   const ok = o => !!o && typeof o === 'object' && !Array.isArray(o);
   const fill = (o, d) => { Object.keys(d).forEach(k => { if (o[k] === undefined) o[k] = d[k]; }); return o; };   // 같은 묶음을 그대로 채운다(새로 만들면 먼저 잡아 둔 참조가 옛것이 된다)
-  S.gym = fill(ok(S.gym) ? S.gym : {}, { kind: null, id: null, name: '', area: '', by: 'survey', setAt: null, pickAt: undefined, moved: null, step: 'ask', q: '', manual: false, pm: false, flow: null, item: false, itemOn: false });
+  S.gym = fill(ok(S.gym) ? S.gym : {}, { kind: null, id: null, name: '', area: '', by: 'survey', setAt: null, pickAt: undefined, moved: null, step: 'ask', q: '', manual: false, pm: false, nv: false, pnv: false, flow: null, item: false, itemOn: false });
   S.gymSim = fill(ok(S.gymSim) ? S.gymSim : {}, { wait: {}, stage: {}, equip: {}, eqWait: {}, mail: {}, owner: {}, recent: {} });
   ['wait', 'stage', 'equip', 'eqWait', 'mail', 'owner', 'recent'].forEach(k => { if (!ok(S.gymSim[k])) S.gymSim[k] = {}; });
   Object.keys(S.gymSim.stage).forEach(id => { const s = S.gymSim.stage[id]; if (s === 'join') return;   // 앞 판(손으로 누르던 «전달함·답 기다리는 중·거절됨») 저장본 옮기기
@@ -87,6 +154,7 @@ function ensureGym() {
   if (!Array.isArray(S.gymNotes)) S.gymNotes = [];
   S.gymCustom = (Array.isArray(S.gymCustom) ? S.gymCustom : []).filter(c => ok(c) && c.id && typeof c.name === 'string' && c.name);
   if (!ok(S.gymReqs)) S.gymReqs = {};
+  if (!ok(S.gymPick)) S.gymPick = {};   // v1.57: 유저가 고른 곳의 출처·대조 결과
   if (typeof S.joinAt !== 'number') S.joinAt = Date.now() - 30 * DAY_MS;   // 이 판 전부터 쓰던 저장본 = 가입한 지 오래된 계정으로 본다
   if (typeof S.entryCenter !== 'string' || !GYM_DIR.some(g => g.name === S.entryCenter)) S.entryCenter = '니짐 신림점';
   const g = S.gym;
@@ -307,9 +375,17 @@ function gymShare(id) {
 const GY_ICO = { gym: '<svg viewBox="0 0 24 24"><path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"/></svg>', home: '<svg viewBox="0 0 24 24"><path d="M3.5 11 12 4l8.5 7"/><path d="M6 9.5V20h12V9.5"/></svg>' };
 const GY_SEARCH = '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>';
 const GY_NOREC = '여기서 운동을 한 번 기록하면 입점을 요청할 수 있어요';
-const gymFind = q => { q = gnorm(q); return gymDirAll().filter(g => !q || gnorm(g.name + g.area).includes(q)).map((g, i) => [g, i]).sort((a, b) => (isPend(b[0].name) - isPend(a[0].name)) || a[1] - b[1]).map(x => x[0]); };
-const gymFindHTML = list => list.length ? list.map(g => `<button class="prow tap" data-act="gyPick" data-v="${esc(g.id)}"><div><b>${esc(g.name)}</b><small>${isPend(g.name) ? '<span class="cbtag wait">멤버십 확인 중</span>' : gymJoined(g) ? '<span class="cbtag">1.5배</span>' : ''}${esc(g.area || '직접 적은 곳')}${isPend(g.name) ? ' · 결제한 센터' : ''}</small></div><span class="muted">선택</span></button>`).join('')
-  : `<div class="muted" style="padding:12px 0" id="gyNone">검색 결과가 없어요. 아래에서 헬스장 이름을 직접 적어 주세요.</div>`;
+/* 카카오 목록 흉내: 검색어 없음 = 내 주변(가까운 순) · 검색어 있음 = 이름·동네 검색. 결제한 센터는 맨 위 */
+const gymFind = q => { q = gnorm(q); const far = g => (gymDistM(g) == null ? 1e9 : gymDistM(g));
+  return gymDirAll().filter(g => !q || gnorm(g.name + g.area).includes(q)).map((g, i) => [g, i]).sort((a, b) => (isPend(b[0].name) - isPend(a[0].name)) || (q ? 0 : far(a[0]) - far(b[0])) || a[1] - b[1]).map(x => x[0]); };
+const gymFindHTML = list => list.length ? list.map(g => `<button class="prow tap" data-act="gyPick" data-v="${esc(g.id)}"><div><b>${esc(g.name)}</b><small>${isPend(g.name) ? '<span class="cbtag wait">멤버십 확인 중</span>' : gymJoined(g) ? '<span class="cbtag">1.5배</span>' : ''}${gymDistM(g) != null ? gymKm(gymDistM(g)) + ' · ' : ''}${esc(g.area || '직접 적은 곳')}${isPend(g.name) ? ' · 결제한 센터' : ''}</small></div><span class="muted">선택</span></button>`).join('')
+  : `<div class="muted" style="padding:12px 0" id="gyNone">검색 결과가 없어요. 아래에서 더 찾아볼게요.</div>`;
+const gymFindHead = q => (String(q || '').trim() ? '검색 결과' : '내 주변 헬스장');
+/* 목록 아래: 카카오 결과가 없거나 «찾는 곳이 없어요»를 누르면 네이버 검색결과를 잇고, 그래도 없으면 직접 적기 */
+function gymFindMore() {
+  const g = ensureGym(), nv = g.nv || !gymFind(g.q).length;
+  return `${nv ? nvBlock(g.q, 'gyNvPick', 'gyNvCard') : ''}${g.manual ? '' : nv ? `<button class="btn ghost" data-act="gyManual" id="gyManualBtn">그래도 없어요 · 직접 적기</button>` : `<button class="btn ghost" data-act="gyNv" id="gyNvBtn">찾는 곳이 없어요</button>`}`;
+}
 function vGymFlow() {
   const g = ensureGym(), onb = !S.onboarded, top = onb ? obProg(2) : '';
   const wrap = body => `${onb ? '' : subHead('내 헬스장', g.flow === 'settings' ? 'settings' : '')}<div class="sec gyflow">${top}${body}</div>`;
@@ -318,9 +394,9 @@ function vGymFlow() {
     <button class="pk" data-act="gyKind" data-v="home" id="gyKindHome">${GY_ICO.home}<b>집·야외</b><small>홈트·걷기·달리기</small></button></div>`);
   if (g.step === 'find') return wrap(`<div class="h2">다니는 헬스장을 찾아 주세요</div><div class="muted" style="margin-bottom:12px" id="gyFindSub">여러 곳을 다니면 가장 자주 가는 곳을 골라 주세요. 나중에 자주 기록하는 곳으로 알아서 바뀌어요.</div>
     <div class="card"><div class="search">${GY_SEARCH}<input id="gymQ" placeholder="헬스장 이름이나 동네" value="${esc(g.q || '')}" autocomplete="off"></div>
-    <div id="gymList">${gymFindHTML(gymFind(g.q))}</div></div>
-    ${g.manual ? `<div class="card" id="gyManual"><div class="h3" style="margin-top:0">직접 적기</div><input class="gyin" id="gyName" placeholder="헬스장 이름" maxlength="30" autocomplete="off"><input class="gyin" id="gyArea" placeholder="동네 (예: 신림동)" maxlength="12" autocomplete="off"><button class="btn" data-act="gyManualOk" id="gyManualOk">이 헬스장으로 등록</button></div>`
-      : `<button class="btn ghost" data-act="gyManual" id="gyManualBtn">찾는 헬스장이 없어요 · 직접 적기</button>`}
+    <div class="gysrc" id="gyKkHead">${gymFindHead(g.q)}</div><div id="gymList">${gymFindHTML(gymFind(g.q))}</div></div>
+    <div id="gyFindMore">${gymFindMore()}</div>
+    ${g.manual ? `<div class="card" id="gyManual"><div class="h3" style="margin-top:0">직접 적기</div><input class="gyin" id="gyName" placeholder="헬스장 이름" maxlength="30" autocomplete="off"><input class="gyin" id="gyArea" placeholder="동네 (예: 신림동)" maxlength="12" autocomplete="off"><button class="btn" data-act="gyManualOk" id="gyManualOk">이 헬스장으로 등록</button></div>` : ''}
     <button class="linkbtn gyback" data-act="gyStep" data-v="ask">‹ 이전</button>`);
   const m = myGym(), nextL = onb ? '다음' : '확인';
   if (!m) { g.step = 'ask'; return vGymFlow(); }
@@ -330,7 +406,7 @@ function vGymFlow() {
   if (gymJoined(m)) return wrap(`<div class="gydone" id="gyRes"><div class="gychk"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7.5"/></svg></div><div class="h2">여기는 경험치 1.5배 헬스장이에요</div>
     <div class="gyline"><b>${esc(m.name)}</b></div><div class="muted gysub">앱에서 '입장하기'를 누르고 운동하면 경험치를 1.5배로 받아요.</div></div><button class="btn" data-act="gyNext" id="gyNext">${nextL}</button>`);
   const n = gymWait(m), why = gymCanReq(m);
-  return wrap(`<div class="gydone" id="gyRes"><div class="h2 gyname">${esc(m.name)}${gjo(m.name, '은', '는')} 아직 입점 전이에요</div>
+  return wrap(`<div class="gydone" id="gyRes"><div class="h2 gyname">${esc(m.name)}${gjo(m.name, '은', '는')} 아직 입점 전이에요</div>${gymVLine(m, 'gyResV')}${(S.gymPick[m.id] || {}).v === 'no' ? '<div class="muted gyvnote" id="gyVNote">다른 지도에서는 같은 이름·주소로 확인하지 못했어요. 이대로 써도 괜찮아요.</div>' : ''}
     <div class="muted gysub">니짐내짐에 입점하면 여기서 운동할 때 경험치를 더 받아요.${n ? `<br>지금 ${n}명이 입점을 기다리고 있어요.` : ''}${why === 'norec' ? `<br><span id="gyNoRec">${GY_NOREC}.</span>` : why === 'did' ? '<br>입점 요청은 이미 남겨 두셨어요.' : ''}</div></div>
     ${why === 'ok' || why === 'full' ? `<button class="btn" data-act="gyReq" data-v="${esc(m.id)}" data-f="flow" id="gyReqBtn">입점 요청하기</button><button class="btn ghost" data-act="gyNext" id="gyLater" style="margin-top:8px">다음에</button>` : `<button class="btn" data-act="gyNext" id="gyNext">${nextL}</button>`}`);
 }
@@ -354,7 +430,7 @@ function gymCard0(label) {
   if (!g.kind) return `<div class="card gycard" id="gymCard"><div class="gyq">주로 어디서 운동하세요?</div><div class="muted">한 번만 알려 주세요. 나중에 설정에서 바꿀 수 있어요.</div>
     <div class="grid2 gyask"><button class="btn sm ghost" data-act="gyKind" data-v="gym" id="gyCardGym">헬스장</button><button class="btn sm ghost" data-act="gyKind" data-v="home" id="gyCardHome">집·야외</button></div>${gymReqsRow()}</div>`;
   const m = myGym(), st = gymStage(m), n = gymWait(m), nm = esc(m.name), mv = !mships().length && g.moved && Date.now() - g.moved.at < 7 * DAY_MS ? g.moved : null;   // 멤버십 보유자에겐 «내 헬스장을 바꿨어요»를 안 띄운다(멤버십 센터가 따로 보이므로)
-  const head = `<div class="gyh"><div><small>${label}</small><b id="gyName1">${nm}</b></div><button class="linkbtn" data-act="gyChange" id="gyChange">바꾸기</button></div>
+  const head = `<div class="gyh"><div><small>${label}</small><b id="gyName1">${nm}</b>${gymVLine(m, 'gyCardV')}</div><button class="linkbtn" data-act="gyChange" id="gyChange">바꾸기</button></div>
     ${mv ? `<div class="gymoved" id="gyMoved"><span>요즘 여기서 가장 자주 운동해서 내 헬스장${mv.from ? `을 바꿨어요 · 전에는 ${esc(mv.from)}` : '으로 정했어요'}</span><button class="linkbtn" data-act="gyMovedOk" id="gyMovedOk">확인</button></div>` : ''}`;
   const tail = gymReqsRow();
   if (st === 5 && !gymReqd(m)) return `<div class="card gycard" id="gymCard" data-st="in">${head}<div class="gymsg on">경험치 1.5배 헬스장이에요</div><div class="muted">앱에서 '입장하기'를 누르고 운동하면 돼요</div>${tail}</div>`;
@@ -379,11 +455,14 @@ function gymPlaceRow(p) {
     ${mine ? '<button class="gydid" data-act="gyReqs">요청함</button>' : `<button class="btn sm ghost gyreq" data-act="gyReq" data-v="${esc(p.id)}">입점 요청하기</button>`}</div>`;
 }
 /* 검색 카드 아래 — 지도 검색에 없는 헬스장을 직접 적어 그 장소로 운동 시작 */
+function gymPlaceMore() {
+  const g = ensureGym(), nv = g.pnv || !placeFind(S.placeQ).length;
+  return `${nv ? nvBlock(S.placeQ, 'gyPlNv', 'gyPlNvCard') : ''}${g.pm ? '' : nv ? `<button class="btn ghost" data-act="gyPlManual" id="gyPlManualBtn">그래도 없어요 · 직접 적기</button>` : `<button class="btn ghost" data-act="gyPlNvOn" id="gyPlNvBtn">찾는 곳이 없어요</button>`}`;
+}
 function gymPlaceManual() {
   const g = ensureGym();
-  return g.pm ? `<div class="card gyflow" id="gyPlManual"><div class="h3" style="margin-top:0">헬스장 이름 직접 적기</div><input class="gyin" id="gyPlName" placeholder="헬스장 이름" maxlength="30" autocomplete="off" value="${esc((S.placeQ || '').trim().slice(0, 30))}"><input class="gyin" id="gyPlArea" placeholder="동네 (예: 신림동)" maxlength="12" autocomplete="off">
-    <button class="btn" data-act="gyPlOk" id="gyPlOk">여기서 운동 시작</button><div class="muted gyplnote">직접 적은 헬스장도 기록이 쌓이면 입점을 요청할 수 있어요</div></div>`
-    : `<button class="btn ghost" data-act="gyPlManual" id="gyPlManualBtn" style="margin-top:10px">찾는 헬스장이 없어요 · 직접 적기</button>`;
+  return `<div id="gyPlMore">${gymPlaceMore()}</div>${g.pm ? `<div class="card gyflow" id="gyPlManual"><div class="h3" style="margin-top:0">헬스장 이름 직접 적기</div><input class="gyin" id="gyPlName" placeholder="헬스장 이름" maxlength="30" autocomplete="off" value="${esc((S.placeQ || '').trim().slice(0, 30))}"><input class="gyin" id="gyPlArea" placeholder="동네 (예: 신림동)" maxlength="12" autocomplete="off">
+    <button class="btn" data-act="gyPlOk" id="gyPlOk">여기서 운동 시작</button><div class="muted gyplnote">직접 적은 헬스장도 기록이 쌓이면 입점을 요청할 수 있어요</div></div>` : ''}`;
 }
 
 /* ===== 운동 결과 화면 — 그날 고른 장소 기준 =====
@@ -537,19 +616,23 @@ document.addEventListener('click', e => {
     gyKind: () => { const g = ensureGym();
       if (v === 'home') { Object.assign(g, { kind: 'home', id: null, name: '', area: '', by: S.onboarded ? 'pick' : 'survey', setAt: Date.now(), pickAt: Date.now(), moved: null, step: 'ask' });
         if (!S.onboarded) return go('workout', 'onbPerm'); toast('집·야외로 정했어요'); return go('workout', g.flow === 'settings' ? 'settings' : null); }
-      g.q = ''; g.manual = false; if (S.sub !== 'gym' && S.sub !== 'onbGym') g.flow = 'card'; return flowGo('find'); },
+      g.q = ''; g.manual = false; g.nv = false; if (S.sub !== 'gym' && S.sub !== 'onbGym') g.flow = 'card'; return flowGo('find'); },
     gyStep: () => { S.gym.step = v; },
-    gyPick: () => { const x = gymById(v); if (!x) return true; gymRegister(x); S.gym.step = 'res'; },
+    gyPick: () => { const x = gymById(v); if (!x) return true; gymPicked(x, x.custom ? ((S.gymPick[x.id] || {}).src || 'manual') : 'kakao'); gymRegister(x); S.gym.step = 'res'; S.gym.nv = false; },
+    gyNv: () => { S.gym.nv = true; },
+    gyNvPick: () => { const x = gymNvPick(v); if (!x) return true; gymRegister(x); S.gym.step = 'res'; S.gym.nv = false; S.gym.manual = false; },
+    gyPlNvOn: () => { S.gym.pnv = true; },
+    gyPlNv: () => { const x = gymNvPick(v); if (!x) return true; S.gym.pm = false; S.gym.pnv = false; S.placeQ = ''; S.placeOpen = null; save(); pickPlace(x.name); return true; },
     gyManual: () => { S.gym.manual = true; },
     gyManualOk: () => { const x = gymCustomAdd($('gyName').value, $('gyArea').value);
       if (!x) return toast('헬스장 이름을 적어 주세요'), true;
-      gymRegister(x); S.gym.step = 'res'; S.gym.manual = false; },
+      if (!S.gymPick[x.id]) gymPicked(x, x.custom ? 'manual' : 'kakao'); gymRegister(x); S.gym.step = 'res'; S.gym.manual = false; S.gym.nv = false; },
     gyReq: () => { if (b.dataset.f === 'flow' && gymCanReq(gymById(v)) === 'ok') { gymRequest(v); S.gym.step = 'sent'; return; } gymReqTry(v); return true; },
     gyReqs: () => (gymReqsSheet(b.dataset.p), true),
     gyCancelAsk: () => (gymCancelAsk(v, b.dataset.p), true),
     gyCancel: () => (gymCancel(v, b.dataset.p), true),
     gyNext: () => { const g = S.gym; g.step = 'ask'; if (!S.onboarded) return go('workout', 'onbPerm'); return go('workout', g.flow === 'settings' ? 'settings' : null); },
-    gyChange: () => { const g = ensureGym(); g.flow = v === 'settings' ? 'settings' : 'card'; g.q = ''; g.manual = false; return flowGo('ask'); },
+    gyChange: () => { const g = ensureGym(); g.flow = v === 'settings' ? 'settings' : 'card'; g.q = ''; g.manual = false; g.nv = false; return flowGo('ask'); },
     gyShare: () => (gymShare(v), true),
     gyQr: () => (gymQrSheet(v), true),
     gyItem: () => { S.gym.itemOn = !S.gym.itemOn; },
@@ -563,18 +646,21 @@ document.addEventListener('click', e => {
       if (raw === '집' || raw === '야외') return toast('집·야외는 위에 있는 버튼으로 골라 주세요'), true;
       const x = gymCustomAdd(raw, $('gyPlArea').value);
       if (!x) return toast('헬스장 이름을 두 글자 이상 적어 주세요'), true;
-      S.gym.pm = false; S.placeQ = ''; S.placeOpen = null; save(); pickPlace(x.name); return true; },
+      if (!S.gymPick[x.id]) gymPicked(x, x.custom ? 'manual' : 'kakao'); S.gym.pm = false; S.gym.pnv = false; S.placeQ = ''; S.placeOpen = null; save(); pickPlace(x.name); return true; },
     eqList: () => { EQV = { type: '', body: '' }; sheet(eqListHTML(v)); return true; },
     eqF: () => { EQV[b.dataset.k] = v; const sc = document.querySelector('#sheet .hscroll'), keep = [...document.querySelectorAll('#sheet .hscroll')].map(x => x.scrollLeft); sheet(eqListHTML(b.dataset.c), true); document.querySelectorAll('#sheet .hscroll').forEach((x, i) => { x.scrollLeft = keep[i] || 0; }); return true; },
     eqReq: () => { ensureGym(); if (!S.eqReq[v]) S.eqReq[v] = { at: Date.now() }; toast(`요청을 남겼어요 · 지금 ${eqWaitN(v)}명이 요청했어요`); },
   };
+  if (a === 'place' && S.sub === 'place') { ensureGym(); const x = gymByName(v); if (x && !x.custom && !gymJoined(x) && !isPend(x.name)) gymPicked(x, 'kakao'); S.gym.pnv = false; }   // 장소 목록(카카오)에서 고른 곳도 그 1곳만 대조해 남긴다 — 운동 시작은 app.js 가 이어서 한다
   if (!H[a]) return;
   e.stopImmediatePropagation(); ensureGym();
   if (H[a]() !== undefined) return;
   save(); render();
 }, true);
 document.addEventListener('input', e => {
-  if (e.target.id === 'gymQ') { ensureGym(); S.gym.q = e.target.value; const el = document.getElementById('gymList'); if (el) el.innerHTML = gymFindHTML(gymFind(S.gym.q)); }
+  if (e.target.id === 'gymQ') { ensureGym(); S.gym.q = e.target.value; const el = document.getElementById('gymList'); if (el) el.innerHTML = gymFindHTML(gymFind(S.gym.q));
+    const h = document.getElementById('gyKkHead'), m = document.getElementById('gyFindMore'); if (h) h.textContent = gymFindHead(S.gym.q); if (m) m.innerHTML = gymFindMore(); }
+  if (e.target.id === 'placeQ') { ensureGym(); S.placeQ = e.target.value; const m = document.getElementById('gyPlMore'); if (m) m.innerHTML = gymPlaceMore(); }
 });
 
 /* ===== 관리자 시연 화면 H8 — 요청 수·진행 단계·입점 성사·센터 기구 바꿔 보기 ===== */

@@ -69,7 +69,7 @@ function gearNoteSheet() {
     const [h, sub] = n.t === 'end' ? [`${g.name}${gjo(g.name, '이', '가')} 다 해졌어요`, '유효기간이 끝나서 내 아이템에서 빠졌어요. 다시 쓰려면 상점에서 새로 사 주세요.']
       : n.t === 'soon' ? [`${g.name} 유효기간이 ${n.left}일 남았어요`, `${gearDate(gearAddDays(n.until, -1))}까지 쓸 수 있어요. 더 쓰려면 상점에서 기간을 늘려 주세요.`]
       : [`${gearAchText(g)} 달성! ${g.name}${gjo(g.name, '을', '를')} 받았어요`, `내 캐릭터 › 내 아이템에서 바로 쓸 수 있어요${g.fx ? ` · ${gearFxText(g)}` : ''}`];
-    return `<div class="gnote ${n.t}" data-id="${g.id}"><span class="gnico">${n.t === 'end' ? `<span class="gone">${gearIcon(g.id)}</span>` : gearIcon(g.id)}</span><div><b>${h}</b><small>${sub}</small></div></div>`; };
+    return `<div class="gnote gn-${n.t}" data-id="${g.id}"><span class="gnico">${n.t === 'end' ? `<span class="gone">${gearIcon(g.id)}</span>` : gearIcon(g.id)}</span><div><b>${h}</b><small>${sub}</small></div></div>`; };
   const shop = ns.some(n => n.t !== 'ach');
   sheet(`<div id="gearNote">${ns.map(row).join('')}</div><div class="grid2" style="margin-top:14px">${shop ? '<button class="btn ghost" data-act="gearShop" id="gearNoteShop">상점 가기</button>' : '<button class="btn ghost" data-act="myItems" id="gearNoteMine">내 아이템 보기</button>'}<button class="btn" data-act="shClose" id="gearNoteOk">확인</button></div><div class="muted demoonly" style="margin-top:8px">실제 앱에서는 푸시 알림으로도 가요</div>`);
 }

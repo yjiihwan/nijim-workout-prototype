@@ -881,3 +881,15 @@ button.setrow.tapset:active{background:var(--g1)}
 button.gydid{font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 #recentPlaces .chip{max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .plc.prow b{word-break:keep-all;overflow-wrap:anywhere;line-height:1.35}
+
+/* v1.55 멤버십 — 카드 맨 위 «내 멤버십 센터»·«결제한 센터» 줄 · 운동 중 «다른 곳에서 운동해요» */
+.msbox>small{display:block;font-size:12px;color:var(--g5);font-weight:600;margin-bottom:4px}
+.msrow{display:flex;align-items:center;gap:8px;padding:3px 0}
+.msrow b{flex:0 1 auto;min-width:0;font-size:16px;font-weight:700;line-height:1.35;word-break:keep-all;overflow-wrap:anywhere}
+.msrow .cbtag{flex:none;margin:0;white-space:nowrap}
+.msbox .muted{margin-top:4px}
+.mssep{height:1px;background:var(--g1);margin:12px 0}
+.cbtag.wait{background:var(--g1);color:var(--g5)}
+.mschg{display:block;margin:10px 0 0;padding:4px 0;color:var(--g5);font-weight:600;text-align:left}
+.msonb{display:flex;flex-direction:column;gap:4px}.msonb b{font-size:15px;line-height:1.4;word-break:keep-all}.msonb small{font-size:14px;line-height:1.45;color:var(--g5);word-break:keep-all}
+#msPlace #placeNote{margin-top:10px}

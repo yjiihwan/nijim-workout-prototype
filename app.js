@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.54';
+const VER = 'v1.55';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -412,7 +412,8 @@ function parseW(raw) {
   return { ok: true, w, snapped: Math.abs(w - v) > 1e-9 };
 }
 const sw = (act, on, id = '') => `<button class="sw ${on ? 'on' : ''}" data-act="${act}" ${id ? `id="${id}"` : ''}></button>`;
-const obProg = n => `<div class="obprog" aria-label="3단계 중 ${n}단계">${[1, 2, 3].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}<span>${n}/3</span></div>`;
+const obProg = n0 => { ensureGym(); const ms = mships().length > 0, tot = ms ? 2 : 3, n = ms && n0 === 3 ? 2 : n0;   // v1.55: 멤버십이 있으면 «주로 어디서 운동하세요?»(2/3)를 건너뛴다 → 2단계
+  return `<div class="obprog" aria-label="${tot}단계 중 ${n}단계">${Array.from({ length: tot }, (_, i) => `<i class="${i + 1 <= n ? 'on' : ''}"></i>`).join('')}<span>${n}/${tot}</span></div>`; };
 const LOCK = '<svg class="ico" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>';
 const BELL = '<svg class="ico" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>';
 const CAM = '<svg class="ico" viewBox="0 0 24 24"><path d="M4 8.5h3l1.6-2.2h6.8L17 8.5h3v10.5H4z"/><circle cx="12" cy="13.5" r="3.4"/></svg>';
@@ -431,6 +432,7 @@ function vChoose() {
 function vOnbPerm() {
   const row = (ico, title, desc, k) => `<div class="prow">${ico}<div><b>${title}</b><small>${desc}</small></div><button class="btn sm ${S.perm[k] ? 'ghost' : ''}" data-act="perm" data-v="${k}">${S.perm[k] ? '허용됨' : '허용'}</button></div>`;
   return `<div class="sec">${obProg(3)}<div class="h2">거의 다 됐어요</div><div class="muted" style="margin-bottom:12px">마지막으로 알림만 정하면 돼요.</div>
+  ${msOnbNote()}
   <div class="card">${row(BELL, '알림', '센터에 들어가면 «입장 확인! 캐릭터가 기다려요» 하고 한 번 알려요. 설정에서 언제든 끌 수 있어요', 'noti')}</div>
   <div class="card privacy" id="photoNote">${LOCK}<div><b>사진은 나만 봐요</b><small>오운완 셀카는 나한테만 보여요. 친구나 다른 회원은 볼 수 없고, 언제든 지울 수 있어요. 안 찍어도 기록은 그대로 남아요.</small></div></div>
   <button class="btn" data-act="obDone" id="obDone">${esc(CH[S.type].name)}${wa(S.type)} 시작하기</button>
@@ -491,10 +493,11 @@ const clock = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.flo
 
 /* ===== C3b 장소 선택 (입장 기록 없을 때만) ===== */
 function vPlace() {
+  const msTop = msPlaceTop(); if (msTop) return msTop;   // v1.55: 멤버십이 여러 장이면 내 멤버십 센터만 먼저
   const recent = [...new Set([...S.records].sort((a, b) => b.date.localeCompare(a.date)).map(r => placeBase(r.place)))].filter(p => p !== '집' && p !== '야외').slice(0, 4);
   const list = placeFind(S.placeQ);
   return `${subHead('어디서 운동해요?')}<div class="sec">
-  <div class="muted" style="margin-bottom:10px">오늘은 센터 입장 기록이 없어요. 장소만 골라 주세요.</div>
+  <div class="muted" style="margin-bottom:10px">${S.entryDemo ? '오늘 운동할 곳을 골라 주세요.' : '오늘은 센터 입장 기록이 없어요. 장소만 골라 주세요.'}</div>
   <div class="h3">최근 장소</div><div class="chips white" id="recentPlaces">${recent.map(p => `<button class="chip" data-act="place" data-v="${esc(p)}">${esc(p)}</button>`).join('')}</div>
   <div class="grid2 placekind"><button class="pk" data-act="place" data-v="집" id="pkHome"><svg viewBox="0 0 24 24"><path d="M3.5 11 12 4l8.5 7"/><path d="M6 9.5V20h12V9.5"/></svg><b>집</b><small>홈트·맨몸 운동</small></button>
   <button class="pk" data-act="place" data-v="야외" id="pkOut"><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="3"/><path d="M5 20c1.5-4 4-6 7-6s5.5 2 7 6"/></svg><b>야외</b><small>걷기·달리기·자전거</small></button></div>
@@ -503,8 +506,8 @@ function vPlace() {
   ${gymPlaceManual()}
   <div class="muted" id="placeNote">${gymQuiet() ? '' : `입점 헬스장에서 '입장하기'를 누르고 운동하면 경험치를 더 받아요 · `}어디서든 오운완 셀카를 찍으면 경험치 +${CFG.SELFIE_BONUS.pct}%</div></div>`;
 }
-const placeListHTML = list => list.length ? list.map(p => p.linked ? `<button class="prow tap plc" data-act="placeLinked" data-v="${esc(p.name)}"><div><b>${esc(p.name)}</b><small><span class="cbtag">1.5배</span>${p.dist} · 니짐 입점센터</small></div><span class="muted">선택</span></button>${S.placeOpen === p.name ? `<div class="cbopen" id="cbOpen"><div>입장하기로 들어오면 경험치 1.5배예요</div><div class="grid2"><button class="btn sm" data-act="placeEnter" data-v="${esc(p.name)}">입장하기</button><button class="btn sm ghost" data-act="place" data-v="${esc(p.name)}">입장 없이 기록</button></div></div>` : ''}`
-  : gymPlaceRow(p)).join('')
+const placeListHTML = list => list.length ? list.map(p => msPlaceRow(p) || (p.linked ? `<button class="prow tap plc" data-act="placeLinked" data-v="${esc(p.name)}"><div><b>${esc(p.name)}</b><small><span class="cbtag">1.5배</span>${p.dist} · ${isMs(p.name) ? '내 멤버십 센터' : '니짐 입점센터'}</small></div><span class="muted">선택</span></button>${S.placeOpen === p.name ? `<div class="cbopen" id="cbOpen"><div>입장하기로 들어오면 경험치 1.5배예요</div><div class="grid2"><button class="btn sm" data-act="placeEnter" data-v="${esc(p.name)}">입장하기</button><button class="btn sm ghost" data-act="place" data-v="${esc(p.name)}">입장 없이 기록</button></div></div>` : ''}`
+  : gymPlaceRow(p))).join('')
   : `<div class="muted" style="padding:12px 0" id="placeNone">검색 결과가 없어요. 아래 «직접 적기»로 헬스장 이름을 적어 주세요.</div>`;
 
 /* ===== C3 세션 화면 ===== */
@@ -544,8 +547,8 @@ function vSession() {
   <div class="endzone"><div class="endbar" id="endBar"><button class="btn ghost" data-act="sub" data-v="pick" id="addExBtn">+ 운동 추가</button><button class="btn" data-act="endAsk" id="endBtn">${!done.length && !s.items.some(i => i.run) && S.demo === 'none' ? '운동 끝' : held ? '운동 끝 · 기록 저장' : `운동 끝 · +${fmt(est)} XP 저장`}</button></div></div>`;
 }
 /* 결정 36 ⑥ C3 위치별 보너스 줄 — 입점센터 적용 중 / 이번 주 900 다 참 / 그 밖 장소 안내 / 레슨은 줄 없음 */
-function centerLine(s) {
-  if (s.verify === 'V3') return '';
+function centerLine(s) { return s.verify === 'V3' ? '' : (msSessLine(s) || centerLine0(s)) + msChangeLink(s); }   // v1.55: 멤버십·미발급 안내 줄 + «다른 곳에서 운동해요»
+function centerLine0(s) {
   if (s.verify === 'V1') return centerWeek() >= CFG.CENTER_BONUS.weekCap ? `<div class="cbline full" id="cbLine"><span>이번 주 입점센터 보너스 다 모았어요</span></div>` : `<div class="cbline on" id="cbLine"><span><b>입점센터</b> · 경험치 1.5배 적용 중</span></div>`;
   return gymQuiet() ? '' : `<div class="cbline" id="cbLine"><span>입점센터에서 하면 경험치 1.5배</span>${findCenterBtn('cbFind')}</div>`;
 }
@@ -1043,13 +1046,17 @@ const backToTab = () => go('workout');   // 연출 종료 후 복귀 위치 = �
 /* ===== 세션 시작·운동 추가·세트 ===== */
 function startSession() {
   if (S.session) return go('workout', 'session');
-  if (!S.entryDemo) { S.placeQ = ''; ensureGym().pm = false; return go('workout', 'place'); }
-  openSession({ name: S.entryCenter, kind: 'center' }, 'V1');
+  /* v1.55: 멤버십 보유자는 장소를 안 묻는다 — 오늘 입장한 센터 → 멤버십 1장이면 그 센터 → 여러 장이면 내 멤버십 센터만 먼저 보여 준다 */
+  const ms = (ensureGym(), mships());
+  if (!S.entryDemo) {
+    if (ms.length === 1) { openSession({ name: ms[0], kind: 'center' }, 'V0', { auto: true }); return toast(`${ms[0]}에서 운동 시작`); }
+    S.placeQ = ''; S.placeAll = false; ensureGym().pm = false; return go('workout', 'place'); }
+  openSession({ name: S.entryCenter, kind: 'center' }, 'V1', isMs(S.entryCenter) ? { auto: true } : null);
   toast(`입장 확인! ${S.entryCenter}에서 운동 시작`);
 }
-function openSession(place, verify) {
+function openSession(place, verify, extra) {
   const now = Date.now();
-  S.session = { id: now, startedAt: now, lastAt: now, place, verify, items: [], light: false, selfie: null, photo: null, prCount: 0, times: {} };
+  S.session = { id: now, startedAt: now, lastAt: now, place, verify, items: [], light: false, selfie: null, photo: null, prCount: 0, times: {}, ...(extra || {}) };
   S.demo = 'none'; S.holdDemo = false; S.q = ''; S.part = 'all';
   go('workout', 'session');
 }
@@ -1579,7 +1586,7 @@ document.addEventListener('click', e => {
   else if (a === 'wseg') S.wseg = v;
   else if (a === 'pick') S.pick = v;
   else if (a === 'choose') { S.type = S.pick || S.type; S.chosen = true; S.pick = null;
-    if (!S.onboarded) { ensureGym(); S.gym.step = 'ask'; return go('workout', 'onbGym'); }
+    if (!S.onboarded) { ensureGym(); S.gym.step = 'ask'; return go('workout', mships().length ? 'onbPerm' : 'onbGym'); }
     S.sub = null; toast(`${CH[S.type].name}${wa(S.type)} 운동 시작!`); }
   else if (a === 'perm') { S.perm[v] = !S.perm[v]; }
   else if (a === 'obDone') { S.onboarded = true; S.joinAt = Date.now(); toast(`${CH[S.type].name}${wa(S.type)} 운동 시작!`); return go('workout'); }

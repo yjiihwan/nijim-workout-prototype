@@ -922,3 +922,6 @@ button.gydid{font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .gydone .gyv{justify-content:center;margin:-2px 0 8px}
 .gyvnote{font-size:12px;line-height:1.5;word-break:keep-all;text-wrap:balance;margin:0 0 10px}
 #gyFindMore .btn,#gyPlMore .btn{margin-top:10px}
+
+/* v1.58 기록 없는 헬스장 안내 — 문장이 길어져 두 줄일 때 끝 낱말만 떨어지지 않게 */
+.gyhint{text-wrap:balance}

@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.53';
+const VER = 'v1.54';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -498,13 +498,14 @@ function vPlace() {
   <div class="h3">최근 장소</div><div class="chips white" id="recentPlaces">${recent.map(p => `<button class="chip" data-act="place" data-v="${esc(p)}">${esc(p)}</button>`).join('')}</div>
   <div class="grid2 placekind"><button class="pk" data-act="place" data-v="집" id="pkHome"><svg viewBox="0 0 24 24"><path d="M3.5 11 12 4l8.5 7"/><path d="M6 9.5V20h12V9.5"/></svg><b>집</b><small>홈트·맨몸 운동</small></button>
   <button class="pk" data-act="place" data-v="야외" id="pkOut"><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="3"/><path d="M5 20c1.5-4 4-6 7-6s5.5 2 7 6"/></svg><b>야외</b><small>걷기·달리기·자전거</small></button></div>
-  <div class="card" style="margin-top:12px"><div class="search">${'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>'}<input id="placeQ" placeholder="센터 이름 검색" value="${esc(S.placeQ)}" autocomplete="off"></div>
+  <div class="card" style="margin-top:12px"><div class="search">${'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>'}<input id="placeQ" placeholder="헬스장 이름이나 동네 검색" value="${esc(S.placeQ)}" autocomplete="off"></div>
   <div id="placeList">${placeListHTML(list)}</div></div>
+  ${gymPlaceManual()}
   <div class="muted" id="placeNote">${gymQuiet() ? '' : `입점 헬스장에서 '입장하기'를 누르고 운동하면 경험치를 더 받아요 · `}어디서든 오운완 셀카를 찍으면 경험치 +${CFG.SELFIE_BONUS.pct}%</div></div>`;
 }
 const placeListHTML = list => list.length ? list.map(p => p.linked ? `<button class="prow tap plc" data-act="placeLinked" data-v="${esc(p.name)}"><div><b>${esc(p.name)}</b><small><span class="cbtag">1.5배</span>${p.dist} · 니짐 입점센터</small></div><span class="muted">선택</span></button>${S.placeOpen === p.name ? `<div class="cbopen" id="cbOpen"><div>입장하기로 들어오면 경험치 1.5배예요</div><div class="grid2"><button class="btn sm" data-act="placeEnter" data-v="${esc(p.name)}">입장하기</button><button class="btn sm ghost" data-act="place" data-v="${esc(p.name)}">입장 없이 기록</button></div></div>` : ''}`
   : gymPlaceRow(p)).join('')
-  : `<div class="muted" style="padding:12px 0">찾는 센터가 없어요. 지도에서 찾은 센터만 고를 수 있어요.</div>`;
+  : `<div class="muted" style="padding:12px 0" id="placeNone">검색 결과가 없어요. 아래 «직접 적기»로 헬스장 이름을 적어 주세요.</div>`;
 
 /* ===== C3 세션 화면 ===== */
 function vSession() {
@@ -1042,7 +1043,7 @@ const backToTab = () => go('workout');   // 연출 종료 후 복귀 위치 = �
 /* ===== 세션 시작·운동 추가·세트 ===== */
 function startSession() {
   if (S.session) return go('workout', 'session');
-  if (!S.entryDemo) { S.placeQ = ''; return go('workout', 'place'); }
+  if (!S.entryDemo) { S.placeQ = ''; ensureGym().pm = false; return go('workout', 'place'); }
   openSession({ name: S.entryCenter, kind: 'center' }, 'V1');
   toast(`입장 확인! ${S.entryCenter}에서 운동 시작`);
 }
@@ -1206,6 +1207,7 @@ function endSession0(s, auto) {
   rec.dur = Math.max(1, Math.round((s.lastAt - s.startedAt) / 60000));   // 공유 카드 «운동 시간»(v2 SPEC §2)
   if (res.level > res.from) rec.lvUp = { from: res.from, to: res.level };
   S.records.push(rec);
+  if (!isDemo) gymAuto();   // v1.54: 내 헬스장 = 최근 자주 기록한 곳(gymreq.js)
   /* 결정 21: 표정만 바뀜 — 위 레벨·경험치 계산에 관여하지 않음 */
   const j = judgeIntensity(items, { hist: histVol(), today: TODAY, light: s.light, comeback: ctx.lastDays >= CFG.COMEBACK_DAYS, lowRun: S.lowRun });
   const verdict = S.moodDemo !== 'auto' ? S.moodDemo : j.verdict;

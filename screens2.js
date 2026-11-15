@@ -353,7 +353,7 @@ function vProfile() {
     : p.friend ? `<button class="btn" data-act="cheer" data-v="${esc(p.n)}" id="cheerBtn" ${S.fr.cheered[p.n] === TODAY ? 'disabled' : ''}>${S.fr.cheered[p.n] === TODAY ? '오늘 응원했어요 👏' : '응원 👏'}</button><div class="muted" style="text-align:center;margin-top:8px">친구 · 하루 1번 응원할 수 있어요</div>`
     : `${S.fr.sent.includes(p.n) ? '<button class="btn" disabled>요청 보냄 · 수락 기다리는 중</button>' : S.fr.recv.includes(p.n) ? `<button class="btn" data-act="frAccept" data-v="${esc(p.n)}">친구 요청 수락</button>` : `<button class="btn" data-act="frRequest" data-v="${esc(p.n)}" id="frReqBtn">친구 요청 보내기</button>`}<div class="muted" style="text-align:center;margin-top:8px">친구가 아니어도 레벨·칭호·운동으로 쌓은 경험치 비율은 누구나 볼 수 있어요<br>친구가 되면 이번 주 리그에서 같이 겨뤄요</div>`;
   return `${subHead(p.me ? '내 프로필 미리보기' : '프로필', back, backLabel)}<div class="sec">
-  <div class="card" style="text-align:center" id="profCard">${charHTML(p.t, p.lv, 150, true, null)}
+  <div class="card" style="text-align:center" id="profCard">${charHTML(p.t, p.lv, 150, true, null, false, 150, { wear: !!p.me })}
     <div style="margin-top:12px;display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap"><span class="name">${esc(p.n)}</span>${p.paid ? `<span class="pill paidpill" id="paidBadge">💰 ${PAID_TIER[p.paid]}</span>` : ''}${!p.friend ? '<span class="pill tier1">친구 아님</span>' : ''}</div>
     <div style="margin-top:6px;display:flex;gap:6px;justify-content:center"><span class="pill lvpill">Lv.${p.lv}</span><span class="pill tier${tierOf(p.lv)}">${TIER_NAME[tierOf(p.lv)]}</span></div>
     <div class="muted" style="margin-top:6px">${esc(CH[p.t].name)} · 칭호 «${stageName(p.t, p.lv)}»</div></div>
@@ -393,7 +393,7 @@ function vFriends2() {
   const list = rankList();
   return `${subHead('랭킹 · 친구')}<div class="sec">${req}<div class="seg"><button class="${S.fTab === 'week' ? 'on' : ''}" data-act="ftab" data-v="week">이번 주</button><button class="${S.fTab === 'level' ? 'on' : ''}" data-act="ftab" data-v="level">레벨</button></div>
   ${S.fTab === 'level' ? `<div class="row" style="padding-top:0"><span class="muted">운동만 보기 (💰 유료 경험치 빼고)</span><button class="sw ${S.pureOnly ? 'on' : ''}" data-act="pure"></button></div>` : ''}
-  <div class="card">${list.map((f, i) => `<div class="rank tap ${f.me ? 'me' : ''}" data-act="prof" data-v="${f.me ? 'me' : esc(f.n)}"><div class="no">${i + 1}</div><div class="av">${S.placeholder ? `<img src="${placeholderSrc(f.lv)}" alt="">` : charAvatar(f.t, f.lv, 40)}</div>
+  <div class="card">${list.map((f, i) => `<div class="rank tap ${f.me ? 'me' : ''}" data-act="prof" data-v="${f.me ? 'me' : esc(f.n)}"><div class="no">${i + 1}</div><div class="av">${S.placeholder ? `<img src="${placeholderSrc(f.lv)}" alt="">` : charAvatar(f.t, f.lv, 40, f.me)}</div>
   <div><b>${esc(f.n)}</b> ${f.paid ? '<span title="유료 사용">💰</span>' : ''}<div class="muted">${esc(CH[f.t].name)} · ${stageName(f.t, f.lv)}</div></div>
   <div class="val">${S.fTab === 'week' ? `${f.week.toLocaleString()}<small>XP</small>` : `Lv.${S.pureOnly ? (f.pure ?? f.lv) : f.lv}<small>${f.paid && !S.pureOnly && f.pure !== f.lv ? `운동만 Lv.${f.pure}` : TIER_NAME[tierOf(f.lv)]}</small>`}</div></div>`).join('')}</div>
   <button class="btn ghost" data-act="sub" data-v="addFriend" id="goAddFriend">친구 추가</button>

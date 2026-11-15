@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.67';
+const VER = 'v1.68';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -228,18 +228,19 @@ function charHTML(t, lv, boxH, withRing = true, expr = null, same = false, boxW 
   const c = charImg(t, lv, boxH, same, boxW), gold = withRing && lv >= 99 && !S.placeholder ? c.w * 1.1 * 0.12 : 0;   // 골드 링 아래 반쪽만큼 자리를 비워 아래 글자와 안 겹치게
   const r1 = n => Math.round(n * 10) / 10;
   const inner = (opts.rig && !S.placeholder && rigLayers(t, c.cut, c.s)) || `<img src="${c.src}" style="width:${c.w}px;height:${c.h}px" alt="">`;   // opts.rig: 4단계 부품 레이어(팔 ±5°)
-  return `<div class="cbox" style="height:${boxH}px${gold ? `;margin-bottom:${Math.round(gold)}px` : ''}">${withRing ? ringHTML(c, lv, boxH) : ''}<span class="cimg${opts.rig ? ' rig' : ''}" style="width:${c.w}px;height:${c.h}px;left:${r1(c.dx)}px;bottom:${r1(c.db)}px">${inner}${faceLayer(t, lv, expr)}</span></div>`;
+  return `<div class="cbox" style="height:${boxH}px${gold ? `;margin-bottom:${Math.round(gold)}px` : ''}">${withRing ? ringHTML(c, lv, boxH) : ''}<span class="cimg${opts.rig ? ' rig' : ''}" style="width:${c.w}px;height:${c.h}px;left:${r1(c.dx)}px;bottom:${r1(c.db)}px">${inner}${opts.wear ? wearUnder(t, lv) : ''}${faceLayer(t, lv, expr)}${opts.wear ? wearLayer(t, lv, !!opts.rig, c.s) : ''}</span></div>`;
 }
 /* 작은 칸(홈 축소 카드·코치·랭킹): 같은 배율 규칙으로 Lv.99 가 box 높이에 맞게 → 레벨이 낮으면 작게 보인다 */
 function charFit(t, lv, box, expr = null) {
   if (S.placeholder) return `<img src="${placeholderSrc(lv)}" style="max-width:${box}px;max-height:${box}px" alt="">`;
   const k = scaleOf(t, lv, box, false, box, 1), [w, h] = CHARS[t].dims[cutOf(lv)], dw = Math.round(w*k), dh = Math.round(h*k);
-  return `<span class="cimg" style="width:${dw}px;height:${dh}px"><img src="assets/c/${t}/lv${cutOf(lv)}.png?v=${VER}" style="width:${dw}px;height:${dh}px" alt="">${faceLayer(t, lv, expr)}</span>`;
+  return `<span class="cimg" style="width:${dw}px;height:${dh}px"><img src="assets/c/${t}/lv${cutOf(lv)}.png?v=${VER}" style="width:${dw}px;height:${dh}px" alt="">${wearUnder(t, lv)}${faceLayer(t, lv, expr)}${wearLayer(t, lv, false, k)}</span>`;
 }
 /* 랭킹 아바타(40px 아이콘): v1.8처럼 컷마다 칸에 꽉 맞추고, 밤톨·뚝비·영차만 다른 화면과 같은 비율로 줄인다 */
-function charAvatar(t, lv, box) {
-  const c = cutOf(lv), [w, h] = CHARS[t].dims[c], k = box / Math.max(w, h);
-  return `<img src="assets/c/${t}/lv${c}.png?v=${VER}" style="width:${Math.round(w*k)}px;height:${Math.round(h*k)}px" alt="">`;
+function charAvatar(t, lv, box, me = false) {
+  const c = cutOf(lv), [w, h] = CHARS[t].dims[c], k = box / Math.max(w, h) * (me && wearOn().includes('cap') ? 0.8 : 1);   // 모자를 쓰면 칸 위로 잘리지 않게 조금 줄인다
+  const img = `<img src="assets/c/${t}/lv${c}.png?v=${VER}" style="width:${Math.round(w*k)}px;height:${Math.round(h*k)}px" alt="">`;
+  return me ? `<span class="cimg" style="width:${Math.round(w*k)}px;height:${Math.round(h*k)}px">${img}${wearUnder(t, lv)}${wearLayer(t, lv, false, k)}</span>` : img;   // v1.68: 내 줄에만 착용 그림(친구 장착 정보는 없음)
 }
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2400); }
 
@@ -452,7 +453,7 @@ function vWorkout() {
   const toNext = lv >= 99 ? 0 : Math.max(0, need(lv) - S.xp);
   const nextEvo = lv >= 99 ? '만렙 달성!' : lv >= 90 ? 'Lv.99에 골드 아우라' : `Lv.${(Math.floor(lv/10)+1)*10}에 진화해요`;
   const pend = S.pending ? `<div class="notice"><span>⏳ 못 본 레벨업 장면이 있어요</span><button class="btn sm" data-act="playPending">보기</button></div>` : '';
-  const eqNames = ITEMS.filter(i => S.equipped[i.id]).map(i => `<span class="pill">${i.name}</span>`).join('') + gymPill();
+  const eqNames = ITEMS.filter(i => S.equipped[i.id]).map(i => i.kind === 'look' ? `<button class="pill eqpill" data-act="myItems" data-id="${i.id}" aria-label="${i.name} · 내 아이템에서 쓰고 벗기">${i.name}<i>›</i></button>` : `<span class="pill">${i.name}</span>`).join('') + gymPill();   // v1.68: 꾸미기 알약을 누르면 내 캐릭터 «내 아이템» 칸으로
   const seg = `<div class="seg wseg"><button class="${S.wseg==='mine'?'on':''}" data-act="wseg" data-v="mine">내 운동</button><button class="${S.wseg==='feed'?'on':''}" data-act="wseg" data-v="feed">오운완 피드</button></div>`;
   if (S.wseg === 'feed') return `${seg}<div class="sec"><div class="ph tall">오운완 피드는 준비 중이에요<br>곧 친구들의 오운완을 여기서 볼 수 있어요</div></div>`;
   const wd = weekDays(), wk = weekCount();
@@ -472,11 +473,11 @@ function vWorkout() {
   };
   const ex = exprNow();
   return `${seg}<div class="sec" style="padding-top:8px">${pend}
-  <div class="card" id="stageCard"><div class="stage"><div class="cwrap stagewrap ${ex}" data-act="pose" id="stageWrap">${charHTML(t, lv, 128, true, ex, false, 160, { rig: true })}${sigClipHTML(t, lv)}</div>
+  <div class="card" id="stageCard"><div class="stage"><div class="cwrap stagewrap ${ex}" data-act="pose" id="stageWrap">${charHTML(t, lv, 128, true, ex, false, 160, { rig: true, wear: true })}${sigClipHTML(t, lv)}</div>
     <div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span class="name">${esc(CH[t].name)}</span><span class="pill lvpill">Lv.${lv}</span><span class="pill tier${tr}">${TIER_NAME[tr]}</span>${moodPill(moodToday(), true)}${exprPill(ex, true)}</div>
     <div class="bar"><i style="width:${lv>=99?100:Math.max(0, Math.round(S.xp/need(lv)*100))}%"></i></div>
     <div class="muted">${lv>=99?'최고 레벨':`Lv.${lv+1}까지 ${toNext.toLocaleString()} XP`} · ${nextEvo}</div>
-    <div class="eqs">${eqNames || '<span class="pill none">장착 아이템 없음</span>'}</div>
+    <div class="eqs">${eqNames || '<button class="pill none eqpill" data-act="myItems">장착 아이템 없음<i>›</i></button>'}</div>
     <button class="linkbtn" data-act="sub" data-v="me" id="goMe">내 캐릭터 자세히 ›</button></div></div>${moodToday() ? `<div class="say moodsay ${moodToday().verdict}" id="stageSay">${esc(moodToday().line)}</div>` : EXPR[ex].line ? `<div class="say moodsay ${ex}" id="stageSay">${esc(EXPR[ex].line)}</div>` : ''}</div>
   <button class="btn" data-act="start" id="goRecord" style="margin-top:0">${S.session ? '운동 이어서 하기' : '오늘 운동 기록하기'}</button>
   <div class="muted" style="text-align:center;margin:6px 0 12px">${S.session ? `${esc(S.session.place.name)}에서 운동 중 · <span data-clock="sess">${clock(Date.now() - S.session.startedAt)}</span>` : gymQuiet() ? '운동을 시작할 때 눌러 주세요' : `센터에 입장하면 바로 시작돼요 · ${CB_TXT}`}</div>
@@ -763,7 +764,7 @@ function vResult() {
   ${rec && rec.batch ? `<div class="notice" id="batchNote"><span>운동을 마치고 한꺼번에 적은 기록이라 <b>자가 기록</b>으로 저장했어요</span></div>` : ''}
   ${typeof frResultNote === 'function' ? frResultNote(rec) : ''}
   ${rec && rec.auto ? `<div class="notice" id="autoNote"><span>3시간 동안 적은 게 없어서 자동으로 끝냈어요 · 마지막으로 적은 시각에 끝난 걸로 저장했어요</span></div>` : ''}
-  <div class="card result ${v}" id="resultCard"><div class="cwrap big ${v}">${charHTML(t, lv, 170, true, exprOfMood(show))}</div>
+  <div class="card result ${v}" id="resultCard"><div class="cwrap big ${v}">${charHTML(t, lv, 170, true, exprOfMood(show), false, 170, { wear: true })}</div>
     <div class="rname"><span class="name">${esc(CH[t].name)}</span><span class="pill lvpill">Lv.${lv}</span>${show ? moodPill(show) : '<span class="pill tier1">평소 표정</span>'}</div>
     <div class="say moodsay ${v}" id="resultSay">${esc(m && m.line ? m.line : coachLine())}</div>
     <div class="est"><span>오늘 얻은 경험치</span><em class="${S.bump ? 'bump' : ''}" id="resultXP">+${(rec ? rec.xp : 0).toLocaleString()} XP</em></div>
@@ -865,18 +866,26 @@ function vFriends() {
   const list = rankList();
   return `${subHead('랭킹 · 친구')}<div class="sec"><div class="seg"><button class="${S.fTab==='week'?'on':''}" data-act="ftab" data-v="week">이번 주</button><button class="${S.fTab==='level'?'on':''}" data-act="ftab" data-v="level">레벨</button></div>
   ${S.fTab==='level'?`<div class="row" style="padding-top:0"><span class="muted">운동만 보기 (💰 유료 경험치 빼고)</span><button class="sw ${S.pureOnly?'on':''}" data-act="pure"></button></div>`:''}
-  <div class="card">${list.map((f, i) => `<div class="rank ${f.me?'me':''}"><div class="no">${i+1}</div><div class="av">${S.placeholder ? `<img src="${placeholderSrc(f.lv)}" alt="">` : charAvatar(f.t, f.lv, 40)}</div>
+  <div class="card">${list.map((f, i) => `<div class="rank ${f.me?'me':''}"><div class="no">${i+1}</div><div class="av">${S.placeholder ? `<img src="${placeholderSrc(f.lv)}" alt="">` : charAvatar(f.t, f.lv, 40, f.me)}</div>
   <div><b>${esc(f.n)}</b> ${f.paid?'<span title="유료 사용">💰</span>':''}<div class="muted">${esc(CH[f.t].name)} · ${stageName(f.t, f.lv)}</div></div>
   <div class="val">${S.fTab==='week'?`${f.week.toLocaleString()}<small>XP</small>`:`Lv.${S.pureOnly?(f.pure??f.lv):f.lv}<small>${f.paid&&!S.pureOnly&&f.pure!==f.lv?`운동만 Lv.${f.pure}`:TIER_NAME[tierOf(f.lv)]}</small>`}</div></div>`).join('')}</div>
   <button class="btn ghost" data-act="invite">친구 초대</button>
   <div class="muted" style="margin-top:8px">순위에는 입점 헬스장에서 '입장하기'로 들어가서 운동한 기록만 반영돼요</div></div>`;
 }
+/* v1.68 «내 아이템» — 가진 꾸미기 아이템을 그림으로 보여 주고 눌러서 쓰고 벗는다(상점까지 안 가도 됨 · 상점의 장착/해제도 그대로) */
+function myItemsHTML(t, looks) {
+  const own = looks.filter(i => S.owned[i.id]), g = wearGeo(t, cutOf(S.level)), noArm = S.equipped.wristband && S.owned.wristband && g && !g.wr;
+  return `<div class="myitems" id="myItems"><div class="mihd"><b>내 아이템</b><span>${own.length ? '눌러서 쓰고 벗어요' : ''}</span></div>
+  ${own.length ? `<div class="migrid">${own.map(i => { const on = !!S.equipped[i.id]; return `<button class="mi ${on ? 'on' : ''}" data-act="wear" data-id="${i.id}" aria-pressed="${on}" aria-label="${i.name} ${on ? '벗기' : '쓰기'}">${itemImg(i)}<b>${i.name}</b><small>${on ? '착용 중 · 벗기' : '쓰기'}</small></button>`; }).join('')}</div>` : '<div class="miempty">아직 가진 꾸미기 아이템이 없어요 · 아래 상점에서 구할 수 있어요</div>'}
+  ${noArm ? '<div class="minote">지금 단계는 팔이 없어서 손목밴드가 그림에 안 보여요 · Lv.10부터 보여요</div>' : ''}</div>`;
+}
 function vMe() {
   const t = S.type, looks = ITEMS.filter(i => i.kind === 'look');
   return `${subHead('내 캐릭터')}<div class="sec">
-  <div class="card" style="text-align:center">${charHTML(t, S.level, 170, true, exprNow(), false, 212, { rig: true })}<div style="margin-top:14px"><span class="name">${esc(CH[t].name)}</span> <span class="pill lvpill">Lv.${S.level}</span> <span class="pill tier${tierOf(S.level)}">${TIER_NAME[tierOf(S.level)]}</span></div>
+  <div class="card" style="text-align:center">${charHTML(t, S.level, 170, true, exprNow(), false, 212, { rig: true, wear: true })}<div style="margin-top:14px"><span class="name">${esc(CH[t].name)}</span> <span class="pill lvpill">Lv.${S.level}</span> <span class="pill tier${tierOf(S.level)}">${TIER_NAME[tierOf(S.level)]}</span></div>
   <div class="muted" style="margin-top:4px">칭호 «${stageName(t, S.level)}» · 운동 레벨 Lv.${S.exLv} · 포인트 ${S.points.toLocaleString()}P</div>
-  <div class="slots">${looks.map(i => `<div class="slot ${S.equipped[i.id]?'on':''}">${S.equipped[i.id] ? i.name : '빈 슬롯'}</div>`).slice(0, 3).join('')}${ITEMS.filter(i => i.kind === 'effect' && S.equipped[i.id]).map(i => `<div class="slot on">${i.name}</div>`).join('')}${S.gym && S.gym.item ? `<button class="slot gyslot ${S.gym.itemOn ? 'on' : ''}" data-act="gyItem" id="gySlot">${GYM_ITEM}${S.gym.itemOn ? '' : ' · 달기'}</button>` : ''}</div>
+  ${myItemsHTML(t, looks)}
+  <div class="slots">${ITEMS.filter(i => i.kind === 'effect' && S.equipped[i.id]).map(i => `<div class="slot on">${i.name}</div>`).join('')}${S.gym && S.gym.item ? `<button class="slot gyslot ${S.gym.itemOn ? 'on' : ''}" data-act="gyItem" id="gySlot">${GYM_ITEM}${S.gym.itemOn ? '' : ' · 달기'}</button>` : ''}</div>
   <button class="btn" data-act="sub" data-v="shop" id="shopBtn">🛍️ 아이템 상점</button>
   <button class="btn ghost" data-act="rechoose" style="margin-top:8px">캐릭터 바꾸기 <span class="muted">(Lv.10 전 1회 무료)</span></button></div>
   ${centerCard()}
@@ -1529,6 +1538,7 @@ document.addEventListener('click', e => {
   if (a === 'sigSeg') { sigSegPlay(v); return; }
   if (a === 'flexPlay') { flexPlay(v); return; }
   if (a === 'shClose') return shClose();
+  if (a === 'myItems') { shClose(); go('workout', 'me'); const e = $('myItems'); if (e) e.scrollIntoView({ block: 'center' }); return; }
   if (a === 'sub') { if (v === 'calc') S.calc = null; shClose(); return go('workout', v); }
   if (a === 'goPhotos') { shClose(); go('workout', 'settings'); const pc = $('photoCard'); if (pc) pc.scrollIntoView({ block: 'center' }); return; }
   if (a === 'hardResetAsk') return sheet(`<div class="h2">처음 상태로 돌아갈까요?</div><div class="muted" style="line-height:1.6">지금까지의 기록과 레벨이 모두 지워지고, 되돌릴 수 없어요.</div><div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="shClose">취소</button><button class="btn danger" data-act="hardReset" id="hardReset">처음으로</button></div>`);
@@ -1652,6 +1662,7 @@ document.addEventListener('click', e => {
   else if (a === 'cmp') { const m = S.cmp, lim = { perWeek: [0, 7, 1], per: [0, 1200, 20], potions: [0, 21, 1] }[b.dataset.k]; m[b.dataset.k] = clampStep(m[b.dataset.k], dd, lim[2], lim[0], lim[1]); }
   else if (a === 'cmpB') S.cmp.booster = v;
   else if (a === 'equip') { S.equipped[id] = !S.equipped[id]; }
+  else if (a === 'wear') { if (S.owned[id]) S.equipped[id] = !S.equipped[id]; }
   else if (a === 'ticketAuto') S.ticketAuto = !S.ticketAuto;
   else if (a === 'noti') S.noti[v] = !S.noti[v];
   else if (a === 'hideTips') S.hideTips = !S.hideTips;

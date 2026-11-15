@@ -967,3 +967,20 @@ body:has(#cSaveBar) .toast{bottom:156px}
 #invBy{display:block;line-height:1.5;word-break:keep-all}
 .profwk{margin-top:6px;font-size:13px;line-height:1.45}.profwk b{display:block;font-size:14px}.profwk span{color:var(--g5)}
 #frSkipNote{margin:-4px 2px 10px}
+
+/* ===== v1.68 꾸미기 아이템 착용 그림(equip.js) — 캐릭터 그림 칸(.cimg) 위에 % 로 겹친다 ===== */
+.cimg .wr{position:absolute;z-index:3;pointer-events:none;display:block;max-width:none;max-height:none;margin:0;overflow:visible}
+.cimg .wrarm{z-index:3;pointer-events:none}
+.cimg .wtw,.cimg .whead{z-index:2}.cimg .wsg{z-index:4}.cimg .wcap{z-index:5}
+.eqs .eqpill{border:0;font-family:inherit;cursor:pointer;min-height:24px;-webkit-tap-highlight-color:transparent}.eqs .eqpill i{font-style:normal;color:var(--g5);margin-left:1px}
+.myitems{margin-top:12px;text-align:left}
+.mihd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}.mihd b{font-size:14px}.mihd span{font-size:12px;color:var(--g5)}
+.migrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.mi{border:1.5px solid transparent;background:var(--g1);border-radius:12px;padding:8px 2px 7px;font-family:inherit;color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;-webkit-tap-highlight-color:transparent}
+.mi img{height:38px;width:44px;object-fit:contain;display:block;margin-bottom:2px}
+.mi b{font-size:12px;font-weight:700;white-space:nowrap}.mi small{font-size:11px;color:var(--g5);white-space:nowrap}
+.mi.on{background:#FFE3EE;border-color:var(--rose)}.mi.on small{color:var(--rose);font-weight:700}
+.miempty,.minote{font-size:12px;color:var(--g5);background:var(--g1);border-radius:10px;padding:10px;text-align:center}.minote{margin-top:6px;background:none;padding:2px 0 0}
+.slots:empty{display:none}
+.mini .mbox:has(.wcap),.wsay .cbox:has(.wcap),.rank .av:has(.wcap){overflow:visible}
+@media (max-width:350px){.migrid{gap:4px}.mi small{font-size:10px;letter-spacing:-.3px}}

@@ -83,7 +83,7 @@ function rkHomes() {
 const rkHomeList = () => { const h = rkHomes(); return Array.isArray(h) ? h : h.list; };
 const rkSel = homes => (homes.some(h => h.center_id === S.rkSel) ? S.rkSel : CenterRank.defaultCenter(homes));
 
-const rkRow = (m, val, sub) => `<div class="rank ${m.me ? 'me' : ''}" data-mid="${m.member_id}"><div class="no">${m.rank}</div><div class="av">${S.placeholder ? `<img src="${placeholderSrc(m.lv)}" alt="">` : charAvatar(m.t, m.lv, 40)}</div>
+const rkRow = (m, val, sub) => `<div class="rank ${m.me ? 'me' : ''}" data-mid="${m.member_id}"><div class="no">${m.rank}</div><div class="av">${S.placeholder ? `<img src="${placeholderSrc(m.lv)}" alt="">` : charAvatar(m.t, m.lv, 40, m.me)}</div>
   <div class="rkn"><b>${esc(m.nickname)}</b><div class="muted">${sub}</div></div><div class="val">${fmt(val)}<small>XP</small></div></div>`;
 function rkMeBar(board, label) {
   const m = board.find(x => x.me);

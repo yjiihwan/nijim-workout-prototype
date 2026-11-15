@@ -22,7 +22,13 @@ const GYM_DIR = [
   { id: 'han', name: '한강스포츠센터', area: '대방동', wait: 11 },
 ];
 const GYM_STEPS = [['요청', '접수'], ['5명', '모임'], ['사장님께', '전달'], ['답', '기다리는 중'], ['입점', '']];
-const GYM_NEED = 5;            // 이 인원이 모이면 니짐이 사장님께 연락
+const GYM_NEED = 5;            // 이 인원이 모이면(그리고 아래 최근 기록자 조건까지 맞으면) 사장님께 안내문 우편이 자동으로 나감
+/* v1.56 사장님 자동 연락(형 11-15 결정 ⑤ · 설계 OWNER_AUTO_CONTACT.md 3장): 사람이 «전달함»을 누르지 않는다.
+   칸 2 = 요청 5명 이상 + 그중 최근 2주에 그 헬스장에서 기록한 사람 3명 이상 · 칸 3 = 그 주 묶음 우편 접수됨 · 칸 4 = 접수 다음 날부터 영업일 6일 지남 · 칸 5 = 입점 절차 완료
+   시험판은 관리자 시연 H8에서 «우편 접수됨 / 도착 예정일 지남»을 흉내 낸다. 실제 우편·문자·알림톡 발송은 어디에도 연결돼 있지 않다 */
+const GYM_NEED_RECENT = 3;
+const GYM_RECENT_DAYS = 14;
+const GYM_MAIL_BIZ = 6;
 const GYM_REQ_MAX = 3;         // 입점 요청은 한 번에 3곳까지(장난 요청 막기)
 const GYM_AUTO_DAYS = 30, GYM_AUTO_MIN = 2;   // 내 헬스장 자동 판정 = 최근 30일 · 2번 이상 기록한 곳 중 최다
 const GYM_QUIET_DAYS = 7, GYM_QUIET_RECS = 3;   // 가입 후 첫 7일·첫 3회 기록까지는 «입점 헬스장이었다면 +○○» 비교를 안 띄움
@@ -70,8 +76,13 @@ function ensureGym() {
   const ok = o => !!o && typeof o === 'object' && !Array.isArray(o);
   const fill = (o, d) => { Object.keys(d).forEach(k => { if (o[k] === undefined) o[k] = d[k]; }); return o; };   // 같은 묶음을 그대로 채운다(새로 만들면 먼저 잡아 둔 참조가 옛것이 된다)
   S.gym = fill(ok(S.gym) ? S.gym : {}, { kind: null, id: null, name: '', area: '', by: 'survey', setAt: null, pickAt: undefined, moved: null, step: 'ask', q: '', manual: false, pm: false, flow: null, item: false, itemOn: false });
-  S.gymSim = fill(ok(S.gymSim) ? S.gymSim : {}, { wait: {}, stage: {}, equip: {}, eqWait: {} });
-  ['wait', 'stage', 'equip', 'eqWait'].forEach(k => { if (!ok(S.gymSim[k])) S.gymSim[k] = {}; });
+  S.gymSim = fill(ok(S.gymSim) ? S.gymSim : {}, { wait: {}, stage: {}, equip: {}, eqWait: {}, mail: {}, owner: {}, recent: {} });
+  ['wait', 'stage', 'equip', 'eqWait', 'mail', 'owner', 'recent'].forEach(k => { if (!ok(S.gymSim[k])) S.gymSim[k] = {}; });
+  Object.keys(S.gymSim.stage).forEach(id => { const s = S.gymSim.stage[id]; if (s === 'join') return;   // 앞 판(손으로 누르던 «전달함·답 기다리는 중·거절됨») 저장본 옮기기
+    if (s === 'sent' && !S.gymSim.mail[id]) S.gymSim.mail[id] = { at: Date.now() };
+    if (s === 'wait' || s === 'reject') S.gymSim.mail[id] = { at: Date.now() - 12 * DAY_MS };
+    if (s === 'reject') S.gymSim.owner[id] = 'reject';
+    delete S.gymSim.stage[id]; });
   if (!ok(S.eqReq)) S.eqReq = {};
   if (!Array.isArray(S.gymNotes)) S.gymNotes = [];
   S.gymCustom = (Array.isArray(S.gymCustom) ? S.gymCustom : []).filter(c => ok(c) && c.id && typeof c.name === 'string' && c.name);
@@ -112,11 +123,25 @@ const gymWait = g => gymOthers(g) + (gymReqd(g) ? 1 : 0);
 const gymReqList = () => Object.keys(S.gymReqs).map(gymById).filter(g => g && !gymJoined(g)).sort((a, b) => S.gymReqs[a.id].at - S.gymReqs[b.id].at);   // 지금 살아 있는 요청(입점한 곳은 자리에서 빠진다)
 /* 요청할 수 있나: ok · joined(이미 입점) · did(이미 요청) · norec(여기서 운동한 기록 없음) · full(3곳이 참) */
 const gymCanReq = g => (!g ? 'none' : gymJoined(g) ? 'joined' : gymReqd(g) ? 'did' : !gymRecN(g) ? 'norec' : gymReqList().length >= GYM_REQ_MAX ? 'full' : 'ok');
-/* 진행 5칸: 1 요청 접수 → 2 5명 모임 → 3 사장님께 전달 → 4 답 기다리는 중 → 5 입점. 거절돼도 회원 화면은 4에서 멈춘다 */
+/* 최근 2주 기록자 = 요청자 가운데 «그 헬스장에서» 최근 2주에 기록한 사람(다른 헬스장 기록은 안 센다). 다른 사람 몫은 시험판 가짜 값 */
+const gymMeRecent = g => realRecs().some(r => isGymRec(r) && gnorm(placeBase(r.place)) === gnorm(g.name) && Date.now() - recAt(r) < GYM_RECENT_DAYS * DAY_MS);
+const gymRecentOthers = g => Math.min(gymOthers(g), Math.max(0, S.gymSim.recent[g.id] ?? Math.round(gymOthers(g) * 0.7)));
+const gymRecent = g => gymRecentOthers(g) + (gymReqd(g) && gymMeRecent(g) ? 1 : 0);
+const gymReady = g => gymWait(g) >= GYM_NEED && gymRecent(g) >= GYM_NEED_RECENT;
+function gymBizDays(at) {   // 접수 다음 날부터 어제까지 지난 영업일(토·일 제외 · 공휴일은 시험판에서 안 뺀다)
+  const d = new Date(at), t = new Date(); d.setHours(0, 0, 0, 0); t.setHours(0, 0, 0, 0); let n = 0;
+  for (d.setDate(d.getDate() + 1); d < t; d.setDate(d.getDate() + 1)) { const w = d.getDay(); if (w && w !== 6) n++; }
+  return n;
+}
+const gymMailDue = g => { const m = S.gymSim.mail[g.id]; return !!m && gymBizDays(m.at) >= GYM_MAIL_BIZ; };
+/* 진행 5칸(자동): 1 요청 접수 → 2 5명 모임 → 3 사장님께 전달(우편 접수) → 4 답 기다리는 중(도착 예정일 지남) → 5 입점.
+   사장님 쪽 내부 기록(열람·거절·우편 그만 받기)은 회원 화면에 안 보인다. 거절·그만 받기여도 4에서 멈춘다 */
 function gymStage(g) {
   if (gymJoined(g)) return 5; if (!gymReqd(g)) return 0;
-  const s = S.gymSim.stage[g.id]; if (s === 'wait' || s === 'reject') return 4; if (s === 'sent') return 3;
-  return gymWait(g) >= GYM_NEED ? 2 : 1;
+  const mail = S.gymSim.mail[g.id], ow = S.gymSim.owner[g.id], no = ow === 'reject' || ow === 'optout';
+  if (mail) return no || gymMailDue(g) ? 4 : 3;
+  if (no && gymReady(g)) return 4;
+  return gymReady(g) ? 2 : 1;
 }
 const gymStepName = g => ['', '요청 접수', `${GYM_NEED}명 모임`, '사장님께 전달', '답 기다리는 중', '입점'][gymStage(g)];
 const gymFirstWeek = () => { ensureGym(); return Date.now() - S.joinAt < GYM_QUIET_DAYS * DAY_MS || realRecs().length <= GYM_QUIET_RECS; };
@@ -225,10 +250,11 @@ function gymRequest(id) { ensureGym(); if (gymCanReq(gymById(id)) !== 'ok') retu
 const gyOkBtn = (id = 'gySheetOk') => `<button class="btn" data-act="shClose" id="${id}" style="margin-top:8px">확인</button>`;
 const gymShareBtn = (id, cls = 'btn ghost') => `<button class="${cls}" data-act="gyShare" data-v="${esc(id)}" id="gyShare">같은 헬스장 다니는 친구에게 보내기</button>`;
 function gymSentHTML(m) {
-  const n = gymWait(m);
+  const n = gymWait(m), st = gymStage(m);
+  const line = st >= 4 ? '사장님 답을 기다리고 있어요.' : st === 3 ? '사장님께 안내문을 보냈어요.' : st === 2 ? `${GYM_NEED}명이 모여서 사장님께 보낼 안내문을 준비하고 있어요.` : `${GYM_NEED}명이 모이면 저희가 사장님께 우편으로 안내문을 보내요.`;
   return `<div class="gydone" id="gySent"><div class="gychk"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7.5"/></svg></div><div class="h2">요청을 남겼어요</div>
   <div class="gyline"><b>${esc(m.name)}</b><span>지금 ${n}명이 기다리고 있어요</span></div>
-  <div class="muted gysub">${n >= GYM_NEED ? `${GYM_NEED}명이 넘게 모여서 저희가 곧 사장님께 연락드릴게요.` : `${GYM_NEED}명이 요청하면 저희가 사장님께 연락드려요.`} 입점하면 바로 알려 드릴게요.</div>${gymShareBtn(m.id)}</div>`;
+  <div class="muted gysub" id="gySentSub">${line} ${esc(m.name)}${gjo(m.name, '이', '가')} 입점하면 바로 알려 드릴게요.</div>${gymShareBtn(m.id)}</div>`;
 }
 /* 요청 버튼 공통(카드·장소 목록·결과 화면) — 되면 요청, 안 되면 까닭을 알려 준다 */
 function gymReqTry(id) {
@@ -241,7 +267,7 @@ function gymReqTry(id) {
 /* 내 입점 요청 목록(취소하는 곳). pend = 3곳이 차서 못 넣은 헬스장 id → 맨 위에 «하나를 취소하면 여기에 요청할 수 있어요» */
 function gymReqsSheet(pend) {
   ensureGym(); const list = gymReqList(), x = pend ? gymById(pend) : null, p = x ? ` data-p="${esc(x.id)}"` : '';
-  const rows = list.map(g => `<div class="gyrq" data-gym="${esc(g.id)}"><div><b>${esc(g.name)}</b><small>${gymWait(g)}명이 기다리는 중 · ${gymStepName(g)}</small></div><button class="btn sm ghost" data-act="gyCancelAsk" data-v="${esc(g.id)}"${p}>요청 취소</button></div>`).join('');
+  const rows = list.map(g => `<div class="gyrq" data-gym="${esc(g.id)}"><div><b>${esc(g.name)}</b><small>${gymWait(g)}명이 기다리는 중 · ${gymStepName(g)}</small><button class="linkbtn gyrqqr" data-act="gyQr" data-v="${esc(g.id)}">사장님께 QR 보여 드리기 ›</button></div><button class="btn sm ghost" data-act="gyCancelAsk" data-v="${esc(g.id)}"${p}>요청 취소</button></div>`).join('');
   sheet(`${x ? `<div class="h2 gyname" id="gyFullT">입점 요청은 한 번에 ${GYM_REQ_MAX}곳까지 할 수 있어요</div><div class="muted gysub">아래 요청 중 하나를 취소하면 <b>${esc(x.name)}</b>에 요청할 수 있어요.</div>`
     : `<div class="h2" id="gyReqsT">내 입점 요청 <span class="gycnt">${list.length}/${GYM_REQ_MAX}곳</span></div><div class="muted gysub">한 번에 ${GYM_REQ_MAX}곳까지 요청할 수 있어요. 요청한 곳이 입점하면 자리가 다시 비어요.</div>`}
     <div class="gyrqs" id="gyReqList">${rows || '<div class="muted gyrqnone">아직 요청한 곳이 없어요</div>'}</div><button class="btn${x ? ' ghost' : ''}" data-act="shClose" id="gyReqsClose" style="margin-top:12px">닫기</button>`);
@@ -256,6 +282,19 @@ function gymCancel(id, pend) {
   if (nx && gymCanReq(nx) === 'ok') return sheet(`<div class="gydone" id="gyFreed"><div class="h2 gyname">${esc(x ? x.name : '')} 요청을 취소했어요</div><div class="muted gysub">이제 <b>${esc(nx.name)}</b>에 요청할 수 있어요.</div></div>
     <button class="btn" data-act="gyReq" data-v="${esc(nx.id)}" id="gyFreedReq">입점 요청하기</button><button class="btn ghost" data-act="shClose" style="margin-top:8px">다음에</button>`);
   toast('요청을 취소했어요'); if (gymReqList().length) gymReqsSheet(); else shClose();
+}
+/* v1.56 «사장님께 QR 보여 드리기» — 요청한 사람이 원할 때 데스크에서 보여 주는 화면. 알림·팝업으로 권하지 않는다. 요청 수는 화면을 열 때 값 */
+const gymOwnerUrl = (g, more = '') => `${location.origin}${location.pathname.replace(/[^/]*$/, '')}owner.html?g=${encodeURIComponent(g.id)}&n=${gymWait(g)}&r=${gymRecent(g)}&name=${encodeURIComponent(g.name)}${more}`;
+const gymQrBtn = id => `<button class="btn ghost sm gyshare gyqrbtn" data-act="gyQr" data-v="${esc(id)}" id="gyQrBtn">사장님께 QR 보여 드리기</button>`;
+function gymQrSheet(id) {
+  const m = gymById(id); if (!m || !gymReqd(m) || gymJoined(m)) return;
+  const n = gymWait(m), nm = esc(m.name);
+  sheet(`<div class="gyqr" id="gyQr"><div class="h2 gyname" id="gyQrT">${n}명이 ${nm}의 '니짐내짐' 입점을 기다리고 있어요</div>
+    <div class="muted gysub" id="gyQrSub">니짐내짐은 운동기록 앱이에요. ${n}명은 앱에 '${nm}에서 운동했다'고 기록한 분들이에요.</div>
+    <div class="gyqrbox" id="gyQrBox">${typeof NJ_qrSvg === 'function' ? NJ_qrSvg(gymOwnerUrl(m), 208) : ''}</div>
+    <div class="gyqrcap" id="gyQrCap">사장님 휴대폰으로 이 QR을 찍으시면 입점 안내를 보실 수 있어요</div>
+    <div class="gyqrhelp" id="gyQrHelp">데스크에서 이 화면만 보여 드리면 돼요. 사장님이 안 계시면 직원분께 보여 드려도 괜찮아요.</div></div>
+    <button class="btn ghost" data-act="shClose" id="gyQrClose">닫기</button>`);
 }
 function gymShare(id) {
   const m = gymById(id) || myGym(); if (!m) return;
@@ -323,12 +362,12 @@ function gymCard0(label) {
     return `<div class="card gycard" id="gymCard" data-st="0">${head}<div class="gymsg">아직 입점 전이에요</div><div class="muted">니짐내짐에 입점하면 여기서 운동할 때 경험치를 더 받아요${n ? ` · 지금 ${n}명이 기다리고 있어요` : ''}</div>
     ${can ? `<button class="btn" data-act="gyReq" data-v="${esc(m.id)}" id="gyReqBtn">입점 요청하기</button>` : `<div class="gyhint" id="gyNoRec">${GY_NOREC}</div>`}${tail}</div>`; }
   const msg = [null,
-    [`지금 ${n}명이 기다리고 있어요`, `${GYM_NEED}명이 요청하면 저희가 사장님께 연락드려요`],
-    [`${n}명이 모였어요`, '저희가 곧 사장님께 연락드릴게요'],
-    ['사장님께 요청을 전달했어요', '답변 오면 바로 알려 드릴게요'],
+    [`지금 ${n}명이 기다리고 있어요`, `${GYM_NEED}명이 모이면 저희가 사장님께 안내문을 보내요`],
+    [`${n}명이 모였어요`, '사장님께 보낼 안내문을 준비하고 있어요'],
+    ['사장님께 안내문을 보냈어요', '우편이라 도착까지 일주일쯤 걸려요'],
     ['사장님 답을 기다리고 있어요', '소식이 오면 바로 알려 드릴게요'],
     [`${nm}${gjo(m.name, '이', '가')} 입점했어요!`, g.item ? `<span class="gygift" id="gyGift">${gymItemImg()}<span>오늘부터 경험치 1.5배예요 · 요청해 주셔서 «${GYM_ITEM}»를 드렸어요</span></span>` : '오늘부터 경험치 1.5배예요']][st];
-  return `<div class="card gycard" id="gymCard" data-st="${st}">${head}${gymStepsHTML(st)}<div class="gymsg ${st === 5 ? 'on' : ''}" id="gyMsg">${msg[0]}</div><div class="muted" id="gyMsg2">${msg[1]}</div>${st < 5 ? gymShareBtn(m.id, 'btn ghost sm gyshare') : ''}${tail}</div>`;
+  return `<div class="card gycard" id="gymCard" data-st="${st}">${head}${gymStepsHTML(st)}<div class="gymsg ${st === 5 ? 'on' : ''}" id="gyMsg">${msg[0]}</div><div class="muted" id="gyMsg2">${msg[1]}</div>${st < 5 ? gymShareBtn(m.id, 'btn ghost sm gyshare') + gymQrBtn(m.id) : ''}${tail}</div>`;
 }
 const gymPill = () => { const g = ensureGym(); return g.item && g.itemOn ? `<span class="pill gypill">${gymItemImg()}${GYM_ITEM}</span>` : ''; };
 
@@ -483,7 +522,7 @@ function gymNoteSheet() {
   ensureGym(); const n = S.gymNotes.shift(); if (!n) return; save();
   const ok = `<button class="btn" data-act="shClose" id="gyNoteOk" style="margin-top:14px">확인</button>`, push = `<div class="muted demoonly" style="margin-top:8px">실제 앱에서는 푸시 알림으로도 가요</div>`;
   if (n.t === 'join') sheet(`<div class="gydone" id="gyJoinNote">${n.item ? `<div class="gybadge">${gymItemImg('lg')}</div>` : `<div class="gychk"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7.5"/></svg></div>`}<div class="h2 gyname">${esc(n.name)}${gjo(n.name, '이', '가')} 입점했어요!</div><div class="muted gysub">오늘부터 경험치 1.5배예요.${n.item ? `<br>입점을 요청해 주셔서 한정 꾸미기 아이템 «${GYM_ITEM}»를 드렸어요.` : ''}</div></div>${ok}${push}`);
-  else if (n.t === 'five') sheet(`<div class="gydone" id="gyFiveNote"><div class="h2 gyname">${esc(n.name)} 입점 요청에 ${GYM_NEED}명이 모였어요</div><div class="muted gysub">저희가 사장님께 연락드릴게요. 답변 오면 바로 알려 드릴게요.</div></div>${ok}${push}`);
+  else if (n.t === 'five') sheet(`<div class="gydone" id="gyFiveNote"><div class="h2 gyname">${esc(n.name)} 입점 요청, ${GYM_NEED}명이 모였어요!</div><div class="muted gysub">이제 사장님께 안내문을 보낼게요</div></div>${ok}${push}`);
   else if (n.t === 'eq') sheet(`<div class="gydone" id="gyEqNote"><div class="gychk"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7.5"/></svg></div><div class="h2 gyname">${esc(n.name)}${gjo(n.name, '이', '가')} 기구 정보를 올렸어요</div><div class="muted gysub">이제 코치가 이 센터에 있는 기구에 맞춰 알려드려요.</div></div>${ok}${push}`);
 }
 function gymBoot() { try { ensureGym(); if (S.gymNotes.length && S.chosen && S.onboarded && !/^#admin/.test(location.hash)) setTimeout(gymNoteSheet, 500); } catch (e) { console.error('[gymBoot]', e); } }
@@ -512,6 +551,7 @@ document.addEventListener('click', e => {
     gyNext: () => { const g = S.gym; g.step = 'ask'; if (!S.onboarded) return go('workout', 'onbPerm'); return go('workout', g.flow === 'settings' ? 'settings' : null); },
     gyChange: () => { const g = ensureGym(); g.flow = v === 'settings' ? 'settings' : 'card'; g.q = ''; g.manual = false; return flowGo('ask'); },
     gyShare: () => (gymShare(v), true),
+    gyQr: () => (gymQrSheet(v), true),
     gyItem: () => { S.gym.itemOn = !S.gym.itemOn; },
     gyMovedOk: () => { S.gym.moved = null; },
     gyPlManual: () => { S.gym.pm = true; },
@@ -550,11 +590,12 @@ function vH8() {
   const gs = (key, cur, opts) => `<div class="aseg">${opts.map(([k, l]) => `<button class="${String(cur) === String(k) ? 'on' : ''}" data-gadm="${key}" data-v="${k}">${l}</button>`).join('')}</div>`;
   const row = (l, body, hint = '') => `<div class="afr gyafr"><span>${l}</span><div>${body}${hint ? `<em>${hint}</em>` : ''}</div></div>`;
   const who = !g.kind ? 'none' : g.kind === 'home' ? 'home' : g.id;
-  const stageCur = m ? (sim.stage[m.id] || 'auto') : 'auto';
+  const mailCur = !m || !sim.mail[m.id] ? 'none' : gymMailDue(m) ? 'due' : 'sent', ready = !!m && gymReady(m);
+  const qs = m ? `?g=${encodeURIComponent(m.id)}&name=${encodeURIComponent(m.name)}&area=${encodeURIComponent(m.area || '')}&n=${gymWait(m)}&r=${gymRecent(m)}` : '';
   const days = Math.floor((Date.now() - S.joinAt) / DAY_MS);
   const st = m ? gymStage(m) : 0;
   const now = !g.kind ? '아직 안 고름' : g.kind === 'home' ? '집·야외' : `${esc(g.name)}(${g.by === 'auto' ? '기록으로 자동 판정' : '직접 고름'}) · ${gymJoined(m) ? '입점' : '입점 전'} · 여기 기록 ${gymRecN(m)}건 · ${gymReqd(m) ? `요청함 · 진행 ${st}/5칸 · 요청 ${gymWait(m)}명` : '요청 안 함'}`;
-  const ownerUrl = m ? `owner.html?g=${encodeURIComponent(m.id)}&name=${encodeURIComponent(m.name)}&area=${encodeURIComponent(m.area || '')}&n=${gymWait(m)}` : 'owner.html';
+  const ownerUrl = 'owner.html' + qs, letterUrl = 'letter.html' + qs;
   const centers = ['니짐 신림점', '니짐 봉천점'];
   const entry = S.entryDemo ? S.entryCenter : 'none';
   return `${sec('우리 헬스장 입점 요청 — 회원 앱 상태 바꿔 보기', `
@@ -564,9 +605,13 @@ function vH8() {
     ${row('운동 기록 넣기(오늘 · 자가 기록)', GYM_SIM_GYMS.map(([id, l]) => `<button class="abtn ghost sm" data-gadm="rec" data-v="${id}" style="margin:0 4px 4px 0">${l} +1</button>`).join(''), `입점 요청은 기록이 있는 헬스장에만 할 수 있어요 · 지금 ${GYM_SIM_GYMS.map(([id, l]) => `${l} ${gymRecN(gymById(id))}건`).join(' · ')}`)}
     ${row('입점 요청(내 헬스장)', gs('req', m && gymReqd(m) ? 1 : 0, [[0, '아직 안 함'], [1, '요청함']]) + ` <button class="abtn ghost sm" data-gadm="reqClear" data-v="1" style="margin-left:6px">내 요청 모두 지우기</button>`, m && !gymJoined(m) ? '기록이 없으면 «요청함»으로 안 바뀌어요(위에서 기록 먼저) · 3곳이 차 있어도 안 바뀌어요' : '입점 전 헬스장이 내 헬스장일 때만')}
     ${row('다른 사람 요청 수(내 헬스장)', gs('wait', m ? gymOthers(m) : '', [[0, '0명'], [2, '2명'], [4, '4명'], [11, '11명']]), '내 요청은 따로 +1')}
-    ${row('진행 단계(내 헬스장)', gs('stage', stageCur, [['auto', '인원대로'], ['sent', '사장님께 전달'], ['wait', '답 기다리는 중'], ['reject', '거절됨'], ['join', '입점 성사']]), '«거절됨»이어도 회원 화면엔 «답 기다리는 중»까지만 보여요 · «입점 성사»는 알림 + 요청자에게 한정 꾸미기 1개 · 입점하면 요청 3곳 중 한 자리가 비어요')}
+    ${row('그중 최근 2주 기록자(다른 사람)', gs('recent', m ? gymRecentOthers(m) : '', [[0, '0명'], [2, '2명'], [3, '3명'], [8, '8명']]), m ? `자동 판정 «5명 모임» = 요청 ${GYM_NEED}명 이상 + 그중 최근 2주에 이 헬스장에서 기록한 사람 ${GYM_NEED_RECENT}명 이상 · 지금 요청 ${gymWait(m)}명 · 최근 2주 ${gymRecent(m)}명(내 기록 ${gymReqd(m) && gymMeRecent(m) ? '+1' : '0'}) → ${ready ? '기준 넘음(발송 대기 목록)' : '기준 미달(칸 1에 머묾)'} · 다른 사람 요청 수보다 크게는 안 들어가요` : '')}
+    ${row('안내문 우편(흉내 · 실제 발송 없음)', gs('mail', mailCur, [['none', '접수 전'], ['sent', '이번 주 묶음 우편 접수됨'], ['due', `도착 예정일 지남(영업일 ${GYM_MAIL_BIZ}일)`]]), `사람이 누르는 «전달함»은 없어졌어요 · 실서비스는 주 1회 묶음 접수 때 자동으로 칸 3, 접수 다음 날부터 영업일 ${GYM_MAIL_BIZ}일 뒤 자동으로 칸 4${m && !sim.mail[m.id] && !ready ? ' · <b>아직 기준 미달이라 눌러도 접수되지 않아요</b>' : ''}`)}
+    ${row('사장님 쪽 내부 기록', gs('owner', m ? (sim.owner[m.id] || 'none') : 'none', [['none', '없음'], ['open', '열람(QR·주소 접속)'], ['reject', '거절'], ['optout', '우편 그만 받기']]), '회원 화면에는 보이지 않아요 · 열람해도 «사장님이 확인했어요»를 띄우지 않고, 거절·그만 받기여도 «답 기다리는 중»까지만')}
+    ${row('입점(내 헬스장)', gs('stage', m && sim.stage[m.id] === 'join' ? 'join' : 'auto', [['auto', '입점 전'], ['join', '입점 성사']]), '«입점 성사»는 알림 + 요청자에게 한정 꾸미기 1개 · 입점하면 요청 3곳 중 한 자리가 비어요')}
     ${row('가입 시점', gs('join', days < GYM_QUIET_DAYS ? 0 : 1, [[0, '오늘 가입(첫 7일)'], [1, '가입 8일째']]), '첫 7일·첫 3회 기록까지는 결과 화면에 입점 안내·요청 버튼을 안 띄워요')}
-    ${row('사장님용 안내 페이지', `<a class="abtn ghost sm" href="${ownerUrl}" target="_blank" rel="noopener" id="ownerLink" style="text-decoration:none">시안 열기 (새 창)</a>`, '헬스장마다 주소 1개 · 이름 없이 숫자만 · 비용·조건 칸은 [형 입력]')}`)}
+    ${row('사장님용 안내 페이지', `<a class="abtn ghost sm" href="${ownerUrl}" target="_blank" rel="noopener" id="ownerLink" style="text-decoration:none">시안 열기 (새 창)</a>`, '헬스장마다 주소 1개 · 이름 없이 숫자만 · 비용·조건 칸은 [형 입력] · 입점 신청(확인 코드·동의 2개)·채팅·우편 그만 받기는 시안(실제 접수·발송 없음)')}
+    ${row('사장님 안내문(우편 A4 한 장)', `<a class="abtn ghost sm" href="${letterUrl}" target="_blank" rel="noopener" id="letterLink" style="text-decoration:none">시안 열기 (새 창)</a>`, 'QR·짧은 주소·확인 코드 자리 포함 · 문의 창구는 [형 입력] · 실제 우편 발송 없음')}`)}
   ${sec('센터 기구 기반 코칭 — 시험용 센터 2곳 (기구 목록에서 골라 배정하는 방식)', `
     ${row('오늘 입장한 센터', gs('entry', entry, [['니짐 신림점', '니짐 신림점'], ['니짐 봉천점', '니짐 봉천점'], ['none', '입장 기록 없음']]), '코치는 «입장»한 입점센터의 기구만 봐요 · 입점 안 된 헬스장·집·야외는 내 기록만')}
     ${centers.map(c => { const r = centerRow(c), n = r.machine_ids.length, cur = !n ? 0 : n === MACHINES.length ? 2 : 1;
@@ -583,6 +628,7 @@ document.addEventListener('click', e => {
   e.preventDefault(); e.stopImmediatePropagation(); ensureGym();
   const k = b.dataset.gadm, v = b.dataset.v, g = S.gym, sim = S.gymSim, m0 = myGym();
   const pushNote = n => { S.gymNotes = S.gymNotes.filter(x => x.t !== n.t); S.gymNotes.push(n); };
+  const wasReady = !!m0 && gymReqd(m0) && gymReady(m0), wasId = m0 && m0.id;
   if (k === 'who') {
     if (v === 'none') Object.assign(g, { kind: null, id: null, name: '', area: '' });
     else if (v === 'home') Object.assign(g, { kind: 'home', id: null, name: '', area: '' });
@@ -592,17 +638,26 @@ document.addEventListener('click', e => {
   else if (k === 'rec') gymSimRec(v);
   else if (k === 'req') { if (m0 && !gymJoined(m0)) { if (+v) gymRequest(m0.id); else delete S.gymReqs[m0.id]; } }
   else if (k === 'reqClear') S.gymReqs = {};
-  else if (k === 'wait') { if (m0) { const was = gymWait(m0); sim.wait[m0.id] = +v; if (gymReqd(m0) && was < GYM_NEED && gymWait(m0) >= GYM_NEED) pushNote({ t: 'five', name: m0.name }); } }
+  else if (k === 'wait') { if (m0) sim.wait[m0.id] = +v; }
+  else if (k === 'recent') { if (m0) sim.recent[m0.id] = +v; }
+  else if (k === 'mail') { if (m0 && !m0.linked) {   // 우편 접수는 기준(5명 + 최근 2주 3명)을 넘은 헬스장만
+    if (v === 'none') delete sim.mail[m0.id];
+    else if (sim.mail[m0.id] || gymReady(m0)) sim.mail[m0.id] = { at: Date.now() - (v === 'due' ? 12 : 0) * DAY_MS }; } }
+  else if (k === 'owner') { if (m0) { if (v === 'none') delete sim.owner[m0.id]; else sim.owner[m0.id] = v; } }
   else if (k === 'stage') { if (m0 && !m0.linked) {
     const item = gymReqd(m0);
-    if (v === 'auto') delete sim.stage[m0.id]; else { sim.stage[m0.id] = v; if (gymOthers(m0) < GYM_NEED) sim.wait[m0.id] = GYM_NEED; }
-    if (v === 'join') { if (item) { g.item = true; g.itemOn = true; } pushNote({ t: 'join', name: m0.name, item }); }
-    else { g.item = false; g.itemOn = false; S.gymNotes = S.gymNotes.filter(x => x.t !== 'join'); } } }
+    if (v === 'join') { sim.stage[m0.id] = 'join'; if (item) { g.item = true; g.itemOn = true; } pushNote({ t: 'join', name: m0.name, item }); }
+    else { delete sim.stage[m0.id]; g.item = false; g.itemOn = false; S.gymNotes = S.gymNotes.filter(x => x.t !== 'join');
+      if (v !== 'auto') { if (gymOthers(m0) < GYM_NEED) sim.wait[m0.id] = GYM_NEED;   // 앞 판 검증 스크립트용(sent·wait·reject) — 화면 버튼은 없다
+        sim.mail[m0.id] = { at: Date.now() - (v === 'sent' ? 0 : 12) * DAY_MS }; if (v === 'reject') sim.owner[m0.id] = 'reject'; else delete sim.owner[m0.id]; } } } }
   else if (k === 'join') S.joinAt = Date.now() - (+v ? 8 : 0) * DAY_MS;
   else if (k === 'entry') { if (v === 'none') S.entryDemo = false; else { S.entryDemo = true; S.entryCenter = v; } }
   else if (k.startsWith('equip:')) { const c = k.slice(6), was = !!centerEquip(c); sim.equip[c] = +v; if (!was && +v && S.eqReq[c]) pushNote({ t: 'eq', name: c }); }
   else if (k === 'eqWait') sim.eqWait['니짐 봉천점'] = +v;
   else if (k === 'eqClear') S.eqReq = {};
+  { const m1 = myGym();   // «5명 모임» 알림: 기준(요청 5명 + 최근 2주 3명)을 막 넘었을 때 요청자에게 한 번
+    if (m1 && m1.id === wasId && !wasReady && gymReqd(m1) && gymReady(m1) && !sim.mail[m1.id] && !gymJoined(m1)) pushNote({ t: 'five', name: m1.name });
+    else if (m1 && !(gymReqd(m1) && gymReady(m1))) S.gymNotes = S.gymNotes.filter(x => x.t !== 'five'); }
   save();
   if (typeof rerender === 'function') rerender();
 }, true);

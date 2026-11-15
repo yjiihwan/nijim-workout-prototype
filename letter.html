@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>니짐내짐 사장님 안내문 우편 (시안)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Pretendard,-apple-system,'Apple SD Gothic Neo',sans-serif;color:#111;background:#E9E9EE;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere;-webkit-font-smoothing:antialiased}
+.draft{background:#16161C;color:#fff;font-size:12.5px;text-align:center;padding:8px 14px}
+.bar{max-width:794px;margin:14px auto 0;padding:0 12px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.env{background:#fff;border:1px solid #CFCFD6;border-radius:10px;padding:8px 14px;font-size:14px}
+.env small{color:#6F6F7A;margin-right:8px}.env b{font-weight:700}
+.tog{display:none;border:1px solid #16161C;background:#fff;border-radius:10px;padding:8px 14px;font:inherit;font-size:14px;font-weight:700;color:#16161C;cursor:pointer}
+.fit{margin:12px auto 32px;width:794px;max-width:calc(100% - 24px)}
+.page{width:794px;height:1123px;background:#fff;box-shadow:0 2px 14px rgba(0,0,0,.14);padding:66px 76px 54px;transform-origin:top left;display:flex;flex-direction:column}
+.logo{font-weight:900;font-style:italic;font-size:22px;letter-spacing:-1px}
+.to{margin-top:34px;font-size:16.5px;font-weight:600}
+h1{margin-top:14px;font-size:30px;line-height:1.42;letter-spacing:-.4px;font-weight:800}
+.sub{margin-top:14px;font-size:15.5px;color:#444;line-height:1.65;padding-bottom:20px;border-bottom:2px solid #111}
+.body{margin-top:26px;font-size:18px;line-height:1.8}
+.body p+p{margin-top:14px}
+.qr{margin-top:30px;display:flex;gap:24px;align-items:center;border:1.5px solid #111;border-radius:6px;padding:20px}
+.qr .img{flex:none;line-height:0}
+.qr .img svg{display:block;width:190px;height:190px}
+.qr .tx{flex:1;min-width:0;font-size:17px;line-height:1.65}
+.qr .url{margin-top:10px;font-size:19px;font-weight:800;letter-spacing:.2px}
+.qr .code{margin-top:10px;padding-top:10px;border-top:1px dashed #999;font-size:16px}
+.qr .code b{font-size:22px;letter-spacing:1.5px;font-weight:800;margin:0 4px}
+.prom{margin-top:28px;font-size:17.5px;font-weight:700;line-height:1.7}
+.stop{margin-top:16px;margin-bottom:22px;font-size:15.5px;color:#333;line-height:1.7}
+.from{margin-top:auto;padding-top:16px;border-top:1px solid #999;font-size:15px;line-height:1.7}
+.todo{display:inline-block;background:#FFF4B8;border:1px dashed #D9A400;border-radius:6px;padding:0 8px;font-size:13px;color:#5A4300;font-weight:700}
+.eg{display:inline-block;background:#FFF4B8;border:1px dashed #D9A400;border-radius:6px;padding:0 6px;font-size:11.5px;color:#5A4300;font-weight:700;letter-spacing:0;vertical-align:middle;margin-left:6px}
+@media (max-width:820px){.tog{display:inline-block}}
+body.read .page{width:100%;height:auto;transform:none!important;padding:28px 20px 24px}
+body.read .fit{height:auto!important}
+body.read h1{font-size:21px}body.read .body{font-size:15.5px}body.read .sub,body.read .stop{font-size:14px}body.read .qr .tx,body.read .prom{font-size:15.5px}
+body.read .qr{flex-direction:column;align-items:flex-start;gap:14px}
+body.read .from{margin-top:22px}
+@media print{.draft,.bar{display:none}body{background:#fff}.fit{margin:0;height:auto!important}.page{box-shadow:none;transform:none!important}.todo,.eg{background:none}}
+</style>
+</head>
+<body>
+<div class="draft">시안 · 사장님 안내문(우편 A4 한 장 · 흑백 인쇄 기준) · 숫자·확인 코드·짧은 주소는 예시 · 노란 칸은 [형 입력] · 실제 우편은 발송되지 않습니다</div>
+<div class="bar"><div class="env"><small>봉투 받는 사람</small><b><span class="lNm">△△헬스</span> 사장님께</b></div><button class="tog" id="lTog" type="button">글자 크게 보기</button></div>
+<div class="fit" id="lFit"><div class="page" id="lPage">
+  <div class="logo">N 니짐내짐</div>
+  <div class="to"><span class="lNm">△△헬스</span> 사장님께</div>
+  <h1>운동기록 앱 '니짐내짐' 사용자 <span id="lN">12</span>명이 <span class="lNm">△△헬스</span>의 입점을 요청했습니다</h1>
+  <div class="sub">이 앱에 <span class="lNm">△△헬스</span>에서 운동했다고 기록한 분들입니다 · <span id="lDate">2026년 11월 15일</span> 기준 · 이 중 <span id="lR">8</span>명은 최근 2주 사이에도 <span class="lNm">△△헬스</span>에서 운동한 기록이 있습니다</div>
+  <div class="body">
+    <p>니짐내짐은 헬스장 다니는 분들이 운동을 기록하는 앱입니다. 이 앱에서 <span class="lNm">△△헬스</span><span id="lJo">를</span> 운동 장소로 기록한 분들이 <span class="lNm">△△헬스</span>도 니짐내짐에 입점(제휴 헬스장으로 등록)했으면 좋겠다고 요청하셔서 알려 드립니다.</p>
+    <p>입점하시면 <span class="lNm">△△헬스</span>에서 운동하는 분들이 앱에서 점수(경험치)를 더 받고, 같은 헬스장 사람들끼리 주간 순위 경쟁도 할 수 있습니다.</p>
+    <p>입점 조건과 비용은 아래 QR코드를 찍으시면 보실 수 있습니다.</p>
+  </div>
+  <div class="qr">
+    <div class="img" id="lQr"></div>
+    <div class="tx">휴대폰 카메라로 QR코드를 찍으시면 요청 현황과 입점 조건을 보실 수 있습니다.
+      <div class="url"><span id="lUrl">ngym.co.kr/g/7K2M</span><span class="eg">짧은 주소 자리 · 예시</span></div>
+      <div class="code">확인 코드 <b id="lCode">ABCD-1234</b><span class="eg">예시</span><br>입점 신청하실 때 사장님 본인 확인에 쓰는 코드입니다.</div>
+    </div>
+  </div>
+  <div class="prom">저희가 먼저 전화나 문자를 드리지 않습니다. 사장님께서 신청하시거나 문의를 남기신 경우에만 연락드립니다.</div>
+  <div class="stop">이 우편은 한 헬스장에 두 번까지만 보냅니다.<br>더 받지 않으시려면 위 QR코드로 들어간 페이지 맨 아래에서 '우편 그만 받기'를 눌러 주십시오.</div>
+  <div class="from">니짐내짐(주식회사 인디펜던트) · 문의 <span class="todo">형 입력 · 문의 창구</span></div>
+</div></div>
+<script src="qr.js?v=1.56"></script>
+<script>
+/* 시안: 주소의 ?g=&name=&n=&r= 값을 쓴다. 실서비스는 발송 시점의 서버 집계 값 + 헬스장마다 고유한 확인 코드·짧은 주소를 인쇄 */
+(function () {
+  var q = new URLSearchParams(location.search), name = (q.get('name') || '△△헬스').slice(0, 40), n = parseInt(q.get('n'), 10), r = parseInt(q.get('r'), 10), g = (q.get('g') || '').slice(0, 40);
+  if (!(n >= 0)) n = 12; if (!(r >= 0)) r = Math.round(n * 0.7); r = Math.min(n, r);
+  var set = function (id, v) { document.getElementById(id).textContent = v; };
+  document.querySelectorAll('.lNm').forEach(function (el) { el.textContent = name; });
+  set('lN', n); set('lR', r);
+  var c = name.charCodeAt(name.length - 1) - 0xAC00; set('lJo', c >= 0 && c <= 11171 && c % 28 ? '을' : '를');   // 받침 있으면 «을»
+  var d = new Date(); set('lDate', d.getFullYear() + '년 ' + (d.getMonth() + 1) + '월 ' + d.getDate() + '일');
+  var url = location.origin + location.pathname.replace(/[^/]*$/, '') + 'owner.html?g=' + encodeURIComponent(g) + '&n=' + n + '&r=' + r + '&name=' + encodeURIComponent(name);
+  document.getElementById('lQr').innerHTML = NJ_qrSvg(url, 190);
+  document.title = name + ' · 니짐내짐 사장님 안내문 (시안)';
+  var page = document.getElementById('lPage'), fit = document.getElementById('lFit'), tog = document.getElementById('lTog');
+  var lay = function () { if (document.body.classList.contains('read')) return; var k = Math.min(1, fit.clientWidth / 794); page.style.transform = k < 1 ? 'scale(' + k + ')' : ''; fit.style.height = Math.round(1123 * k) + 'px'; };
+  tog.addEventListener('click', function () { var on = document.body.classList.toggle('read'); tog.textContent = on ? 'A4 한 장으로 보기' : '글자 크게 보기'; lay(); });
+  addEventListener('resize', lay); lay();
+})();
+</script>
+</body>
+</html>

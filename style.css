@@ -893,3 +893,15 @@ button.gydid{font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .mschg{display:block;margin:10px 0 0;padding:4px 0;color:var(--g5);font-weight:600;text-align:left}
 .msonb{display:flex;flex-direction:column;gap:4px}.msonb b{font-size:15px;line-height:1.4;word-break:keep-all}.msonb small{font-size:14px;line-height:1.45;color:var(--g5);word-break:keep-all}
 #msPlace #placeNote{margin-top:10px}
+
+/* ===== v1.56 사장님께 QR 보여 드리기 ===== */
+.gycard .gyshare.gyqrbtn{margin-top:8px}
+.gyqr{text-align:center;padding:6px 2px 4px}
+.gyqr .h2{line-height:1.38;word-break:keep-all;overflow-wrap:anywhere;margin:0 0 8px}
+.gyqr .gysub{margin-bottom:12px}
+.gyqrbox{display:inline-flex;padding:6px;border:1px solid var(--g2);border-radius:16px;background:#fff;line-height:0}
+.gyqrbox svg{display:block;width:208px;height:208px;max-width:60vw;max-height:60vw}
+.gyqrcap{margin-top:10px;font-size:14px;font-weight:700;line-height:1.45;word-break:keep-all;text-wrap:balance}
+.gyqr .h2,.gyqr .gysub,.gyqrhelp{text-wrap:balance}
+.gyqrhelp{margin:10px 0 14px;padding:10px 12px;border-radius:12px;background:var(--g1);font-size:13px;line-height:1.5;color:var(--g5);word-break:keep-all}
+.gyrq .gyrqqr{display:block;margin-top:6px;font-size:12.5px;text-align:left}

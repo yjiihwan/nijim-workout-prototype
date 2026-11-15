@@ -23,7 +23,9 @@ const GYM_STEPS = [['요청', '접수'], ['5명', '모임'], ['사장님께', '�
 const GYM_NEED = 5;            // 이 인원이 모이면 니짐이 사장님께 연락
 const GYM_CHANGE_DAYS = 30;    // 내 헬스장 바꾸기 = 30일에 1번
 const GYM_QUIET_DAYS = 7, GYM_QUIET_RECS = 3;   // 가입 후 첫 7일·첫 3회 기록까지는 «입점 헬스장이었다면 +○○» 비교를 안 띄움
-const GYM_ITEM = '개척자 배지';   // 입점 성사 때 요청자 전원에게 주는 한정 꾸미기(경험치 보상 없음 — 형 확정)
+const GYM_ITEM = '개척자 배지';
+const GYM_ITEM_IMG = 'pioneer_badge';   // assets/item_pioneer_badge.png — 별이 뭉개지지 않게 24px 이상으로만 씀
+const gymItemImg = cls => `<img class="gyico ${cls || ''}" src="assets/item_${GYM_ITEM_IMG}.png" srcset="assets/item_${GYM_ITEM_IMG}.png 1x, assets/item_${GYM_ITEM_IMG}@2x.png 2x" alt="">`;   // 입점 성사 때 요청자 전원에게 주는 한정 꾸미기(경험치 보상 없음 — 형 확정)
 const DAY_MS = 864e5;
 
 /* 센터 기구 — 정해진 목록에서 고르는 방식(자유 입력·사진만으로는 코치가 못 읽는다). [id, 이름, 묶음] */
@@ -176,10 +178,10 @@ function gymCard() {
     [`${n}명이 모였어요`, '저희가 곧 사장님께 연락드릴게요'],
     ['사장님께 요청을 전달했어요', '답변 오면 바로 알려 드릴게요'],
     ['사장님 답을 기다리고 있어요', '소식이 오면 바로 알려 드릴게요'],
-    [`${nm}${gjo(m.name, '이', '가')} 입점했어요!`, `오늘부터 경험치 1.5배예요${g.item ? ` · 요청해 주셔서 «${GYM_ITEM}»를 드렸어요` : ''}`]][st];
+    [`${nm}${gjo(m.name, '이', '가')} 입점했어요!`, g.item ? `<span class="gygift" id="gyGift">${gymItemImg()}<span>오늘부터 경험치 1.5배예요 · 요청해 주셔서 «${GYM_ITEM}»를 드렸어요</span></span>` : '오늘부터 경험치 1.5배예요']][st];
   return `<div class="card gycard" id="gymCard" data-st="${st}">${head}${gymStepsHTML(st)}<div class="gymsg ${st === 5 ? 'on' : ''}" id="gyMsg">${msg[0]}</div><div class="muted" id="gyMsg2">${msg[1]}</div>${st < 5 ? gymShareBtn('btn ghost sm gyshare') : ''}</div>`;
 }
-const gymPill = () => { const g = ensureGym(); return g.item && g.itemOn ? `<span class="pill gypill">${GYM_ITEM}</span>` : ''; };
+const gymPill = () => { const g = ensureGym(); return g.item && g.itemOn ? `<span class="pill gypill">${gymItemImg()}${GYM_ITEM}</span>` : ''; };
 
 /* ===== 장소 고르는 화면 — «아직 입점 전» 줄 ===== */
 function gymPlaceRow(p) {
@@ -326,7 +328,7 @@ function eqAltReply(q, lastEx) {
 function gymNoteSheet() {
   ensureGym(); const n = S.gymNotes.shift(); if (!n) return; save();
   const ok = `<button class="btn" data-act="shClose" id="gyNoteOk" style="margin-top:14px">확인</button>`, push = `<div class="muted demoonly" style="margin-top:8px">실제 앱에서는 푸시 알림으로도 가요</div>`;
-  if (n.t === 'join') sheet(`<div class="gydone" id="gyJoinNote"><div class="gychk"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7.5"/></svg></div><div class="h2 gyname">${esc(n.name)}${gjo(n.name, '이', '가')} 입점했어요!</div><div class="muted gysub">오늘부터 경험치 1.5배예요.${n.item ? `<br>입점을 요청해 주셔서 한정 꾸미기 아이템 «${GYM_ITEM}»를 드렸어요.` : ''}</div></div>${ok}${push}`);
+  if (n.t === 'join') sheet(`<div class="gydone" id="gyJoinNote">${n.item ? `<div class="gybadge">${gymItemImg('lg')}</div>` : `<div class="gychk"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7.5"/></svg></div>`}<div class="h2 gyname">${esc(n.name)}${gjo(n.name, '이', '가')} 입점했어요!</div><div class="muted gysub">오늘부터 경험치 1.5배예요.${n.item ? `<br>입점을 요청해 주셔서 한정 꾸미기 아이템 «${GYM_ITEM}»를 드렸어요.` : ''}</div></div>${ok}${push}`);
   else if (n.t === 'five') sheet(`<div class="gydone" id="gyFiveNote"><div class="h2 gyname">${esc(n.name)} 입점 요청에 ${GYM_NEED}명이 모였어요</div><div class="muted gysub">저희가 사장님께 연락드릴게요. 답변 오면 바로 알려 드릴게요.</div></div>${ok}${push}`);
   else if (n.t === 'eq') sheet(`<div class="gydone" id="gyEqNote"><div class="gychk"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7.5"/></svg></div><div class="h2 gyname">${esc(n.name)}${gjo(n.name, '이', '가')} 기구 정보를 올렸어요</div><div class="muted gysub">이제 코치가 이 센터에 있는 기구에 맞춰 알려드려요.</div></div>${ok}${push}`);
 }

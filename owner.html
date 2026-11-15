@@ -117,7 +117,7 @@ footer.stop p{color:var(--ink);font-size:14.5px}
 
   <section>
     <h2>사장님이 하실 일</h2>
-    <div class="steps"><div>입점 신청<small>아래 버튼으로 신청합니다</small></div><div>본인 확인<small>우편 안내문에 적힌 확인 코드로 확인합니다</small></div><div>입점 완료<small>카카오톡 안내에 따라 남은 절차를 마치면 입점됩니다</small></div></div>
+    <div class="steps"><div>입점 신청<small>아래 버튼으로 신청합니다</small></div><div>본인 확인<small>우편 안내문에 적힌 확인 코드로 확인합니다</small></div><div>남은 절차 마무리<small>본인 확인이 끝나면 카카오톡이나 문자로 안내를 보내 드립니다. 안내에 따라 남은 절차를 마치시면 입점이 완료됩니다</small></div></div>
     <p class="after">입점 후 센터에서 따로 하실 일은 없습니다.</p>
     <div class="todo" style="margin-top:12px"><b>형 확인</b>«따로 하실 일이 없다»는 문장은 회원 입장 확인 방식(앱의 «입장하기»)이 정해져야 쓸 수 있습니다. 센터에 QR을 붙이는 방식이라면 이 문장을 고쳐야 합니다.</div>
   </section>
@@ -151,12 +151,12 @@ footer.stop p{color:var(--ink);font-size:14.5px}
         <div class="note">시안: 형식(영문 4자-숫자 4자)만 맞으면 통과합니다. 예시 코드 ABCD-1234</div>
       </div>
       <div id="apBiz" hidden>
-        <label class="f" for="apBizIn">사업자등록번호를 입력해 주십시오. 담당자가 확인한 뒤 신청을 이어서 진행합니다.</label>
+        <label class="f" for="apBizIn">확인 코드가 없으시면 사업자등록번호를 입력해 주십시오. 담당자가 확인한 뒤 카카오톡이나 문자로 다음 절차를 안내해 드립니다.</label>
         <input type="text" id="apBizIn" placeholder="000-00-00000" maxlength="12" inputmode="numeric" autocomplete="off">
         <div class="err" id="apBizErr" hidden>사업자등록번호 10자리를 입력해 주십시오.</div>
         <button class="go" id="apBizOk" type="button">확인</button>
         <button class="lnk" id="apHasCode" type="button">확인 코드로 신청하기</button>
-        <div class="note">시안 문구(검수 전) · 확인 코드 없이 들어온 경우의 예외 처리 자리입니다</div>
+        <div class="note">시안: 확인 코드 없이 들어온 경우의 예외 처리 자리입니다(담당자 확인은 실제로 이뤄지지 않습니다)</div>
       </div>
       <div id="apForm" hidden>
         <label class="f" for="apTel">연락받으실 휴대폰 번호</label>
@@ -166,7 +166,8 @@ footer.stop p{color:var(--ink);font-size:14.5px}
         <button class="go" id="apSubmit" type="button" disabled>신청하기</button>
       </div>
       <div id="apDone" hidden>
-        <div class="okmsg"><b>신청이 접수되었습니다.</b>아직 입점이 완료된 것은 아닙니다. 입력하신 휴대폰 번호로 카카오톡 안내를 보내 드렸습니다. 카카오톡을 쓰지 않으시면 같은 안내가 문자로 갑니다. 안내에 따라 남은 절차를 마쳐 주십시오.</div>
+        <div class="okmsg" id="apDoneCode"><b>신청이 접수되었습니다.</b>아직 입점이 완료된 것은 아닙니다. 입력하신 휴대폰 번호로 카카오톡 안내를 보내 드렸습니다. 카카오톡을 쓰지 않으시면 같은 안내가 문자로 갑니다. 안내에 따라 남은 절차를 마쳐 주십시오.</div>
+        <div class="okmsg" id="apDoneBiz" hidden><b>신청이 접수되었습니다.</b>아직 입점이 완료된 것은 아닙니다. 담당자가 사업자등록번호를 확인한 뒤, 입력하신 휴대폰 번호로 다음 절차를 안내해 드립니다.</div>
         <div class="note">시안: 실제 카카오톡·문자는 발송되지 않았습니다</div>
       </div>
     </div>
@@ -179,10 +180,10 @@ footer.stop p{color:var(--ink);font-size:14.5px}
       <div class="leave" id="chLeave" hidden>
         <label class="f" for="chTel">답변받으실 휴대폰 번호</label>
         <input type="tel" id="chTel" placeholder="010-0000-0000" maxlength="13" inputmode="numeric" autocomplete="off">
-        <label class="ck"><input type="checkbox" id="chAgree"><span>이 문의의 답변을 문자로 받겠습니다.</span></label>
+        <label class="ck"><input type="checkbox" id="chAgree"><span>이 문의에 대한 답변을 문자로 받겠습니다.</span></label>
         <button class="go" id="chLeaveOk" type="button" disabled>연락처 남기기</button>
       </div>
-      <div class="note">시안: AI 답변은 미리 넣어 둔 예시입니다. 비용·조건은 [형 입력] 값이 들어오기 전이라 답하지 않고 담당자에게 넘깁니다 · 첫 줄 외 채팅 문구는 검수 전</div>
+      <div class="note">시안: AI 답변은 미리 넣어 둔 예시입니다. 비용·조건은 [형 입력] 값이 들어오기 전이라 답하지 않고 담당자에게 넘깁니다</div>
     </div>
   </div>
 </main>
@@ -206,16 +207,17 @@ footer.stop p{color:var(--ink);font-size:14.5px}
   $('oApply').addEventListener('click', function (e) { e.preventDefault(); open('apply'); });
   $('oChat').addEventListener('click', function (e) { e.preventDefault(); open('chat'); });
   var telOk = function (v) { return /^01[0-9]{8,9}$/.test(v.replace(/[^0-9]/g, '')); };
+  var via = 'code';   /* 본인 확인 길: code(확인 코드) · biz(사업자등록번호 — 담당자 확인 전이라 접수 뒤 글이 다르다) */
   var step = function (id) { ['apCode', 'apBiz', 'apForm', 'apDone'].forEach(function (k) { show(k, k === id); }); };
-  $('apCodeOk').addEventListener('click', function () { var ok = /^[A-Za-z]{4}-?[0-9]{4}$/.test($('apCodeIn').value.trim()); show('apCodeErr', !ok); if (ok) step('apForm'); });
+  $('apCodeOk').addEventListener('click', function () { var ok = /^[A-Za-z]{4}-?[0-9]{4}$/.test($('apCodeIn').value.trim()); show('apCodeErr', !ok); if (ok) { via = 'code'; step('apForm'); } });
   $('apNoCode').addEventListener('click', function () { step('apBiz'); });
   $('apHasCode').addEventListener('click', function () { step('apCode'); });
-  $('apBizOk').addEventListener('click', function () { var ok = $('apBizIn').value.replace(/[^0-9]/g, '').length === 10; show('apBizErr', !ok); if (ok) step('apForm'); });
+  $('apBizOk').addEventListener('click', function () { var ok = $('apBizIn').value.replace(/[^0-9]/g, '').length === 10; show('apBizErr', !ok); if (ok) { via = 'biz'; step('apForm'); } });
   var apChk = function () { $('apSubmit').disabled = !(telOk($('apTel').value) && $('apAgree1').checked); };
   ['apTel', 'apAgree1'].forEach(function (id) { $(id).addEventListener('input', apChk); $(id).addEventListener('change', apChk); });
-  $('apSubmit').addEventListener('click', function () { step('apDone'); });
+  $('apSubmit').addEventListener('click', function () { show('apDoneCode', via !== 'biz'); show('apDoneBiz', via === 'biz'); step('apDone'); });
   var say = function (cls, text) { var d = document.createElement('div'); d.className = 'b ' + cls; d.textContent = text; $('chLog').appendChild(d); d.scrollIntoView({ block: 'nearest' }); };
-  var HAND = '이 질문은 담당자 확인이 필요합니다. 연락처를 남겨 주시면 담당자가 확인한 뒤 문자로 답해 드립니다.';
+  var HAND = '이 질문은 담당자가 확인한 뒤에 답해 드릴 수 있습니다. 아래에 휴대폰 번호를 남겨 주시면 문자로 답해 드립니다.';
   var ask = function (text, kind) { say('me', text); if (kind === 'who') say('ai', $('faqWho').textContent); else { say('ai', HAND); show('chLeave', true); } };
   $('chChips').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { ask(b.textContent, b.dataset.q); b.remove(); } });
   var send = function () { var v = $('chIn').value.trim(); if (!v) return; $('chIn').value = ''; ask(v, 'free'); };
@@ -223,7 +225,7 @@ footer.stop p{color:var(--ink);font-size:14.5px}
   $('chIn').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.isComposing) send(); });
   var chChk = function () { $('chLeaveOk').disabled = !(telOk($('chTel').value) && $('chAgree').checked); };
   ['chTel', 'chAgree'].forEach(function (id) { $(id).addEventListener('input', chChk); $(id).addEventListener('change', chChk); });
-  $('chLeaveOk').addEventListener('click', function () { show('chLeave', false); say('ai', '연락처가 접수되었습니다. 담당자가 확인한 뒤 문자로 답해 드리겠습니다.'); });
+  $('chLeaveOk').addEventListener('click', function () { show('chLeave', false); say('ai', '문의가 접수되었습니다. 담당자가 확인한 뒤 남겨 주신 번호로 문자를 드리겠습니다.'); });
   $('oStop').addEventListener('click', function () { var p = document.createElement('p'); p.id = 'oStopDone'; p.textContent = '우편 수신 거부가 처리되었습니다. 앞으로 ' + name + '에는 안내문을 보내지 않겠습니다.'; $('stopBox').replaceChildren(p); });
 })();
 </script>

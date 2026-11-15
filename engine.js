@@ -13,6 +13,12 @@ const CFG = {
   COMEBACK_DAYS: 7, COMEBACK_MUL: 1.5,                // 7일+ 쉬고 첫 세션 — 연속 배율 대신
   MOOD: { low: 0.6, high: 1.3, baseN: 10, baseDays: 56, minBase: 5, newShare: 0.5, quietAfter: 3 },
   CARDIO_K: { light: 0.8, normal: 1.0, hard: 1.2 },
+  /* v1.63(형 11-15): 유산소 경험치 = 분 × XP.cardio × 강도(k). 속도·경사·파워 등을 적으면 그 값으로 MET 를 구해 k = MET ÷ ref,
+     안 적으면 «얼마나 힘들었어요?»(felt)로 조금만. 부풀리기 방지: k 는 min~max(=12 MET) · 입력값은 lim 까지만 · 한 번 운동 sessXP 까지.
+     자전거류는 몸무게와 무관하게 bw(70kg) 고정 — 같은 파워면 같은 경험치(내 정보 몸무게를 낮게 적어 올리는 길 차단).
+     이 판 전에 저장한 기록(it.iv 없음)은 k = 1(시간만) 그대로 */
+  CARDIO_INT: { ref: 5, min: 0.9, max: 2.4, felt: { light: 0.9, normal: 1.0, hard: 1.1 }, sessXP: 240, bw: 70,
+    lim: { kmh: 20, inc: 15, watt: 400, spm: 160, cyc: 45 } },
   BOOST: { mul: 2 },
   POTION: { xp: 300 },
   /* 결정 33: 하루 600·주 1,800 은 «운동 경험치»에만. 아이템 경험치(부스터로 늘어난 몫·물약·앞으로 나올 먹는/마시는 아이템)는
@@ -137,6 +143,43 @@ function xpQty(it) {
   if (e.xpk === 'lesson') return 1;
   return (it.sets || []).filter(x => xpEligible(e, x)).length;
 }
+/* ----- 유산소 강도 (v1.63) -----
+   기구별 입력값: tread = 속도·경사 · foot(걷기·달리기) = 속도 · watt(실내 자전거류) = 파워(W) · row(로잉·스키에르그) = 파워(W) ·
+   step(스텝밀) = 분당 계단 수 · cycle(야외 자전거) = 속도. 표에 없는 기구(일립티컬·직접 추가)는 객관 기준이 없어 felt 만.
+   공식: 걷기·달리기 = ACSM 대사 공식(걷기 0.1S+1.8SG+3.5 · 달리기 0.2S+0.9SG+3.5, S m/분·G 경사 소수, 6~8km/h 는 두 식을 이어 붙임) ·
+   자전거 = ACSM 다리 에르고미터(10.8×W÷몸무게+7) · 로잉 = 2024 Compendium 파워 구간 · 스텝밀 = Compendium 9.0 MET(분당 60계단)에 맞춘 직선 ·
+   야외 자전거 = Compendium 속도 구간 */
+const CARDIO_KIND = { treadmill: 'tread', walk: 'foot', run: 'foot', bike_up: 'watt', bike_rec: 'watt', spin: 'watt', assault: 'watt', rower: 'row', skierg: 'row', stepmill: 'step', cycle: 'cycle' };
+const ROW_MET = [[0, 3.5], [75, 5.0], [125, 7.5], [175, 11.0], [225, 14.0]];
+const CYC_MET = [[0, 3.5], [15, 4.0], [17.5, 6.8], [21, 8.0], [24, 10.0], [28, 12.0], [32, 15.8]];
+const lerpTab = (t, x) => { if (x <= t[0][0]) return t[0][1]; for (let i = 1; i < t.length; i++) if (x <= t[i][0]) { const [a, b] = t[i - 1], [c, d] = t[i]; return b + (d - b) * (x - a) / (c - a); } return t[t.length - 1][1]; };
+const cardioKind = ex => CARDIO_KIND[ex] || null;
+/* 속도를 안 적고 거리만 적었으면 거리÷시간으로 속도를 구한다 */
+function cardioSpeed(it, lim) { const v = it.kmh > 0 ? it.kmh : (it.km > 0 && it.min > 0 ? it.km / (it.min / 60) : 0); return Math.min(lim, v); }
+/* 적은 값으로 구한 MET · 계산에 쓸 값이 없으면 null */
+function cardioMET(it) {
+  const kind = cardioKind(it.ex), L = CFG.CARDIO_INT.lim;
+  if (kind === 'tread' || kind === 'foot') {
+    const v = cardioSpeed(it, L.kmh); if (!(v > 0)) return null;
+    const S = v * 1000 / 60, G = kind === 'tread' ? Math.min(L.inc, Math.max(0, it.inc || 0)) / 100 : 0;
+    const walk = 0.1 * S + 1.8 * S * G + 3.5, run = 0.2 * S + 0.9 * S * G + 3.5, w = Math.min(1, Math.max(0, (v - 6) / 2));
+    return (walk * (1 - w) + run * w) / 3.5;
+  }
+  if (kind === 'watt') { const W = Math.min(L.watt, it.watt || 0); return W > 0 ? (10.8 * W / CFG.CARDIO_INT.bw + 7) / 3.5 : null; }
+  if (kind === 'row') { const W = Math.min(L.watt, it.watt || 0); return W > 0 ? lerpTab(ROW_MET, W) : null; }
+  if (kind === 'step') { const f = Math.min(L.spm, it.spm || 0); return f > 0 ? 1.2 + 0.13 * f : null; }
+  if (kind === 'cycle') { const v = cardioSpeed(it, L.cyc); return v > 0 ? lerpTab(CYC_MET, v) : null; }
+  return null;
+}
+/* 강도 배수 — { k, by: 'old'(이 판 전 기록 = 시간만) | 'input'(적은 값) | 'felt'(힘들었어요), met, top(상한에 걸림) } */
+function cardioK(it) {
+  const C = CFG.CARDIO_INT;
+  if (!it.iv) return { k: 1, by: 'old', met: null, top: false };
+  const met = cardioMET(it);
+  if (met == null) return { k: C.felt[it.level || 'normal'] || 1, by: 'felt', met: null, top: false };
+  const raw = met / C.ref, k = Math.round(Math.min(C.max, Math.max(C.min, raw)) * 100) / 100;
+  return { k, by: 'input', met, top: raw > C.max, low: raw < C.min };
+}
 const shortSets = it => { const e = EX[it.ex]; return e && (e.mode === 'wr' || e.mode === 'r') ? (it.sets || []).filter(x => x.done && !xpEligible(e, x)).length : 0; };
 /* 경험치용 «내 평소» = 기준일 −56일 안 · «가볍게» 제외 · 같은 날은 합쳐 1회 · 최신 10회 중앙값 · 5회 미만이면 null (SPEC §3-1a)
    hist[ex] = [{ date, light, q }] (오늘 것 제외) */
@@ -153,7 +196,7 @@ function sessionXP(s, c) {
   const X = CFG.XP, UNIT = { weight: X.weight, body: X.body, cardio: X.cardio }, LEFT = { weight: CFG.LIM.weightSets, body: CFG.LIM.bodySets, cardio: CFG.LIM.cardioMin };
   const xb = c.xpBase || {}, tq = c.todayQ || {};
   const cnt = { weight: 0, body: 0, cardio: 0 }, xpOf = { weight: 0, body: 0, cardio: 0 };
-  let l = 0, base = 0, plainSum = 0, bonusXP = 0, short = 0;
+  let l = 0, base = 0, plainSum = 0, bonusXP = 0, short = 0, cardioLeft = CFG.CARDIO_INT.sessXP;
   const per = [], bonusRows = [], noBase = [];
   s.items.slice(0, CFG.LIM.exPerSession).forEach(it => {
     const e = EX[it.ex]; if (!e) return;
@@ -162,9 +205,11 @@ function sessionXP(s, c) {
     const k = e.xpk, n = Math.min(xpQty(it), LEFT[k]); LEFT[k] -= n;   // 세션 상한은 개수에 먼저(SPEC ⑥-3)
     if (!n) return;
     const b = xb[it.ex] ?? null, qd = (tq[it.ex] || 0) + n, on = volBonusOn(qd, b);
-    const plain = UNIT[k] * n, extra = on ? plain * (CFG.VOL_BONUS.mult - 1) : 0;
+    let plain = UNIT[k] * n, ck = null;
+    if (k === 'cardio') { ck = cardioK(it); plain = Math.min(cardioLeft, Math.round(plain * ck.k)); cardioLeft -= plain; }   // v1.63: 분 × 강도 · 한 번 운동 유산소 sessXP 까지
+    const extra = on ? plain * (CFG.VOL_BONUS.mult - 1) : 0;
     cnt[k] += n; xpOf[k] += plain; plainSum += plain; base += plain + extra; bonusXP += extra;
-    per.push({ ex: it.ex, cnt: n, bonus: on, base: b, qd });
+    per.push(ck ? { ex: it.ex, cnt: n, bonus: on, base: b, qd, xp: plain, k: ck.k, by: ck.by } : { ex: it.ex, cnt: n, bonus: on, base: b, qd });
     if (on) bonusRows.push([e.name, extra, b, qd]); else if (b == null) noBase.push(e.name);
   });
   const lines = [['웨이트·머신', cnt.weight, '세트', xpOf.weight], ['맨몸', cnt.body, '세트', xpOf.body], ['유산소', cnt.cardio, '분', xpOf.cardio], ['레슨', l, '회', l * X.lesson]].filter(x => x[1] > 0);
@@ -178,7 +223,7 @@ function sessionXP(s, c) {
   const mult = Math.round((base + first + complete) * vm * sm), bm = c.boost === true ? CFG.BOOST.mul : (c.boost || 0), boostPart = bm && any ? Math.round((mult + selfieXP) * (bm - 1)) : 0;   // c.boost = 배율(숫자) · true 는 예전 2배 부스터 · 셀카 몫에도 배율(PLAN ⑧-2 A)
   /* 같은 날 나눠 저장: 앞 세션에서 ×1.0이던 종목이 그날 합계로 ×1.2가 되면 앞 세션 몫 차액을 이번 세션에 더한다(앞 원장은 안 고침) */
   const nowOn = new Set(per.filter(x => x.bonus).map(x => x.ex));
-  const catchUp = Math.round((c.todayPrev || []).filter(p => !p.bonus && nowOn.has(p.ex)).reduce((a, p) => a + UNIT[EX[p.ex].xpk] * p.cnt * (CFG.VOL_BONUS.mult - 1) * p.mul, 0));
+  const catchUp = Math.round((c.todayPrev || []).filter(p => !p.bonus && nowOn.has(p.ex)).reduce((a, p) => a + (p.xp != null ? p.xp : UNIT[EX[p.ex].xpk] * p.cnt) * (CFG.VOL_BONUS.mult - 1) * p.mul, 0));
   const worked = it => (it.sets || []).some(x => x.done) || it.min > 0 || (EX[it.ex] && EX[it.ex].xpk === 'lesson');
   const parts = [...new Set(s.items.filter(worked).map(it => EX[it.ex] && EX[it.ex].part).filter(Boolean))];
   const fresh = parts.filter(p => !c.weekParts.includes(p));

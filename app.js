@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.62';
+const VER = 'v1.63';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -306,7 +306,7 @@ function volCtx(today) {
   const ids = new Set([...Object.keys(S.hist), ...realRecs().flatMap(r => (r.items || []).map(i => i.ex))].filter(x => EX[x] && EX[x].xpk !== 'lesson'));
   const xpBase = Object.fromEntries([...ids].map(ex => [ex, xpBaselineOf({ [ex]: histOf(ex).map(h => ({ date: h.date, light: h.light, q: xpQty({ ex, ...h }) })) }, ex, TODAY)]));
   const todayQ = {}, todayPrev = [];
-  today.forEach(r => (r.br && r.br.per || []).forEach(x => { todayQ[x.ex] = (todayQ[x.ex] || 0) + x.cnt; todayPrev.push({ ex: x.ex, cnt: x.cnt, bonus: x.bonus, mul: (r.br.vm || 1) * (r.br.sm || 1) }); }));
+  today.forEach(r => (r.br && r.br.per || []).forEach(x => { todayQ[x.ex] = (todayQ[x.ex] || 0) + x.cnt; todayPrev.push({ ex: x.ex, cnt: x.cnt, xp: x.xp, bonus: x.bonus, mul: (r.br.vm || 1) * (r.br.sm || 1) }); }));
   return { xpBase, todayQ, todayPrev };
 }
 const sessCalc = (s = S.session) => { const r = sessionXP(effSess(s), sessCtx()); return { r, cap: capGain(r, ledger(), r.v === 'V0') }; };
@@ -533,7 +533,7 @@ function vSession() {
   ${lr ? `<button class="card routine" data-act="routine" id="routineCard"><div class="h3">지난번 루틴 그대로</div><b>${md(lr.date)} · ${esc(placeBase(lr.place))}</b><div class="rchips">${lr.items.filter(i => EX[i.ex]).map(i => `<span>${EX[i.ex].name}</span>`).join('')}</div><span class="rgo">한 번에 불러오기 ›</span></button>` : ''}
   <div class="card" id="recoCard"><div class="h3">오늘 추천</div>${eqCtx(s).mode === 'equip' ? `<div class="muted" id="recoEq" style="margin:-2px 0 4px">${esc(eqCtx(s).center)}에 있는 기구로 골랐어요</div>` : ''}${recs.map(([id, why]) => `<button class="prow tap" data-act="addEx" data-v="${id}"><div><b>${EX[id].name}</b><small>${why}</small></div><span class="plus">+</span></button>`).join('')}</div>`
   : `<div class="card" id="sessList">${s.items.map(it => { const e = EX[it.ex], ds = (it.sets || []).filter(x => x.done);
-      const sub = e.mode === 'cardio' ? ((it.min ? `${it.min}분 · ${({ light: '가벼움', normal: '보통', hard: '힘듦' })[it.level || 'normal']}${it.km ? ` · ${it.km}km` : ''}` : '') + (it.pre ? `${it.min ? ' · ' : ''}시간 확인 전` : it.min ? '' : '아직 기록 전'))
+      const sub = e.mode === 'cardio' ? ((it.min ? cardioTxt(it) : '') + (it.pre ? `${it.min ? ' · ' : ''}시간 확인 전` : it.min ? '' : '아직 기록 전'))
         : e.mode === 'lesson' ? `${it.min}분 · 선생님 확인` : ds.length ? setsTxt(e, ds) : (it.plan ? `지난번 ${it.plan}` : '아직 0세트');
       return `<button class="prow tap" data-act="openEx" data-v="${it.ex}"><div><b>${e.name}${ds.some(x => x.pr) ? ' <span class="prtag">PR</span>' : ''}</b><small>${esc(sub)}</small></div><span class="cnt">${e.mode === 'cardio' || e.mode === 'lesson' ? (it.min ? '✓' : '') : `${ds.length}세트`}</span></button>`; }).join('')}</div>`;
   const sfPct = CFG.SELFIE_BONUS.pct, selfieBtn = s.selfie ? sfCard('sfSess', s.photo, '오운완 셀카 찍음', `저장하면 경험치 +${sfPct}%${r.selfieXP ? ` (+${fmt(r.selfieXP)})` : ''}가 들어가요`, 'session')
@@ -657,19 +657,59 @@ function restHTML(left) {
 }
 
 /* ===== C6b 유산소 ===== */
+/* v1.63: 기구별 강도 입력 칸 — [초안 키, 이름, 단위, 한 번에 바뀌는 양, 상한, 빠른 값] · 계산은 engine.js cardioMET */
+const C_LIM = CFG.CARDIO_INT.lim;
+const C_FIELDS = {
+  tread: [['kmh', '속도', 'km/h', 0.5, C_LIM.kmh, [4, 6, 8, 10, 12]], ['inc', '경사', '%', 1, C_LIM.inc, [0, 3, 6, 10, 15]]],
+  foot: [['kmh', '속도', 'km/h', 0.5, C_LIM.kmh, [4, 6, 8, 10, 12]]],
+  watt: [['watt', '파워', 'W', 10, C_LIM.watt, [50, 100, 150, 200]]],
+  row: [['watt', '파워', 'W', 10, C_LIM.watt, [50, 100, 150, 200]]],
+  step: [['spm', '분당 계단 수', '계단', 5, C_LIM.spm, [40, 60, 80, 100]]],
+  cycle: [['kmh', '속도', 'km/h', 1, C_LIM.cyc, [15, 20, 25, 30]]],
+};
+const C_HEAD = { tread: '속도·경사', foot: '속도', watt: '파워(W)', row: '파워(W)', step: '분당 계단 수', cycle: '속도' };
+const C_HELP = { watt: '기구 화면에 나오는 W(와트) 숫자예요 · 레벨은 기구마다 달라서 계산에 안 써요', row: '기구 화면에 나오는 W(와트) 숫자예요', step: '기구 화면의 «계단/분»(steps/min) 숫자예요' };
+const C_KM = ['tread', 'foot', 'cycle'];   // 거리를 같이 적는 기구
+const LV_KO = { light: '가벼움', normal: '보통', hard: '힘듦' };
+const cNum = v => +(+v || 0).toFixed(1);
+/* 강도로 적은 값 한 줄 — «6km/h · 경사 10%» */
+const cardioIn = it => [it.kmh ? `${cNum(it.kmh)}km/h` : '', it.inc ? `경사 ${cNum(it.inc)}%` : '', it.watt ? `${it.watt}W` : '', it.spm ? `분당 ${it.spm}계단` : ''].filter(Boolean).join(' · ');
+const cardioTxt = it => `${it.min}분 · ${cardioIn(it) || LV_KO[it.level || 'normal']}${it.km ? ` · ${it.km}km` : ''}`;
+const cDraftItem = it => { const c = it.draft; return { ex: it.ex, iv: 1, min: c.min, level: c.level, km: c.km || 0, kmh: c.kmh || 0, inc: c.inc || 0, watt: c.watt || 0, spm: c.spm || 0 }; };
+/* 저장 전 예상 경험치 — 이 운동을 지금 값으로 저장했을 때의 기본 경험치(인증·연속 배율 전). 세션 상한(60분·240)까지 반영 */
+function cardioPreview(it) {
+  const d = cDraftItem(it), k = cardioK(d), s = S.session;
+  const r = sessionXP({ ...effSess(s), items: s.items.map(x => x === it ? d : x) }, sessCtx());
+  const p = r.per.find(x => x.ex === it.ex), xp = p ? p.xp : 0, cnt = p ? p.cnt : 0;
+  return { k, xp, cnt, cut: xp < Math.round(CFG.XP.cardio * d.min * k.k) };
+}
 function vCardio() {
   const it = curItem(); if (!it) return vSession();
   const e = EX[it.ex], c = it.draft, prev = histOf(it.ex).find(h => h.min);
   const lv = [['light', '가벼움'], ['normal', '보통'], ['hard', '힘듦']];
+  const kind = cardioKind(it.ex), F = C_FIELDS[kind] || [], pv = cardioPreview(it), byIn = pv.k.by === 'input';
+  const autoKm = C_KM.includes(kind) && !c.km && c.kmh > 0 ? Math.round(c.kmh * c.min / 60 * 10) / 10 : 0;
+  const fields = F.map(([k, name, unit, , , qs]) => { const v = cNum(c[k]);
+    return `${stepper('c' + k, '', name, '', `<span class="cval${v || k === 'inc' ? '' : ' off'}" id="cv_${k}">${v || k === 'inc' ? `${k === 'kmh' ? v.toFixed(1) : v}<i>${unit}</i>` : '안 적음'}</span>`)}<div class="qrow cq" id="q_${k}">${qs.map(n => `<button class="chip ${v === n && (n > 0 || k === 'inc') ? 'on' : ''}" data-act="cq" data-k="${k}" data-v="${n}">${n}</button>`).join('')}</div>`; }).join('');
+  const kTxt = `${pv.k.k.toFixed(2).replace(/0$/, '')}배`;
+  const how = byIn ? `${cardioIn(cDraftItem(it)) || `${cNum(cardioSpeed(cDraftItem(it), 99))}km/h`} 기준` : `«${LV_KO[c.level]}» 기준`;
+  const xpBox = `<div class="cxp" id="cXp"><div class="cxprow"><span>저장하면 받는 기본 경험치</span><b id="cXpN">+${fmt(pv.xp)} XP</b></div>
+    <div class="cxpsub" id="cXpHow">${pv.cnt}분 × ${CFG.XP.cardio} XP × 강도 <b>${kTxt}</b> <span class="muted">(${esc(how)})</span></div>
+    ${pv.k.low ? `<div class="cxpsub muted" id="cXpLow">가볍게 움직이는 정도까지는 ${CFG.CARDIO_INT.min}배로 같아요 · 더 빠르거나 가파르면 올라가요</div>` : ''}${pv.k.top ? `<div class="cxpsub warnline" id="cXpTop">강도는 최대 ${CFG.CARDIO_INT.max}배까지만 계산해요</div>` : ''}${pv.cut || pv.cnt < c.min ? `<div class="cxpsub warnline" id="cXpCut">유산소는 운동 한 번에 ${CFG.LIM.cardioMin}분 · ${CFG.CARDIO_INT.sessXP} XP까지 쌓여요</div>` : ''}
+    <div class="cxpsub muted">인증·연속 배율은 운동을 끝낼 때 곱해져요</div></div>`;
   return `${subHead(e.name, 'session', '오늘 운동')}<div class="sec">
-  <div class="card"><div class="prevrec">${prev ? `지난번 ${md(prev.date)} · ${prev.min}분${prev.km ? ` · ${prev.km}km` : ''}` : '이 운동은 처음이에요'}</div>
+  <div class="card"><div class="prevrec">${prev ? `지난번 ${md(prev.date)} · ${prev.min}분${cardioIn(prev) ? ` · ${cardioIn(prev)}` : ''}${prev.km ? ` · ${prev.km}km` : ''}` : '이 운동은 처음이에요'}</div>
   <div class="setsteps">${stepper('cmin', c.min, '시간', '분', nInput('min', c.min, 'id="minIn" data-w="draft"'))}<div class="qrow" id="qMin">${[10, 20, 30, 45, 60].map(n => `<button class="chip ${c.min === n ? 'on' : ''}" data-act="qmin" data-v="${n}">${n}분</button>`).join('')}</div></div>${it.pre ? `<div class="warn" id="preNote">전에 재던 시간 <b>${it.pre}분</b>을 넣어 뒀어요. 실제로 한 시간이 맞는지 보고 저장해 주세요</div>` : ''}<div class="muted" style="margin-top:8px;word-break:keep-all">숫자를 누르면 직접 적을 수 있어요 · 한 번에 최대 ${CFG.LIM.cardioMaxMin}분까지 기록돼요</div>
   </div>
+  ${xpBox}
+  ${F.length ? `<div class="card" id="cInt"><div class="h3 cinth">${C_HEAD[kind]} <span class="ctag">적으면 경험치가 달라져요</span></div>
+  <div class="muted ckeep">같은 시간이라도 ${kind === 'tread' ? '빠르게·가파르게' : kind === 'step' ? '빨리 오를수록' : kind === 'watt' || kind === 'row' ? '파워가 높을수록' : '빠를수록'} 경험치가 더 쌓여요${C_HELP[kind] ? ` · ${C_HELP[kind]}` : ''}</div>
+  ${c.pref ? `<div class="cpref" id="cPref">지난번 값을 넣어 뒀어요 · 오늘과 다르면 고쳐 주세요</div>` : ''}
+  <div class="setsteps cint">${fields}</div>
+  ${C_KM.includes(kind) ? `${autoKm ? `<div class="muted ckeep" id="cAutoKm" style="margin-top:8px">거리 약 ${autoKm}km로 같이 기록돼요 (속도 × 시간)</div>` : ''}<details class="more" ${c.open ? 'open' : ''} data-act="cmore"><summary>거리 직접 적기 <span class="muted">(선택)</span></summary>
+    ${stepper('ckm', c.km.toFixed(1), '거리', 'km')}<div class="muted ckeep">속도를 안 적고 거리만 적으면 거리 ÷ 시간으로 속도를 계산해요</div></details>` : ''}</div>` : ''}
   <div class="card"><div class="h3">얼마나 힘들었어요?</div><div class="chips" id="cLevel">${lv.map(([k, l]) => `<button class="chip ${c.level === k ? 'on' : ''}" data-act="clevel" data-v="${k}">${l}</button>`).join('')}</div>
-  <div class="muted" style="margin-top:8px">캐릭터 표정에만 써요 · 경험치는 시간으로만 계산해요</div>
-  <details class="more" ${c.open ? 'open' : ''} data-act="cmore"><summary>거리·속도·경사 <span class="muted">(선택)</span></summary>
-    ${stepper('ckm', c.km.toFixed(1), '거리', 'km')}${stepper('ckmh', c.kmh.toFixed(1), '속도', 'km/h')}${e.id === 'treadmill' ? stepper('cinc', c.inc, '경사', '%') : ''}
-    ${c.kmh > 25 ? '<div class="warn">25km/h 넘는 속도는 25로 계산해요</div>' : ''}</details></div>
+  <div class="muted ckeep" style="margin-top:8px" id="cLvNote">${byIn ? `${C_HEAD[kind]}를 적어서 경험치는 그 값으로 계산해요 · 이 답은 캐릭터 표정에만 써요` : F.length ? `${C_HEAD[kind]}를 안 적으면 이 답으로 경험치를 조금만 조정해요 (가벼움 −10% · 힘듦 +10%)` : '이 운동은 속도 같은 기준이 따로 없어서 이 답으로 경험치를 조금만 조정해요 (가벼움 −10% · 힘듦 +10%)'}</div></div>
   <button class="btn" data-act="cSave" id="cSave">${c.min}분 저장</button></div>`;
 }
 
@@ -953,7 +993,7 @@ function vRec() {
   const r = S.records.find(x => x.id === S.recId); if (!r) return vStats();
   const E = S.editRec, items = E ? E.items : (r.items || []), lesson = r.v === 'lesson';
   const itemHTML = (it, ii) => { const e = EX[it.ex]; if (!e) return '';
-    if (e.mode === 'cardio' || e.mode === 'lesson') return `<div class="ritem"><b>${e.name}</b>${E && e.mode === 'cardio' ? `<div class="step"><button data-act="eMin" data-i="${ii}" data-d="-1">−</button><span>${it.min}분</span><button data-act="eMin" data-i="${ii}" data-d="1">+</button></div>` : `<small>${it.min}분${it.km ? ` · ${it.km}km` : ''}${it.level ? ` · ${({ light: '가벼움', normal: '보통', hard: '힘듦' })[it.level]}` : ''}</small>`}</div>`;
+    if (e.mode === 'cardio' || e.mode === 'lesson') return `<div class="ritem"><b>${e.name}</b>${E && e.mode === 'cardio' ? `<div class="step"><button data-act="eMin" data-i="${ii}" data-d="-1">−</button><span>${it.min}분</span><button data-act="eMin" data-i="${ii}" data-d="1">+</button></div>` : `<small>${it.min}분${e.mode === 'cardio' && cardioIn(it) ? ` · ${cardioIn(it)}` : ''}${it.km ? ` · ${it.km}km` : ''}${it.level ? ` · ${({ light: '가벼움', normal: '보통', hard: '힘듦' })[it.level]}` : ''}</small>`}</div>`;
     return `<div class="ritem"><b>${e.name}</b>${(it.sets || []).filter(s => s.done).map((s, si) => E ? `<div class="setrow edit"><span>${si + 1}세트</span>${e.mode === 'wr' ? `<div class="step"><button data-act="eSet" data-i="${ii}" data-s="${si}" data-k="w" data-d="-1">−</button>${wInput(s.w, `data-w="edit" data-i="${ii}" data-s="${si}"`)}<button data-act="eSet" data-i="${ii}" data-s="${si}" data-k="w" data-d="1">+</button></div>` : ''}<div class="step"><button data-act="eSet" data-i="${ii}" data-s="${si}" data-k="${e.mode === 't' ? 's' : 'r'}" data-d="-1">−</button><span>${e.mode === 't' ? s.s + '초' : s.r + '회'}</span><button data-act="eSet" data-i="${ii}" data-s="${si}" data-k="${e.mode === 't' ? 's' : 'r'}" data-d="1">+</button></div><button class="del" data-act="eDel" data-i="${ii}" data-s="${si}" aria-label="세트 지우기">×</button></div>`
       : `<div class="setrow"><span>${si + 1}세트</span><b>${setTxt(e, s)}</b>${s.pr ? '<span class="prtag">PR</span>' : '<span></span>'}</div>`).join('')}</div>`; };
   const ed = E ? editCalc(r, E.items) : null, keepNow = editKeeps(r), isSelf = vk(r.v) === 'self';
@@ -1068,7 +1108,8 @@ function pickPlace(name) {
 }
 function newItem(ex) {
   const e = EX[ex], prev = histOf(ex).find(h => (h.sets && h.sets.length) || h.min);
-  if (e.mode === 'cardio') return { ex, min: 0, level: 'normal', draft: { min: prev && prev.min ? prev.min : 20, level: 'normal', km: 0, kmh: 0, inc: 0, open: false } };   // v1.40(QA 중1): 거리는 0에서 시작 — 지난번 거리는 «지난번» 줄에만
+  if (e.mode === 'cardio') { const pi = histOf(ex).find(h => h.kmh || h.watt || h.spm) || {};   // v1.63: 지난번 속도·경사·파워를 미리 채움(거리는 0 — v1.40 QA 중1)
+    return { ex, min: 0, level: 'normal', draft: { min: prev && prev.min ? prev.min : 20, level: 'normal', km: 0, kmh: pi.kmh || 0, inc: pi.kmh ? pi.inc || 0 : 0, watt: pi.watt || 0, spm: pi.spm || 0, pref: !!(pi.kmh || pi.watt || pi.spm), open: false } }; }   // v1.40(QA 중1): 거리는 0에서 시작 — 지난번 거리는 «지난번» 줄에만
   const p = prev && prev.sets ? prev.sets[0] : null;
   return { ex, sets: [], plan: prev && prev.sets ? setsTxt(e, prev.sets) : '', draft: { w: p ? p.w : (e.w || 0), r: p ? p.r : 10, s: p && p.s ? p.s : 60 } };
 }
@@ -1558,11 +1599,18 @@ document.addEventListener('click', e => {
   else if (a === 'cmin') { if (!commitWeightField()) return; it.draft.min = clampStep(Math.round(it.draft.min / 5) * 5 === it.draft.min ? it.draft.min : (dd > 0 ? Math.floor(it.draft.min / 5) * 5 : Math.ceil(it.draft.min / 5) * 5), dd, 5, 5, CFG.LIM.cardioMaxMin); }
   else if (a === 'clevel') { it.draft.level = v; if (it.min) it.level = v; }
   else if (a === 'ckm') { it.draft.km = clampStep(it.draft.km, dd, 0.5, 0, 60); it.draft.open = true; }
-  else if (a === 'ckmh') { it.draft.kmh = clampStep(it.draft.kmh, dd, 0.5, 0, 30); it.draft.open = true; }
-  else if (a === 'cinc') { it.draft.inc = clampStep(it.draft.inc, dd, 1, 0, 15); it.draft.open = true; }
+  else if (['ckmh', 'cinc', 'cwatt', 'cspm'].includes(a)) { const k = a.slice(1), f = (C_FIELDS[cardioKind(it.ex)] || []).find(x => x[0] === k); if (!f) return;
+    if (!commitWeightField()) return; const cur = +it.draft[k] || 0, first = { kmh: f[5][1], watt: f[5][1], spm: f[5][1] }[k];
+    it.draft[k] = !cur && dd > 0 && first ? first : clampStep(cur, dd, f[3], 0, f[4]); delete it.draft.pref; }   // 빈 칸에서 + 를 누르면 흔한 값부터
+  else if (a === 'cq') { const k = b.dataset.k, f = (C_FIELDS[cardioKind(it.ex)] || []).find(x => x[0] === k); if (!f) return;
+    if (!commitWeightField()) return; it.draft[k] = (+it.draft[k] || 0) === +v ? 0 : Math.min(f[4], +v); delete it.draft.pref; }   // 같은 값을 다시 누르면 지움
   else if (a === 'cSave') { if (!commitWeightField()) return; it.min = it.draft.min; delete it.pre;   // v1.59: 유산소는 적은 시간 그대로 저장(타이머 없음)
     if (!it.min) return toast('시간을 적어 주세요');
-    it.level = it.draft.level; it.km = it.draft.km || undefined; it.kmh = it.draft.kmh ? Math.min(25, it.draft.kmh) : undefined; it.inc = it.draft.inc || undefined; it.draft.min = it.min; s.lastAt = Date.now();
+    { const d = it.draft, kind = cardioKind(it.ex), has = k => (C_FIELDS[kind] || []).some(f => f[0] === k) && +d[k] > 0;
+      it.iv = 1;   // v1.63: 이 판부터 저장한 유산소 = 시간 × 강도
+      it.level = d.level; it.kmh = has('kmh') ? +d.kmh : undefined; it.inc = has('kmh') && has('inc') ? +d.inc : undefined; it.watt = has('watt') ? +d.watt : undefined; it.spm = has('spm') ? +d.spm : undefined;
+      it.km = d.km || (C_KM.includes(kind) && it.kmh ? Math.round(it.kmh * it.min / 60 * 10) / 10 : 0) || undefined; delete d.pref; }
+    it.draft.min = it.min; s.lastAt = Date.now();
     toast(`${EX[it.ex].name} ${it.min}분 저장`); return go('workout', 'session'); }
   else if (a === 'demo') S.demo = v;
   else if (a === 'mdemo') S.moodDemo = v;

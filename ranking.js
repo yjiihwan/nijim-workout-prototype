@@ -179,11 +179,11 @@ const FR_SELF = { minDur: 10, dayMax: 200 };
 const FR_SELF_DEMO = { 새벽러너: 160, 필라테스러: 240, 헬린이9일차: 480, 오늘도출근: 120, 퇴근후스쿼트: 200 };   // 가짜 친구의 이번 주 자가 기록 몫(센터·전국 표에는 안 들어감)
 const frSelfOk = r => !r.batch && !r.held && (r.dur == null || r.dur >= FR_SELF.minDur);
 function frSelfWeek() {
-  const wd = weekDays(), byDay = {}; let skipped = 0;
+  const wd = weekDays(), byDay = {}; let skipped = 0, skBatch = 0;
   S.records.forEach(r => { if (!wd.includes(r.date) || r.v !== 'self' || r.demo || r.paid || r.sim) return;
-    if (!frSelfOk(r)) { skipped++; return; }
+    if (!frSelfOk(r)) { skipped++; if (r.batch) skBatch++; return; }
     byDay[r.date] = (byDay[r.date] || 0) + Math.max(0, (r.xp || 0) - (r.xpBoost || 0)); });
-  return { self: Object.values(byDay).reduce((s, x) => s + Math.min(x, FR_SELF.dayMax), 0), skipped };
+  return { self: Object.values(byDay).reduce((s, x) => s + Math.min(x, FR_SELF.dayMax), 0), skipped, skBatch };
 }
 const rankList1 = rankList;
 rankList = function () {
@@ -194,7 +194,9 @@ rankList = function () {
 };
 function frFootHTML() {
   const m = frSelfWeek();
-  return `<div class="muted" style="margin-top:8px" id="frFoot">친구리그는 집이든 야외든 어디서 운동해도 순위에 들어가요 · 이름을 누르면 프로필이 보여요</div>${m.skipped ? `<div class="muted" id="frSkip" style="margin-top:4px">이번 주 기록 ${m.skipped}건은 친구리그 순위에서 빠졌어요 · 시작하고 ${FR_SELF.minDur}분 이상 운동한 기록만 순위에 들어가요</div>` : ''}`;
+  return `<div class="muted" style="margin-top:8px" id="frFoot">친구리그는 집이든 야외든 어디서 운동해도 순위에 들어가요 · 이름을 누르면 프로필이 보여요</div>${m.skipped ? `<div class="muted" id="frSkip" style="margin-top:4px;word-break:keep-all">${m.skBatch === m.skipped ? `이번 주 기록 ${m.skipped}건은 운동을 마치고 한꺼번에 적어서 친구리그 순위에서 빠졌어요 · 경험치는 그대로 받았어요`
+    : m.skBatch ? `이번 주 기록 ${m.skipped}건은 친구리그 순위에서 빠졌어요 · 한꺼번에 적은 기록과 ${FR_SELF.minDur}분이 안 된 기록은 순위에 안 들어가요 · 경험치는 그대로 받았어요`
+    : `이번 주 기록 ${m.skipped}건은 친구리그 순위에서 빠졌어요 · 시작하고 ${FR_SELF.minDur}분 이상 운동한 기록만 순위에 들어가요`}</div>` : ''}`;
 }
 /* 결과 화면 — 친구리그에서 빠지는 자가 기록에만 한 줄(보류 기록은 보류 안내가 따로 있어 안 띄움) */
 function frResultNote(rec) {
@@ -216,6 +218,18 @@ SUB.profile = () => {
    주는 때: 초대받은 사람이 가입한 뒤 «첫 운동 기록»(보류·한꺼번에 적기 제외, 자가 기록이면 10분 이상)을 저장했을 때 두 사람에게 1개씩.
    같은 헬스장 사람을 데려와도(입점 요청 화면의 «친구에게 보내기» 링크) 같은 규칙 — 더 주지 않는다. 경험치 부스터는 주지 않는다. */
 const ensureInv = () => (S.invr = S.invr || { tickets: 0, by: null, byDone: false, at: 0, just: 0 });
+/* v1.69(형 11-16 확정): 내가 초대해서 받는 선물은 한 달 INV_MONTH_MAX개까지. 달이 바뀌면(1일 0시) 다시 0부터.
+   세는 때 = 선물이 생기는 때(친구의 첫 운동 기록). 한도 뒤에도 초대는 되고, 초대받은 친구는 자기 선물을 그대로 받는다.
+   초대받아 가입한 쪽이 받는 1개(평생 1번)는 이 한도에 안 센다. S.invr.mon = 센 달(YYYY-MM) · S.invr.mcnt = 그 달에 받은 수 */
+const INV_MONTH_MAX = 5;
+const invMonthCnt = () => { const v = ensureInv(), m = TODAY.slice(0, 7); if (v.mon !== m) { v.mon = m; v.mcnt = 0; } return v.mcnt || 0; };
+const invCapped = () => invMonthCnt() >= INV_MONTH_MAX;
+/* 초대 화면 두 곳(친구 추가 · 전체 › 친구 초대)이 같이 쓰는 보상 안내 글 */
+function invRuleHTML() {
+  const n = invMonthCnt();
+  if (n >= INV_MONTH_MAX) return `<b>이번 달 초대 선물 ${INV_MONTH_MAX}개를 다 받았어요</b><br><span class="nb">초대는 계속할 수 있어요</span> · <span class="nb">친구는 선물을 그대로 받아요</span><br><span class="nb">내 선물은 다음 달부터 다시 받아요</span>`;
+  return `초대한 친구가 가입해서 첫 운동을 기록하면<br>나도 친구도 <b>꾸미기 아이템을 1개씩</b> 받아요<small class="invcap" id="invCap">내 선물은 한 달에 ${INV_MONTH_MAX}개까지${n ? ` · 이번 달 ${n}개 받았어요` : ''}</small>`;
+}
 const invLooks = () => ITEMS.filter(i => i.kind === 'look' && !S.owned[i.id]);
 function invCheck() {
   const v = ensureInv(); if (!v.by || v.byDone) return;
@@ -231,7 +245,7 @@ function invTopHTML() {
   return `${v.tickets ? `<button class="notice tap" data-act="invPick" id="invGift" style="width:100%"><span>🎁 초대 선물이 ${v.tickets}개 있어요</span><b style="color:var(--rose)">고르기 ›</b></button>` : ''}${v.by && !v.byDone ? `<div class="notice" id="invBy"><span><b>${esc(v.by)}</b>님 초대로 가입했어요 · 첫 운동을 기록하면 둘 다 꾸미기 아이템을 1개씩 받아요</span></div>` : ''}`;
 }
 const invDemoHTML = () => { const v = ensureInv();
-  return `<div class="card demo" id="invDemo"><div class="h3">🧪 시연 도구 · 친구 초대 보상</div><div class="chips white"><button class="chip" data-act="invSimJoin">내 링크로 온 친구가 첫 운동 기록</button><button class="chip ${v.by && !v.byDone ? 'on' : ''}" data-act="invSimBy">초대받고 가입한 사람으로 보기</button><button class="chip" data-act="invSimFirst">(초대받은 쪽) 첫 운동 기록함</button><button class="chip" data-act="invSimReset">처음으로</button></div></div>`; };
+  return `<div class="card demo" id="invDemo"><div class="h3">🧪 시연 도구 · 친구 초대 보상</div><div class="chips white"><button class="chip" data-act="invSimJoin">내 링크로 온 친구가 첫 운동 기록</button><button class="chip ${invCapped() ? 'on' : ''}" data-act="invSimFull">이번 달 ${INV_MONTH_MAX}개 다 받은 상태</button><button class="chip" data-act="invSimMonth">다음 달이 됨</button><button class="chip ${v.by && !v.byDone ? 'on' : ''}" data-act="invSimBy">초대받고 가입한 사람으로 보기</button><button class="chip" data-act="invSimFirst">(초대받은 쪽) 첫 운동 기록함</button><button class="chip" data-act="invSimReset">처음으로</button></div></div>`; };
 function invPickSheet() {
   const v = ensureInv(), list = invLooks();
   if (!list.length) return sheet(`<div class="h2" id="invPickT">꾸미기 아이템을 이미 다 갖고 있어요</div><div class="muted" style="line-height:1.6">선물은 사라지지 않아요. 새 꾸미기 아이템이 나오면 그때 골라 주세요.</div><button class="btn" data-act="shClose" style="margin-top:14px">확인</button>`);
@@ -242,7 +256,7 @@ function invPickSheet() {
 const vAddFriend1 = SUB.addFriend;
 SUB.addFriend = () => vAddFriend1()
   .replace('<div class="card" id="myCode"', `${invTopHTML()}<div class="card" id="myCode"`)
-  .replace('<div class="muted" style="margin-top:8px">링크를 받은 친구가 열면', `<div class="invrw" id="invRw">🎁 초대한 친구가 가입해서 첫 운동을 기록하면<br>나도 친구도 <b>꾸미기 아이템을 1개씩</b> 받아요</div><div class="muted" style="margin-top:8px">링크를 받은 친구가 열면`)
+  .replace('<div class="muted" style="margin-top:8px">링크를 받은 친구가 열면', `<div class="invrw${invCapped() ? ' full' : ''}" id="invRw">🎁 ${invRuleHTML()}</div><div class="muted" style="margin-top:8px">링크를 받은 친구가 열면`)
   .replace(/(<\/div>)$/, `${invDemoHTML()}$1`);
 const vRanking1 = SUB.friends;
 SUB.friends = () => { const h = vRanking1(); return S.rkTab === 'friend' ? h.replace('<div class="rktabs" id="rkTabs">', `${invTopHTML()}<div class="rktabs" id="rkTabs">`) : h; };
@@ -252,7 +266,9 @@ document.addEventListener('click', e => {
   const H = {
     invPick: () => { invPickSheet(); return true; },
     invTake: () => { const it = ITEMS.find(i => i.id === v); if (!it || !I.tickets || S.owned[v]) return true; S.owned[v] = 1; I.tickets--; I.just = 0; shClose(); toast(`${it.name}${typeof gjo === 'function' ? gjo(it.name, '을', '를') : ''} 받았어요 · 아이템 상점에서 장착할 수 있어요`); },
-    invSimJoin: () => { I.tickets++; toast('내가 초대한 주말등산러님이 첫 운동을 기록했어요 · 초대 선물이 도착했어요'); },
+    invSimJoin: () => { if (invCapped()) return void toast(`내가 초대한 주말등산러님이 첫 운동을 기록했어요 · 이번 달 초대 선물 ${INV_MONTH_MAX}개는 이미 다 받았어요`); I.tickets++; I.mcnt = invMonthCnt() + 1; toast('내가 초대한 주말등산러님이 첫 운동을 기록했어요 · 초대 선물이 도착했어요'); },
+    invSimFull: () => { invMonthCnt(); I.mcnt = INV_MONTH_MAX; },
+    invSimMonth: () => { I.mon = 'prev'; toast('달이 바뀌었어요 · 초대 선물을 다시 받을 수 있어요'); },
     invSimBy: () => { I.by = '운동하는곰'; I.byDone = false; I.at = Date.now(); },
     invSimFirst: () => { if (!I.by || I.byDone) return toast('먼저 «초대받고 가입한 사람으로 보기»를 눌러 주세요'), true; I.byDone = true; I.tickets++; toast('첫 운동 기록 완료 · 초대 선물이 도착했어요'); },
     invSimReset: () => { S.invr = null; ensureInv(); },

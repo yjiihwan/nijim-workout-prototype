@@ -963,6 +963,11 @@ body:has(#cSaveBar) .toast{bottom:156px}
 /* v1.67 친구 초대 보상 */
 .invrw{margin-top:12px;background:#FFF0F4;color:var(--ink);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.5;word-break:keep-all}
 .invrw b{color:var(--rose)}
+/* v1.69 초대 선물 한 달 한도 안내 */
+.invcap{display:block;margin-top:4px;font-size:12px;color:var(--g5)}
+.invrw.full b,.invrwtxt b{color:var(--rose)}
+.invrwtxt .invcap{font-size:12.5px}
+.invrw .nb,.invrwtxt .nb{white-space:nowrap}
 .invgrid .item img{height:56px}
 #invBy{display:block;line-height:1.5;word-break:keep-all}
 .profwk{margin-top:6px;font-size:13px;line-height:1.45}.profwk b{display:block;font-size:14px}.profwk span{color:var(--g5)}

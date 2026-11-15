@@ -896,7 +896,10 @@ button.gydid{font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .msask .btn{margin-top:8px}.msask .gysub{margin-bottom:8px}
 .msask-later{display:block;margin:12px auto 0;padding:6px 8px;color:var(--g5);font-weight:600}
 .msrow .msundo{margin:0 0 0 auto;flex:none;font-size:12px;color:var(--g5);font-weight:600;white-space:nowrap;padding:4px 0}
-.msagain{display:block;margin:10px 0 0;padding:4px 0;color:var(--g5);font-weight:600;font-size:13px;text-align:left}
+.msagain{display:flex;align-items:center;gap:6px;width:100%;min-height:44px;margin:10px 0 -6px;padding:4px 0 0;border-top:1px solid #FFDCE9;font:inherit;font-size:13px;text-align:left;color:var(--ink)}
+.msagain span{flex:1;min-width:0;font-weight:600;word-break:keep-all}.msagain b{flex:none;color:var(--rose);font-weight:700;white-space:nowrap}.msagain i{flex:none;font-style:normal;color:var(--rose);font-size:16px;line-height:1}
+.cbopen>.btn{display:block;width:100%;margin-top:8px}
+#gyRes[data-ms="no"] .gysub,#gyRes[data-ms="later"] .gysub{text-wrap:balance}
 
 /* ===== v1.56 사장님께 QR 보여 드리기 ===== */
 .gycard .gyshare.gyqrbtn{margin-top:8px}

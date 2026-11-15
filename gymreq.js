@@ -1,5 +1,6 @@
 'use strict';
-/* v1.61: «센터에서 직접 결제»는 앱이 미리 알 수 없다 → 유저가 알려준 센터만 «멤버십 확인 중»(S.msTold)
+/* v1.65: «회원권은 없어요»·«나중에»라고 답한 사람에게 맞는 안내(msAns) · 장소 펼친 칸 «센터에서 직접 결제하셨나요? 알려 주기 ›» 줄
+   v1.61: «센터에서 직접 결제»는 앱이 미리 알 수 없다 → 유저가 알려준 센터만 «멤버십 확인 중»(S.msTold)
    v1.55: 멤버십(없음·1장·여러 장)에 따라 장소 질문을 건너뛰거나 안내를 바꾼다(«v1.55 멤버십» 묶음)
    v1.54: 입점 안내·요청을 «내 헬스장 1곳»에서 떼어 «그날 고른 장소·기록 있는 헬스장마다(3곳)»로 · 내 헬스장 자동 판정 · 직접 적기(아래 «상태» 머리말)
    v1.51 (형 11-15 확정) — ① «우리 헬스장 입점 요청» 장치 ② 센터 기구 기반 코칭 ③ 관리자 시연 스위치
@@ -243,6 +244,9 @@ const mships = () => [...MS_DEMO[msMode()].own, ...msToldPaid().filter(n => (S.m
 const msPends = () => { const own = mships(); return msToldPaid().filter(n => !own.includes(n)); };
 const isMs = name => mships().includes(placeBase(String(name || '')));
 const isPend = name => msPends().includes(placeBase(String(name || '')));
+/* v1.65: 이 입점센터에 «회원권은 없어요»(no)·«나중에»(later)라고 답했나 — 그런 사람에게는 «입장하기»를 권하지 않고 «회원권이 있으면»이라는 조건을 먼저 말한다 */
+const msAns = name => { const n = placeBase(String(name || '')), a = ((S.msTold || {})[n] || {}).a; return !isMs(n) && (a === 'no' || a === 'later') ? a : ''; };
+const MS_NEED = `회원권이 있으면 '입장하기'를 누르고 운동할 때 경험치를 1.5배로 받아요`;
 /* 이 입점센터에 대해 아직 안 물어봤나 — 멤버십이 없는 센터만, 센터마다 한 번 */
 const msNeedAsk = name => { const n = placeBase(String(name || '')), x = gymByName(n); return !!x && gymJoined(x) && !isMs(n) && !(S.msTold || {})[n]; };
 function msSet(mode) {   // 시연 전환 — 입장 기록이 멤버십과 어긋나지 않게 같이 맞춘다
@@ -433,6 +437,8 @@ function vGymFlow() {
   if (msNeedAsk(m.name)) return wrap(msAskHTML(m.name, 'flow'));   // v1.61: 입점센터를 골랐을 때 한 번만 묻는다
   if (isPend(m.name)) return wrap(`<div class="gydone" id="gyRes" data-ms="pend"><div class="h2 gyname">${esc(m.name)} 멤버십을 확인하고 있어요</div>
     <div class="muted gysub">센터가 멤버십을 등록하면 그때부터 여기서 운동할 때 경험치를 1.5배로 받아요.<br>그 전에도 운동 기록은 그대로 쌓여요.</div></div><button class="btn" data-act="gyNext" id="gyNext">${nextL}</button>`);
+  if (gymJoined(m) && msAns(m.name)) return wrap(`<div class="gydone" id="gyRes" data-ms="${msAns(m.name)}"><div class="h2">여기는 니짐내짐 입점 헬스장이에요</div>
+    <div class="gyline"><b>${esc(m.name)}</b></div><div class="muted gysub">${MS_NEED}.<br>${msAns(m.name) === 'no' ? '회원권이 없어도 운동 기록은 그대로 쌓여요.' : '센터에서 직접 결제하셨다면 운동 장소를 고를 때 알려 주세요.'}</div></div><button class="btn" data-act="gyNext" id="gyNext">${nextL}</button>`);   // v1.65: 회원권이 없다고(또는 나중에) 답한 사람 — «입장하기를 누르면 1.5배»라고 권하지 않는다
   if (gymJoined(m)) return wrap(`<div class="gydone" id="gyRes"><div class="gychk"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7.5"/></svg></div><div class="h2">여기는 경험치 1.5배 헬스장이에요</div>
     <div class="gyline"><b>${esc(m.name)}</b></div><div class="muted gysub">앱에서 '입장하기'를 누르고 운동하면 경험치를 1.5배로 받아요.</div></div><button class="btn" data-act="gyNext" id="gyNext">${nextL}</button>`);
   const n = gymWait(m), why = gymCanReq(m);
@@ -463,6 +469,7 @@ function gymCard0(label) {
   const head = `<div class="gyh"><div><small>${label}</small><b id="gyName1">${nm}</b>${gymVLine(m, 'gyCardV')}</div><button class="linkbtn" data-act="gyChange" id="gyChange">바꾸기</button></div>
     ${mv ? `<div class="gymoved" id="gyMoved"><span>요즘 여기서 가장 자주 운동해서 내 헬스장${mv.from ? `을 바꿨어요 · 전에는 ${esc(mv.from)}` : '으로 정했어요'}</span><button class="linkbtn" data-act="gyMovedOk" id="gyMovedOk">확인</button></div>` : ''}`;
   const tail = gymReqsRow();
+  if (st === 5 && !gymReqd(m) && msAns(m.name)) return `<div class="card gycard" id="gymCard" data-st="in" data-ms="${msAns(m.name)}">${head}<div class="gymsg">니짐내짐 입점 헬스장이에요</div><div class="muted">${MS_NEED}</div>${tail}</div>`;
   if (st === 5 && !gymReqd(m)) return `<div class="card gycard" id="gymCard" data-st="in">${head}<div class="gymsg on">경험치 1.5배 헬스장이에요</div><div class="muted">앱에서 '입장하기'를 누르고 운동하면 돼요</div>${tail}</div>`;
   if (st === 0) { const can = gymRecN(m) > 0;
     return `<div class="card gycard" id="gymCard" data-st="0">${head}<div class="gymsg">아직 입점 전이에요</div><div class="muted">이 헬스장이 니짐내짐에 입점하면 여기서 운동할 때 경험치를 더 받아요${n ? ` · 지금까지 ${n}명이 입점을 요청했어요` : ''}</div>
@@ -509,6 +516,7 @@ function gymResultCard(rec) {
   }
   if (!m || first || !(rec.centerIf > 0)) return '';
   const num = fmt(rec.centerIf);
+  if (msAns(rec.place)) return `<div class="cbif" id="cbIf" data-ms="${msAns(rec.place)}"><span>회원권이 있으면 '입장하기'로 경험치를 더 받아요 · 오늘이었다면 경험치 <b>${num}</b>${gjo(num, '을', '를')} 더 받았어요</span></div>`;
   return `<div class="cbif" id="cbIf"><span>다음엔 '입장하기'를 누르고 운동해 보세요 · 오늘이었다면 경험치 <b>${num}</b>${gjo(num, '을', '를')} 더 받았어요</span></div>`;
 }
 /* 설정 › 센터 확인 카드 안 «주로 운동하는 곳» 줄 */

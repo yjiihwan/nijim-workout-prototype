@@ -122,7 +122,7 @@ function vNationTab(W) {
   const mainCenter = id => { const v = visits[id]; if (!v) return '';
     const best = Object.keys(v).sort((a, b) => v[b].days.size - v[a].days.size || ((cw[b] || {})[id] || 0) - ((cw[a] || {})[id] || 0) || v[b].last.localeCompare(v[a].last) || a.localeCompare(b))[0];
     return rkCenter(best).name; };
-  return `<div class="card" id="rkBoard"><div class="rkhd"><b>니짐내짐 전국</b><small>이번 주에 운동해서 모은 경험치 순위예요 · 자가 기록은 안 들어가고, 입점센터 보너스는 들어가요 · <span style="white-space:nowrap">월요일 0시에 새로 시작</span></small></div>
+  return `<div class="card" id="rkBoard"><div class="rkhd"><b>니짐내짐 전국</b><small>이번 주에 운동해서 모은 경험치 순위예요 · 입점 헬스장에서 '입장하기'로 들어가서 운동한 기록만 반영돼요 · <span style="white-space:nowrap">월요일 0시에 새로 시작</span></small></div>
   ${board.slice(0, 100).map(m => rkRow(m, m.weekly_xp, `${esc(CH[m.t].name)}${mainCenter(m.member_id) ? ' · ' + esc(mainCenter(m.member_id)) : ''}`)).join('')}</div>
   ${rkMeBar(board, '이번 주 랭킹에 들어갈 운동 기록이 아직 없어요')}
   <div class="muted" style="margin-top:8px">닉네임·캐릭터만 보여요(실명 없음) · 옆에 적힌 센터는 그 회원이 가장 많이 다닌 곳이에요 · 센터 TV 전국 순위와 같아요</div>`;

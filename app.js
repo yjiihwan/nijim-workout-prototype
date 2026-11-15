@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.50';
+const VER = 'v1.51';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -137,7 +137,7 @@ function sanitize() {
   ['records', 'events', 'paidLog', 'nextBoosts', 'timedBoosts'].forEach(k => { if (!Array.isArray(S[k])) S[k] = []; });
   ['hist', 'inv', 'owned', 'equipped', 'perm', 'noti'].forEach(k => { if (!plainObj(S[k])) S[k] = k === 'hist' ? {} : F[k]; });
   S.inv = { ...F.inv, ...S.inv }; S.perm = { ...F.perm, ...S.perm }; S.noti = { ...F.noti, ...S.noti };
-  ['coach', 'fr', 'me', 'mood', 'calc', 'cmp', 'rest', 'prFx', 'cx'].forEach(k => { if (S[k] != null && !plainObj(S[k])) S[k] = null; });
+  ['coach', 'fr', 'me', 'mood', 'calc', 'cmp', 'rest', 'prFx', 'cx', 'gym', 'gymSim', 'eqReq'].forEach(k => { if (S[k] != null && !plainObj(S[k])) S[k] = null; });
   Object.keys(S.hist).forEach(k => { if (!Array.isArray(S.hist[k]) || !EX[k]) delete S.hist[k]; else S.hist[k] = S.hist[k].filter(h => plainObj(h) && typeof h.date === 'string' && (h.sets == null || Array.isArray(h.sets))); });
   if (!CH[S.type]) S.type = F.type;
   const lvOk = v => num(v) && v >= 1 && v <= 99;
@@ -180,6 +180,7 @@ function sanitize() {
   /* QA 치10: 먹이기 «하나 더» 대기 줄에 서 있다가 앱이 닫힌 음식은 효과 없이 사라지지 않게 보유함으로 되돌린다 */
   if (Array.isArray(S.eatQ) && S.eatQ.length) { S.eatQ.forEach(id => { if (typeof id === 'string') S.inv[id] = (S.inv[id] || 0) + 1; }); S.eatBack = S.eatQ.length; }
   S.eatQ = [];
+  ensureGym();   // v1.51 내 헬스장·입점 요청·센터 기구(gymreq.js)
 }
 /* v1.40(QA 치3): 저장 성공 여부를 돌려준다. 실패하면 화면 위에 사라지지 않는 안내 띠(render) — 알림은 처음 실패했을 때 1번만 */
 let SAVE_OK = true;
@@ -367,8 +368,8 @@ function vHome() {
 /* ===== N1 내 주변 센터 목록 (기존 앱 화면 — 결정 36 ⑥ «경험치 1.5배» 배지만 얹는 자리) =====
    배지는 태그 줄 맨 앞(이름 줄에 붙이면 긴 센터 이름이 잘림) · 목록이 전부 입점센터면 배지 대신 맨 위 1줄 */
 function vNearby() {
-  const list = PLACES.filter(p => !S.nbOnly || p.linked), allLinked = list.length > 0 && list.every(p => p.linked);
-  const card = p => `<div class="nbc" id="nb_${p.id}"><div class="nbimg"></div><div class="nbt"><b>${esc(p.name)}</b><div class="nbtags">${p.linked && !allLinked ? '<span class="cbbadge">경험치 1.5배</span>' : ''}${p.linked ? '<span>니짐 입점</span><span>헬스</span><span>1일권</span>' : '<span>헬스</span><span>지도 정보</span>'}</div><small>${p.dist} · ${p.linked ? '니짐내짐에서 결제·입장' : '입점 안 된 센터'}</small></div></div>`;
+  const list = placesNow().filter(p => !S.nbOnly || p.linked), allLinked = list.length > 0 && list.every(p => p.linked);
+  const card = p => `<div class="nbc" id="nb_${p.id}"><div class="nbimg"></div><div class="nbt"><b>${esc(p.name)}</b><div class="nbtags">${p.linked && !allLinked ? '<span class="cbbadge">경험치 1.5배</span>' : ''}${p.linked ? '<span>니짐 입점</span><span>헬스</span><span>1일권</span>' : '<span>헬스</span><span>지도 정보</span>'}</div><small>${p.dist} · ${p.linked ? '니짐내짐에서 결제·입장' : gymQuiet() ? '지도 정보' : '아직 입점 전'}</small></div></div>`;
   return `<div class="dummy nb"><div class="h2">내주변</div><div class="ph">실제 앱 «내주변» 지도 자리</div>
   <div class="nbfilter"><button class="chip ${S.nbOnly ? 'on' : ''}" data-act="nbOnly" id="nbOnly">입점센터만</button><span class="muted">${list.length}곳</span></div>
   ${allLinked ? `<div class="cbtop" id="cbTop">여기 센터는 모두 경험치 1.5배</div>` : ''}
@@ -411,7 +412,7 @@ function parseW(raw) {
   return { ok: true, w, snapped: Math.abs(w - v) > 1e-9 };
 }
 const sw = (act, on, id = '') => `<button class="sw ${on ? 'on' : ''}" data-act="${act}" ${id ? `id="${id}"` : ''}></button>`;
-const obProg = n => `<div class="obprog" aria-label="2단계 중 ${n}단계">${[1, 2].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}<span>${n}/2</span></div>`;
+const obProg = n => `<div class="obprog" aria-label="3단계 중 ${n}단계">${[1, 2, 3].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}<span>${n}/3</span></div>`;
 const LOCK = '<svg class="ico" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>';
 const BELL = '<svg class="ico" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>';
 const CAM = '<svg class="ico" viewBox="0 0 24 24"><path d="M4 8.5h3l1.6-2.2h6.8L17 8.5h3v10.5H4z"/><circle cx="12" cy="13.5" r="3.4"/></svg>';
@@ -429,7 +430,7 @@ function vChoose() {
 /* 2/2 알림 허용 + 사진은 나만 봄 (v1.44: 위치 허용 줄 삭제 — 위치는 어디서도 안 씀) */
 function vOnbPerm() {
   const row = (ico, title, desc, k) => `<div class="prow">${ico}<div><b>${title}</b><small>${desc}</small></div><button class="btn sm ${S.perm[k] ? 'ghost' : ''}" data-act="perm" data-v="${k}">${S.perm[k] ? '허용됨' : '허용'}</button></div>`;
-  return `<div class="sec">${obProg(2)}<div class="h2">거의 다 됐어요</div><div class="muted" style="margin-bottom:12px">마지막으로 알림만 정하면 돼요.</div>
+  return `<div class="sec">${obProg(3)}<div class="h2">거의 다 됐어요</div><div class="muted" style="margin-bottom:12px">마지막으로 알림만 정하면 돼요.</div>
   <div class="card">${row(BELL, '알림', '센터에 들어가면 «입장 확인! 캐릭터가 기다려요» 하고 한 번 알려요. 설정에서 언제든 끌 수 있어요', 'noti')}</div>
   <div class="card privacy" id="photoNote">${LOCK}<div><b>사진은 나만 봐요</b><small>오운완 셀카는 나한테만 보여요. 친구나 다른 회원은 볼 수 없고, 언제든 지울 수 있어요. 안 찍어도 기록은 그대로 남아요.</small></div></div>
   <button class="btn" data-act="obDone" id="obDone">${esc(CH[S.type].name)}${wa(S.type)} 시작하기</button>
@@ -443,7 +444,7 @@ function vWorkout() {
   const toNext = lv >= 99 ? 0 : Math.max(0, need(lv) - S.xp);
   const nextEvo = lv >= 99 ? '만렙 달성!' : lv >= 90 ? 'Lv.99에 골드 아우라' : `Lv.${(Math.floor(lv/10)+1)*10}에 진화해요`;
   const pend = S.pending ? `<div class="notice"><span>⏳ 못 본 레벨업 장면이 있어요</span><button class="btn sm" data-act="playPending">보기</button></div>` : '';
-  const eqNames = ITEMS.filter(i => S.equipped[i.id]).map(i => `<span class="pill">${i.name}</span>`).join('');
+  const eqNames = ITEMS.filter(i => S.equipped[i.id]).map(i => `<span class="pill">${i.name}</span>`).join('') + gymPill();
   const seg = `<div class="seg wseg"><button class="${S.wseg==='mine'?'on':''}" data-act="wseg" data-v="mine">내 운동</button><button class="${S.wseg==='feed'?'on':''}" data-act="wseg" data-v="feed">오운완 피드</button></div>`;
   if (S.wseg === 'feed') return `${seg}<div class="sec"><div class="ph tall">오운완 피드는 준비 중이에요<br>곧 친구들의 오운완을 여기서 볼 수 있어요</div></div>`;
   const wd = weekDays(), wk = weekCount();
@@ -470,13 +471,13 @@ function vWorkout() {
     <div class="eqs">${eqNames || '<span class="pill none">장착 아이템 없음</span>'}</div>
     <button class="linkbtn" data-act="sub" data-v="me" id="goMe">내 캐릭터 자세히 ›</button></div></div>${moodToday() ? `<div class="say moodsay ${moodToday().verdict}" id="stageSay">${esc(moodToday().line)}</div>` : EXPR[ex].line ? `<div class="say moodsay ${ex}" id="stageSay">${esc(EXPR[ex].line)}</div>` : ''}</div>
   <button class="btn" data-act="start" id="goRecord" style="margin-top:0">${S.session ? '운동 이어서 하기' : '오늘 운동 기록하기'}</button>
-  <div class="muted" style="text-align:center;margin:6px 0 12px">${S.session ? `${esc(S.session.place.name)}에서 운동 중 · <span data-clock="sess">${clock(Date.now() - S.session.startedAt)}</span>` : `센터에 입장하면 바로 시작돼요 · ${CB_TXT}`}</div>
+  <div class="muted" style="text-align:center;margin:6px 0 12px">${S.session ? `${esc(S.session.place.name)}에서 운동 중 · <span data-clock="sess">${clock(Date.now() - S.session.startedAt)}</span>` : gymQuiet() ? '운동을 시작할 때 눌러 주세요' : `센터에 입장하면 바로 시작돼요 · ${CB_TXT}`}</div>
   <div class="card" id="streakCard"><div style="display:flex;justify-content:space-between;align-items:center"><div class="h2" style="margin:0;font-size:16px" id="weekCnt">이번 주 ${wk}회 운동</div><span class="pill ${wk>=1?'tier4':'tier1'}">🔥 ${S.streakWeeks}주 연속</span></div>
     <div class="wsay" id="weekSay"><span class="cbox">${charFit(t, lv, 26, ex)}</span><span>${weekSay(wk)}</span></div>
     <div class="week">${week}</div>
     <div class="wxp" id="weekXP"><span>이번 주 운동 경험치</span><b>${weekXP().toLocaleString()}/${CFG.WEEK_CAP.toLocaleString()}</b></div><div class="bar thin"><i style="width:${Math.min(100, Math.round(weekXP() / CFG.WEEK_CAP * 100))}%"></i></div>${centerWeek() ? `<div class="wxp itm" id="weekCenterXP"><span>+ 입점센터 보너스</span><b>${centerWeek().toLocaleString()} · 따로 계산</b></div>` : ''}${itemWeek() ? `<div class="wxp itm" id="weekItemXP"><span>+ 아이템 경험치</span><b>${itemWeek().toLocaleString()} · 한도 없음</b></div>` : ''}
     <div class="muted" style="margin-top:8px;font-weight:700;color:var(--ink)">${now.getMonth()+1}월</div><div class="cal">${cal}</div></div>
-  <div class="card coach" id="coachCard"><div class="cbox">${charFit(t, lv, 52, ex)}</div><div class="cmain"><div class="say">${coachLine()}</div><button class="coachbtn" data-act="coach" id="coachBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg><span class="ctxt">코치에게 물어보기</span></button><div class="cquota" id="coachQuota">${coachQuota()}</div></div></div>
+  ${gymCard()}<div class="card coach" id="coachCard"><div class="cbox">${charFit(t, lv, 52, ex)}</div><div class="cmain"><div class="say">${coachLine()}</div><button class="coachbtn" data-act="coach" id="coachBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg><span class="ctxt">코치에게 물어보기</span></button><div class="cquota" id="coachQuota">${coachQuota()}</div></div></div>
   <div class="card" id="recentCard"><div style="display:flex;justify-content:space-between;align-items:center"><div class="h2" style="margin:0;font-size:16px">최근 기록</div><button class="linkbtn" data-act="sub" data-v="stats" style="margin:0">전체 보기 ›</button></div>
     ${recent.map(r => `<div class="rec tap" data-act="rec" data-id="${r.id}"><div><b>${esc(r.summary)}</b><small>${r.date.slice(5).replace('-', '/')} · ${esc(r.place)} · ${vLabel(r.v)}</small></div>${recXP(r)}</div>`).join('')}</div>
   <div class="entries" id="entries">
@@ -491,7 +492,7 @@ const clock = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.flo
 /* ===== C3b 장소 선택 (입장 기록 없을 때만) ===== */
 function vPlace() {
   const recent = [...new Set([...S.records].sort((a, b) => b.date.localeCompare(a.date)).map(r => placeBase(r.place)))].filter(p => p !== '집' && p !== '야외').slice(0, 4);
-  const q = S.placeQ.trim(), list = PLACES.filter(p => !q || p.name.includes(q));
+  const list = placeFind(S.placeQ);
   return `${subHead('어디서 운동해요?')}<div class="sec">
   <div class="muted" style="margin-bottom:10px">오늘은 센터 입장 기록이 없어요. 장소만 골라 주세요.</div>
   <div class="h3">최근 장소</div><div class="chips white" id="recentPlaces">${recent.map(p => `<button class="chip" data-act="place" data-v="${esc(p)}">${esc(p)}</button>`).join('')}</div>
@@ -499,10 +500,10 @@ function vPlace() {
   <button class="pk" data-act="place" data-v="야외" id="pkOut"><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="3"/><path d="M5 20c1.5-4 4-6 7-6s5.5 2 7 6"/></svg><b>야외</b><small>걷기·달리기·자전거</small></button></div>
   <div class="card" style="margin-top:12px"><div class="search">${'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>'}<input id="placeQ" placeholder="센터 이름 검색" value="${esc(S.placeQ)}" autocomplete="off"></div>
   <div id="placeList">${placeListHTML(list)}</div></div>
-  <div class="muted" id="placeNote">입점 안 된 헬스장은 집·야외와 같은 «자가 기록»(경험치 40%)이에요 · 어디서든 오운완 셀카를 찍으면 +20%</div></div>`;
+  <div class="muted" id="placeNote">${gymQuiet() ? '' : `입점 헬스장에서 '입장하기'를 누르고 운동하면 경험치를 더 받아요 · `}어디서든 오운완 셀카를 찍으면 경험치 +${CFG.SELFIE_BONUS.pct}%</div></div>`;
 }
 const placeListHTML = list => list.length ? list.map(p => p.linked ? `<button class="prow tap plc" data-act="placeLinked" data-v="${esc(p.name)}"><div><b>${esc(p.name)}</b><small><span class="cbtag">1.5배</span>${p.dist} · 니짐 입점센터</small></div><span class="muted">선택</span></button>${S.placeOpen === p.name ? `<div class="cbopen" id="cbOpen"><div>입장하기로 들어오면 경험치 1.5배예요</div><div class="grid2"><button class="btn sm" data-act="placeEnter" data-v="${esc(p.name)}">입장하기</button><button class="btn sm ghost" data-act="place" data-v="${esc(p.name)}">입장 없이 기록</button></div></div>` : ''}`
-  : `<button class="prow tap plc" data-act="place" data-v="${esc(p.name)}"><div><b>${esc(p.name)}</b><small>${p.dist} · 입점 안 된 센터</small></div><span class="muted">선택</span></button>`).join('')
+  : gymPlaceRow(p)).join('')
   : `<div class="muted" style="padding:12px 0">찾는 센터가 없어요. 지도에서 찾은 센터만 고를 수 있어요.</div>`;
 
 /* ===== C3 세션 화면 ===== */
@@ -520,7 +521,7 @@ function vSession() {
     <div class="muted autoend" id="autoEnd">마지막 기록 뒤 3시간 동안 아무것도 안 적으면 자동으로 끝나요 · 마지막 기록 ${new Date(s.lastAt).toTimeString().slice(0, 5)}</div></div>`;
   const empty = !s.items.length ? `
   ${lr ? `<button class="card routine" data-act="routine" id="routineCard"><div class="h3">지난번 루틴 그대로</div><b>${md(lr.date)} · ${esc(placeBase(lr.place))}</b><div class="rchips">${lr.items.filter(i => EX[i.ex]).map(i => `<span>${EX[i.ex].name}</span>`).join('')}</div><span class="rgo">한 번에 불러오기 ›</span></button>` : ''}
-  <div class="card" id="recoCard"><div class="h3">오늘 추천</div>${recs.map(([id, why]) => `<button class="prow tap" data-act="addEx" data-v="${id}"><div><b>${EX[id].name}</b><small>${why}</small></div><span class="plus">+</span></button>`).join('')}</div>`
+  <div class="card" id="recoCard"><div class="h3">오늘 추천</div>${eqCtx(s).mode === 'equip' ? `<div class="muted" id="recoEq" style="margin:-2px 0 4px">${esc(eqCtx(s).center)}에 있는 기구로 골랐어요</div>` : ''}${recs.map(([id, why]) => `<button class="prow tap" data-act="addEx" data-v="${id}"><div><b>${EX[id].name}</b><small>${why}</small></div><span class="plus">+</span></button>`).join('')}</div>`
   : `<div class="card" id="sessList">${s.items.map(it => { const e = EX[it.ex], ds = (it.sets || []).filter(x => x.done);
       const sub = e.mode === 'cardio' ? ((it.min ? `${it.min}분 · ${({ light: '가벼움', normal: '보통', hard: '힘듦' })[it.level || 'normal']}${it.km ? ` · ${it.km}km` : ''}` : '') + (it.run ? `${it.min ? ' · ' : ''}타이머 도는 중 ${clock(Date.now() - it.run.startAt + (it.run.offset || 0))}` : it.min ? '' : '아직 기록 전'))
         : e.mode === 'lesson' ? `${it.min}분 · 선생님 확인` : ds.length ? setsTxt(e, ds) : (it.plan ? `지난번 ${it.plan}` : '아직 0세트');
@@ -545,11 +546,11 @@ function vSession() {
 function centerLine(s) {
   if (s.verify === 'V3') return '';
   if (s.verify === 'V1') return centerWeek() >= CFG.CENTER_BONUS.weekCap ? `<div class="cbline full" id="cbLine"><span>이번 주 입점센터 보너스 다 모았어요</span></div>` : `<div class="cbline on" id="cbLine"><span><b>입점센터</b> · 경험치 1.5배 적용 중</span></div>`;
-  return `<div class="cbline" id="cbLine"><span>입점센터에서 하면 경험치 1.5배</span>${findCenterBtn('cbFind')}</div>`;
+  return gymQuiet() ? '' : `<div class="cbline" id="cbLine"><span>입점센터에서 하면 경험치 1.5배</span>${findCenterBtn('cbFind')}</div>`;
 }
 function recommend(s) {
   const wkParts = sessCtx().weekParts, f = freq(), have = new Set(s.items.map(i => i.ex)), out = [];
-  const home = s.place.kind !== 'center', ok = id => EX[id] && !have.has(id) && EX[id].cat !== 'lesson' && (!home || EX[id].home) && !out.some(o => o[0] === id);
+  const home = s.place.kind !== 'center', eq = eqCtx(s), ok = id => EX[id] && !have.has(id) && EX[id].cat !== 'lesson' && (!home || EX[id].home) && exAvail(id, eq) && !out.some(o => o[0] === id);
   const miss = PARTS.filter(p => p !== '유산소' && !wkParts.includes(p));
   for (const p of miss) { const id = [...f, ...EX_DICT.map(e => e.id)].find(x => ok(x) && EX[x].part === p); if (id) { out.push([id, `이번 주 아직 안 한 부위 · ${p}`]); break; } }
   f.filter(ok).slice(0, 3 - out.length - (CENTER_POP[s.place.name] ? 1 : 0)).forEach(id => out.push([id, '자주 해요']));
@@ -680,7 +681,10 @@ function xpRows(rec) {
   if (b.noBase && b.noBase.length && b.lines.length) note(`기록 5번 쌓이면 «평소보다 많이 한 날 +${volPct}%»가 열려요`);
   if (b.first) add('오늘 첫 세트', b.first); if (b.complete || b.dayDone) add('운동 완료', (b.complete || 0) + (b.dayDone || 0));   // v1.42: 50(배율 적용) + 고정 67 을 한 줄로
   const s0 = (b.base || 0) + (b.first || 0) + (b.complete || 0), afterV = Math.round(s0 * b.vm), vAmt = afterV - Math.round(s0), sAmt = (b.mult ?? afterV) - afterV;
-  if (b.vm !== 1) add(`${VERIFY_LABEL[b.v].replace(/ ✓| ★ 2배/, '')} ×${b.vm}`, vAmt, 'mul', 'v');
+  if (b.vm > 1) add(`${VERIFY_LABEL[b.v].replace(/ ✓| ★ 2배/, '')} ×${b.vm}`, vAmt, 'mul', 'v');
+  else if (b.vm < 1) { const dy = R.find(x => x.l === '운동 완료'); if (dy) dy.n -= b.dayDone || 0;   // 고정 몫(배율 없음)은 잠깐 빼 두고
+    R.forEach(x => { if (x.n != null) x.n = Math.round(x.n * b.vm); }); if (dy) dy.n += b.dayDone || 0;
+    const big = R.filter(x => x.n != null).sort((p, q) => q.n - p.n)[0]; if (big) { big.n += afterV - (R.reduce((t, x) => t + (x.n || 0), 0) - (b.dayDone || 0)); big.k = big.k || 'v'; } }
   if (b.sm !== 1) add(b.comeback ? `오랜만에 한 운동 ×${b.sm.toFixed(2)}` : `연속 ${b.streakW ?? S.streakWeeks}주 ×${b.sm.toFixed(2)}`, sAmt, 'mul', 's');
   if (b.catchUp) add('오늘 먼저 한 운동과 합쳐 평소보다 많이 함', b.catchUp, 'vol');
   if (b.boostPart) add(`×${b.bm || CFG.BOOST.mul} 부스터 · 한도 없음`, b.boostPart, 'gold');
@@ -720,7 +724,7 @@ function vResult() {
     ${rec && rec.held ? `<div class="notice hold" id="holdNote"><span>세트 사이가 ${CFG.SET_GAP_SEC}초보다 짧아서 경험치 ${fmt(heldAll(rec))} XP는 24시간 뒤에 들어와요. 기록은 그대로 저장됐어요.</span><button class="btn sm ghost demoonly" data-act="release" data-id="${rec.id}">🧪 24시간 뒤</button></div>` : ''}
     ${rec && rec.cut ? `<div class="muted capline" id="resultCap">${rec.cutReason === 'week' ? `이번 주에 받을 수 있는 운동 경험치 ${CFG.WEEK_CAP.toLocaleString()} XP를 다 채웠어요` : `오늘 받을 수 있는 운동 경험치 ${(rec.v === 'self' ? CFG.DAY_CAP_V0 : CFG.DAY_CAP).toLocaleString()} XP를 다 채웠어요`} · 넘친 ${fmt(rec.cut)} XP는 안 들어갔어요. 기록·연속은 그대로 쌓여요</div>` : ''}
     ${rec && rec.xpBoost ? `<div class="muted capline" id="resultBoost">×${(rec.br && rec.br.bm) || CFG.BOOST.mul} 부스터로 늘어난 +${fmt(rec.xpBoost)} XP는 한도 없이 다 들어갔어요 💰</div>` : ''}
-    ${rec && !rec.demo && rec.centerIf > 0 ? `<div class="cbif" id="cbIf"><span>입점센터였다면 <b>+${fmt(rec.centerIf)}</b> 경험치</span>${findCenterBtn('cbIfFind')}</div>` : ''}
+    ${gymResultCard(rec)}
     <div class="bar"><i style="width:${lv >= 99 ? 100 : Math.max(0, Math.round(S.xp / need(lv) * 100))}%"></i></div><div class="muted">${lv >= 99 ? '최고 레벨이라 레벨은 더 오르지 않아요 · 받은 경험치는 이번 주 랭킹에 그대로 들어가요' : `Lv.${lv + 1}까지 ${Math.max(0, need(lv) - S.xp).toLocaleString()} XP`}</div>
     ${ev ? `<div class="ptline" id="ptLine">Lv.${ev.from} → ${ev.to} 레벨업</div>` : ''}
     <div class="muted" style="margin-top:6px" id="resultNote">${note}</div>
@@ -818,14 +822,14 @@ function vFriends() {
   <div><b>${esc(f.n)}</b> ${f.paid?'<span title="유료 사용">💰</span>':''}<div class="muted">${esc(CH[f.t].name)} · ${stageName(f.t, f.lv)}</div></div>
   <div class="val">${S.fTab==='week'?`${f.week.toLocaleString()}<small>XP</small>`:`Lv.${S.pureOnly?(f.pure??f.lv):f.lv}<small>${f.paid&&!S.pureOnly&&f.pure!==f.lv?`운동만 Lv.${f.pure}`:TIER_NAME[tierOf(f.lv)]}</small>`}</div></div>`).join('')}</div>
   <button class="btn ghost" data-act="invite">친구 초대</button>
-  <div class="muted" style="margin-top:8px">이번 주에 얻은 경험치 순위예요 · 자가 기록은 안 들어가고, 입점센터 보너스는 들어가요</div></div>`;
+  <div class="muted" style="margin-top:8px">순위에는 입점 헬스장에서 '입장하기'로 들어가서 운동한 기록만 반영돼요</div></div>`;
 }
 function vMe() {
   const t = S.type, looks = ITEMS.filter(i => i.kind === 'look');
   return `${subHead('내 캐릭터')}<div class="sec">
   <div class="card" style="text-align:center">${charHTML(t, S.level, 170, true, exprNow(), false, 212, { rig: true })}<div style="margin-top:14px"><span class="name">${esc(CH[t].name)}</span> <span class="pill lvpill">Lv.${S.level}</span> <span class="pill tier${tierOf(S.level)}">${TIER_NAME[tierOf(S.level)]}</span></div>
   <div class="muted" style="margin-top:4px">칭호 «${stageName(t, S.level)}» · 운동 레벨 Lv.${S.exLv} · 포인트 ${S.points.toLocaleString()}P</div>
-  <div class="slots">${looks.map(i => `<div class="slot ${S.equipped[i.id]?'on':''}">${S.equipped[i.id] ? i.name : '빈 슬롯'}</div>`).slice(0, 3).join('')}${ITEMS.filter(i => i.kind === 'effect' && S.equipped[i.id]).map(i => `<div class="slot on">${i.name}</div>`).join('')}</div>
+  <div class="slots">${looks.map(i => `<div class="slot ${S.equipped[i.id]?'on':''}">${S.equipped[i.id] ? i.name : '빈 슬롯'}</div>`).slice(0, 3).join('')}${ITEMS.filter(i => i.kind === 'effect' && S.equipped[i.id]).map(i => `<div class="slot on">${i.name}</div>`).join('')}${S.gym && S.gym.item ? `<button class="slot gyslot ${S.gym.itemOn ? 'on' : ''}" data-act="gyItem" id="gySlot">${GYM_ITEM}${S.gym.itemOn ? '' : ' · 달기'}</button>` : ''}</div>
   <button class="btn" data-act="sub" data-v="shop" id="shopBtn">🛍️ 아이템 상점</button>
   <button class="btn ghost" data-act="rechoose" style="margin-top:8px">캐릭터 바꾸기 <span class="muted">(Lv.10 전 1회 무료)</span></button></div>
   ${centerCard()}
@@ -838,6 +842,7 @@ function vMe() {
 /* 결정 36 ⑥ C12 «이번 주 입점 보너스» — 0 / 쌓는 중 / 다 참 */
 function centerCard() {
   const w = centerWeek(), cap = CFG.CENTER_BONUS.weekCap, full = w >= cap;
+  if (!w && gymQuiet()) return '';
   const body = !w ? `<div class="cbzero"><span>${CB_TXT}</span>${findCenterBtn('cbMeFind')}</div>`
     : `<div class="wxp" style="margin-top:4px"><span>${full ? '다 모았어요' : '쌓는 중'}</span><b>${w.toLocaleString()} / ${cap.toLocaleString()}${full ? ' ✓' : ''}</b></div><div class="bar thin cb"><i style="width:${Math.min(100, Math.round(w / cap * 100))}%"></i></div>`;
   return `<div class="card" id="cbCard"><div class="h2" style="font-size:16px">이번 주 입점 보너스</div>${body}
@@ -859,7 +864,8 @@ function vSettings() {
     <div class="row"><div><span>주간 리포트</span><div class="muted">월요일 아침 지난주 돌아보기</div></div>${sw('noti', S.noti.report).replace('data-act="noti"', 'data-act="noti" data-v="report"')}</div>
     <div class="muted demoonly">시연용 스위치 — 실제 알림은 보내지 않아요</div></div>
   <div class="card" id="locCard"><div class="h2" style="font-size:16px">센터 확인</div>
-    <div class="muted">센터 확인은 «입장하기» 기록으로만 해요 · 입장 기록이 없으면 집·야외와 같은 자가 기록(40%)이에요</div>
+    <div class="muted">센터 확인은 «입장하기» 기록으로만 해요${gymQuiet() ? '' : ` · 입점 헬스장에서 '입장하기'를 누르고 운동하면 경험치를 더 받아요`}</div>
+    ${gymSettingsRow()}
     <div class="row"><span>센터 확인 안내 그만 보기</span>${sw('hideTips', S.hideTips)}</div>
     <div class="row"><div><span>체중 <span class="muted">(선택)</span></span><div class="muted">무게 오타 확인에만 써요 · 비우면 70kg으로 봐요</div></div><div class="step"><button data-act="bw" data-d="-1">−</button><span>${S.bodyweight ? S.bodyweight + 'kg' : '—'}</span><button data-act="bw" data-d="1">+</button></div></div></div>
   <div class="card" id="photoCard"><div class="h2" style="font-size:16px">내 사진</div><div class="muted" style="margin-bottom:8px">${LOCK.replace('class="ico"', 'class="ico sm"')} 나한테만 보여요 · ${photos.length}장</div>
@@ -984,7 +990,7 @@ function editCalc(r, items) {
 function editNoteHTML(r, ed, items) {
   const same = sameItems(items.filter(x => (x.sets || []).some(q => q.done) || x.min > 0), r.items || []), isSelf = vk(r.v) === 'self';
   const rule = ed.keep ? (isSelf ? '고친 내용대로 경험치를 다시 계산해요' : `저장하고 24시간이 안 지나서 고쳐도 <b>등급은 그대로</b>예요 <span class="nowrap">(${keepUntil(r)}까지)</span>`)
-    : isSelf ? '고친 내용대로 경험치를 다시 계산해요' : '저장한 지 24시간이 지나서, 고치면 <b>자가 기록(×0.4)</b>으로 다시 계산돼요. 입점센터·개인 기록 보너스는 빠져요';
+    : isSelf ? '고친 내용대로 경험치를 다시 계산해요' : '저장한 지 24시간이 지나서, 고치면 <b>자가 기록</b>으로 다시 계산돼요. 입점센터·개인 기록 보너스는 빠져요';
   const lostPR = ed.keep && !same && (r.prCount || 0) > ed.prCount ? '<div class="enline sub">값을 고친 세트의 개인 기록 보너스는 빠져요</div>' : '';
   if (r.held) { const was = heldAll(r), now = ed.xp;
     return `<div class="warn editnote" id="v0Warn"><div class="enline">${rule}</div>${ed.keep && same ? `<div class="enline num">24시간 뒤에 받을 경험치 <b>${fmt(was)} XP</b></div>` : `<div class="enline num">24시간 뒤에 받을 경험치 ${fmt(was)} XP → 수정 후 <b>${fmt(now)} XP</b></div>`}${lostPR}</div>`; }
@@ -996,7 +1002,7 @@ function editNoteHTML(r, ed, items) {
 
 const MAIN = { home:vHome, nearby:vNearby, membership:vMembership, workout:vWorkout, all:vAll };
 const SUB = { session:vSession, place:vPlace, pick:vPick, set:vSet, cardio:vCardio, result:vResult, selfie:vSelfie, rec:vRec, calc:vCalc,
-  onbPerm:vOnbPerm, friends:vFriends, me:vMe, shop:vShop, stats:vStats, settings:vSettings };
+  onbPerm:vOnbPerm, onbGym:vGymFlow, gym:vGymFlow, friends:vFriends, me:vMe, shop:vShop, stats:vStats, settings:vSettings };
 /* v1.40 안전망(QA 치6·치8): 화면 그리기가 실패해도 빈 화면으로 두지 않는다 — ① 운동기록 첫 화면으로 ② 그것도 안 되면 «처음 상태로 시작» 화면 */
 const SESS_SUBS = ['session', 'set', 'cardio', 'pick'];
 function viewHTML() {
@@ -1037,8 +1043,8 @@ const backToTab = () => go('workout');   // 연출 종료 후 복귀 위치 = �
 function startSession() {
   if (S.session) return go('workout', 'session');
   if (!S.entryDemo) { S.placeQ = ''; return go('workout', 'place'); }
-  openSession({ name: '니짐 신림점', kind: 'center' }, 'V1');
-  toast('입장 확인! 니짐 신림점에서 운동 시작');
+  openSession({ name: S.entryCenter, kind: 'center' }, 'V1');
+  toast(`입장 확인! ${S.entryCenter}에서 운동 시작`);
 }
 function openSession(place, verify) {
   const now = Date.now();
@@ -1084,7 +1090,7 @@ function rapidAsk() {
   if (!batchLeft(s)) { s.rapid = 'hold'; save(); render();
     return sheet(`<div class="h2">세트 사이가 너무 짧았어요</div><div class="muted" style="line-height:1.6;word-break:keep-all">이번 운동 경험치는 24시간 뒤에 들어와요. 기록은 그대로 저장돼요.<br>한꺼번에 적기는 하루에 한 번만 쓸 수 있어요.</div><button class="btn" data-act="shClose" style="margin-top:14px" id="rapidOk">확인</button>`); }
   sheet(`<div class="h2" id="rapidTitle">운동을 마치고 한꺼번에 적는 중인가요?</div><div class="muted" style="line-height:1.6;word-break:keep-all">세트를 ${CFG.SET_GAP_SEC}초도 안 쉬고 연달아 완료했어요.</div>
-    <button class="optbtn" data-act="rapidBatch" id="rapidBatch"><b>네, 한꺼번에 적고 있어요</b><small>자가 기록(×${CFG.VERIFY.V0})으로 바로 받아요 · 하루 한 번</small></button>
+    <button class="optbtn" data-act="rapidBatch" id="rapidBatch"><b>네, 한꺼번에 적고 있어요</b><small>자가 기록으로 바로 받아요 · 하루 한 번</small></button>
     <button class="optbtn" data-act="rapidHold" id="rapidHold"><b>아니요, 지금 운동 중이에요</b><small>등급은 그대로 · 경험치는 24시간 뒤에 들어와요</small></button>
     <div class="muted" style="margin-top:10px;text-align:center;font-size:12px">한 번 고르면 이 운동이 끝날 때까지 바꿀 수 없어요</div>`);
 }
@@ -1571,10 +1577,10 @@ document.addEventListener('click', e => {
   else if (a === 'wseg') S.wseg = v;
   else if (a === 'pick') S.pick = v;
   else if (a === 'choose') { S.type = S.pick || S.type; S.chosen = true; S.pick = null;
-    if (!S.onboarded) return go('workout', 'onbPerm');
+    if (!S.onboarded) { ensureGym(); S.gym.step = 'ask'; return go('workout', 'onbGym'); }
     S.sub = null; toast(`${CH[S.type].name}${wa(S.type)} 운동 시작!`); }
   else if (a === 'perm') { S.perm[v] = !S.perm[v]; }
-  else if (a === 'obDone') { S.onboarded = true; toast(`${CH[S.type].name}${wa(S.type)} 운동 시작!`); return go('workout'); }
+  else if (a === 'obDone') { S.onboarded = true; S.joinAt = Date.now(); toast(`${CH[S.type].name}${wa(S.type)} 운동 시작!`); return go('workout'); }
   else if (a === 'rechoose') { if (S.level >= 10) return toast('Lv.10부터는 캐릭터 변경권이 있어야 바꿀 수 있어요'); S.chosen = false; S.sub = null; }
   else if (a === 'saveWorkout') return endAsk();
   else if (a === 'coach') return toast('코칭 대화(C9)는 프로토타입 범위 밖 · 월 20회');
@@ -1637,7 +1643,7 @@ document.addEventListener('change', e => {
 document.addEventListener('toggle', e => { if (e.target.dataset && e.target.dataset.act === 'cmore') { const it = curItem(); if (it && it.draft) { it.draft.open = e.target.open; save(); } } }, true);
 document.addEventListener('input', e => {
   if (e.target.id === 'exQ') { S.q = e.target.value; $('exList').innerHTML = exListHTML(); }
-  if (e.target.id === 'placeQ') { S.placeQ = e.target.value; const q = S.placeQ.trim(); $('placeList').innerHTML = placeListHTML(PLACES.filter(p => !q || p.name.includes(q))); }
+  if (e.target.id === 'placeQ') { S.placeQ = e.target.value; const q = S.placeQ.trim(); $('placeList').innerHTML = placeListHTML(placeFind(S.placeQ)); }
 });
 document.addEventListener('change', e => {
   if ((e.target.id !== 'camFile' && e.target.id !== 'camApp') || !e.target.files[0]) return;
@@ -1729,3 +1735,4 @@ if (S.fixNote) { const f = S.fixNote; S.fixNote = 0;
     : `<div class="h2" id="fixTitle">운동 기록을 불러오지 못했어요</div><div class="muted" style="line-height:1.6;word-break:keep-all" id="fixBody">저장된 기록에 문제가 있어 운동 기록을 비우고 시작했어요.${lvLine}<br>오늘부터 다시 기록하면 돼요.</div><button class="btn" data-act="shClose" style="margin-top:14px" id="fixOk">확인</button>`), 300); }
 if (S.eatBack) { const n = S.eatBack; S.eatBack = 0; save(); setTimeout(() => toast(`캐릭터한테 주려던 음식 ${n}개는 다시 넣어 뒀어요`), 900); }
 if (S.pending) setTimeout(() => { toast('지난번에 못 본 레벨업 장면을 보여 드릴게요'); playPending(); }, 700);
+else gymBoot();

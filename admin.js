@@ -104,7 +104,7 @@ function withCfg(src, fn) { applyConfig(src); try { return fn(); } finally { app
 /* ===== 메뉴 ===== */
 const MENU = [
   ['센터 관리자 웹 (ngym.co.kr:21080 안)', [['a4', 'A4 운동기록 통계'], ['a5', 'A5 레슨 출석 확정']]],
-  ['니짐 본사 운영자', [['h1', 'H1 운동 사전'], ['h2', 'H2 업적·보상·레벨표·상점'], ['h3', 'H3 부정 검토(V5)'], ['h4', 'H4 코칭 비용·품질'], ['h5', 'H5 지표 대시보드'], ['h6', 'H6 공개 비율'], ['h7', 'H7 포인트·유료 모니터']]],
+  ['니짐 본사 운영자', [['h1', 'H1 운동 사전'], ['h2', 'H2 업적·보상·레벨표·상점'], ['h3', 'H3 부정 검토(V5)'], ['h4', 'H4 코칭 비용·품질'], ['h5', 'H5 지표 대시보드'], ['h6', 'H6 공개 비율'], ['h7', 'H7 포인트·유료 모니터'], ['h8', 'H8 입점 요청·센터 기구 🧪']]],
 ];
 const route = () => (location.hash.match(/^#admin\/?(\w*)/) || [])[1] || 'a4';
 const isAdmin = () => /^#admin/.test(location.hash);
@@ -319,7 +319,7 @@ function vH7() {
 
 /* ===== 틀·이벤트 ===== */
 function admToast(m) { const t = document.getElementById('admToast'); if (!t) return; t.textContent = m; t.classList.add('show'); clearTimeout(admToast.h); admToast.h = setTimeout(() => t.classList.remove('show'), 2600); }
-const VIEWS = { a4: vA4, a5: vA5, h1: vH1, h2: vH2, h3: vH3, h4: vH4, h5: vH5, h6: vH6, h7: vH7 };
+const VIEWS = { a4: vA4, a5: vA5, h1: vH1, h2: vH2, h3: vH3, h4: vH4, h5: vH5, h6: vH6, h7: vH7, h8: vH8 };
 function admBar() { const ch = diffs();
   return `<div class="abar ${ch.length ? 'dirty' : ''}" id="admBar">${ch.length ? `<b>저장 안 한 변경 ${ch.length}건</b><span class="amut">${esc(ch.slice(0, 3).join(' · '))}${ch.length > 3 ? ' …' : ''}</span><button class="abtn ghost sm" data-aact="undo">취소</button><button class="abtn sm" data-aact="save">저장하고 회원 앱에 반영</button>`
     : `<span class="amut">저장된 본사 설정 ${(ADM.log || []).length ? `· 마지막 저장 ${ADM.log[0].at}` : '· 전부 기본값'}</span>${Object.keys(ADM.cfg).length || Object.keys(ADM.levels).length || Object.keys(ADM.ex).length || ADM.exAdd.length || Object.keys(ADM.shop).length ? '<button class="abtn ghost sm" data-aact="resetAll">전부 기본값으로</button>' : ''}`}</div>`; }

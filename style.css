@@ -776,3 +776,66 @@ button.setrow.tapset:active{background:var(--g1)}
 .shr-bonus span{overflow:hidden;text-overflow:ellipsis}
 .shr-bonus.can{color:#FC2066;font-weight:700}
 .pfhint.can{color:#FC2066;font-weight:700}
+
+/* ===== v1.51 «우리 헬스장 입점 요청» · 센터 기구 코칭 (gymreq.js) ===== */
+.gycard{padding-bottom:14px}
+.gycard .gyq{font-size:16px;font-weight:700;margin-bottom:2px}
+.gycard .gyask{margin-top:10px}.gycard .gyask .btn{margin:0}
+.gyh{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}
+.gyh>div{min-width:0;flex:1}
+.gyh small{display:block;font-size:12px;color:var(--g5);font-weight:600}
+.gyh b{display:block;font-size:16px;font-weight:700;line-height:1.35;word-break:keep-all;overflow-wrap:anywhere}
+.gyh .linkbtn{flex:none;margin:0;color:var(--g5);font-weight:600;white-space:nowrap}
+.gymsg{font-size:15px;font-weight:700;color:var(--ink);line-height:1.4;word-break:keep-all;overflow-wrap:anywhere}
+.gymsg.on{color:var(--rose)}
+.gycard .muted{line-height:1.45;word-break:keep-all;margin-top:2px}
+.gycard>.btn{margin-top:12px}
+.gycard .gyshare{display:block;width:100%;margin-top:12px;height:auto;min-height:40px;padding:9px 10px;font-size:14px;line-height:1.3;white-space:normal;word-break:keep-all}
+.gysteps{display:grid;grid-template-columns:repeat(5,1fr);margin:4px 0 12px;position:relative}
+.gysteps>div{display:flex;flex-direction:column;align-items:center;gap:5px;position:relative;min-width:0}
+.gysteps>div::before{content:'';position:absolute;top:11px;left:-50%;width:100%;height:2px;background:var(--g2)}
+.gysteps>div:first-child::before{display:none}
+.gysteps>div.on::before{background:var(--rose)}
+.gysteps i{position:relative;z-index:1;width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid var(--g2);color:var(--g5);font-style:normal;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.gysteps .on i{background:var(--rose);border-color:var(--rose);color:#fff}
+.gysteps .cur i{box-shadow:0 0 0 4px #FFE3EE}
+.gysteps i svg{width:13px;height:13px;fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.gysteps span{font-size:11px;line-height:1.25;color:var(--g5);text-align:center;word-break:keep-all;font-weight:600}
+.gysteps .on span{color:var(--ink)}.gysteps .cur span{color:var(--rose);font-weight:700}
+.gypill{background:#FFF3DC;color:#8A5A00}
+.slot.gyslot{font:inherit;font-size:12px;cursor:pointer}
+/* 고르기 흐름 */
+.gyflow .gyin{display:block;width:100%;height:46px;border:1px solid var(--g2);border-radius:12px;padding:0 12px;font:inherit;font-size:16px;margin-bottom:8px;background:#fff;color:var(--ink);outline:none}
+.gyflow .gyin:focus{border-color:var(--ink)}
+.gyflow .gyback{display:block;margin:14px auto 0;color:var(--g5)}
+.gydone{text-align:center;padding:18px 4px 6px}
+.gydone .h2{margin:10px 0 8px;line-height:1.35;word-break:keep-all;overflow-wrap:anywhere}
+.gydone .gysub,.sh .gysub{line-height:1.55;word-break:keep-all;margin-bottom:14px;font-size:14px}
+.gychk{width:52px;height:52px;border-radius:50%;background:#FFE3EE;margin:0 auto;display:flex;align-items:center;justify-content:center}
+.gychk svg{width:26px;height:26px;fill:none;stroke:var(--rose);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.gyline{background:var(--g1);border-radius:14px;padding:12px 14px;margin:0 0 10px;text-align:center}
+.gyline b{display:block;font-size:15px;line-height:1.35;word-break:keep-all;overflow-wrap:anywhere}
+.gyline span{display:block;font-size:15px;font-weight:700;color:var(--rose);margin-top:4px}
+.gydone .btn{margin-top:4px}
+.gyname{word-break:keep-all;overflow-wrap:anywhere}
+/* 장소 목록 «아직 입점 전» 줄 */
+.prow.gyrow{gap:10px}
+.prow.gyrow .gymain{flex:1;min-width:0;text-align:left;padding:0}
+.prow.gyrow .gymain b{word-break:keep-all;overflow-wrap:anywhere;line-height:1.35}
+.prow.gyrow .gyreq{flex:none;margin:0;white-space:nowrap}
+.gydid{flex:none;font-size:12px;font-weight:700;color:var(--rose);background:#FFE3EE;border-radius:8px;padding:5px 8px;white-space:nowrap}
+/* 결과 화면 */
+.cbif.gyres{align-items:center}
+.cbif.gyres>span{flex:1;min-width:150px;line-height:1.45}
+.cbif.gyres .gynm{color:var(--ink);overflow-wrap:anywhere}
+.cbif.gyres small{display:block;color:var(--g5);font-size:12px;margin-top:2px}
+.cbif.gyres .btn.sm{flex:none;margin:0;white-space:nowrap}
+/* 코치 */
+.eqline{display:flex;align-items:center;gap:6px;margin:-4px 0 12px;padding:9px 12px;border-radius:12px;background:#FFE3EE;color:var(--rose);font-size:13px;font-weight:600;line-height:1.4;word-break:keep-all}
+.eqline svg{flex:none;width:16px;height:16px;fill:none;stroke:var(--rose);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.eqline b{color:var(--ink)}
+.eqcard .gymsg{margin-top:10px}
+/* 관리자 H8 */
+.gyafr{align-items:flex-start}.gyafr>span{flex:0 0 190px;padding-top:6px}.gyafr>div{flex:1;min-width:0}.gyafr em{display:block;margin-top:4px;line-height:1.45}
+.gyeq{margin-top:12px;font-size:13px}.gyeqchips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}.gyeqchips span{background:#F1F1F4;border-radius:6px;padding:3px 8px;font-size:12px}
+.gyeqask{margin-top:6px;background:#FFF8E1;border:1px dashed #E0B400;border-radius:8px;padding:9px 12px;font-size:12.5px}

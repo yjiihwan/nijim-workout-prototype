@@ -945,3 +945,7 @@ button.gydid{font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .cxprow b{font-size:22px;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
 .cxpsub{font-size:13px;line-height:1.45;margin-top:4px;word-break:keep-all}
 .cxpsub.warnline{color:#6B4700}
+/* v1.64: 고르기 결과 첫 줄 — «받아요.»만 떨어지지 않게 줄 길이를 고르게 */
+.gybal{display:block;text-wrap:balance}
+/* v1.64: 요청 직후 창·5명 모임 알림 작은 글 — 마지막 줄에 한 낱말만 떨어지지 않게(좁은 폭) */
+#gySentSub,#gyFiveSub{text-wrap:pretty}

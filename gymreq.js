@@ -153,6 +153,7 @@ function ensureGym() {
     delete S.gymSim.stage[id]; });
   if (!ok(S.eqReq)) S.eqReq = {};
   if (!Array.isArray(S.gymNotes)) S.gymNotes = [];
+  if (!ok(S.gymFiveSeen)) S.gymFiveSeen = {};   // v1.64: «5명 모임» 알림을 이미 본 헬스장(한 헬스장에서 한 사람에게 한 번만)
   S.gymCustom = (Array.isArray(S.gymCustom) ? S.gymCustom : []).filter(c => ok(c) && c.id && typeof c.name === 'string' && c.name);
   if (!ok(S.gymReqs)) S.gymReqs = {};
   if (!ok(S.msTold)) S.msTold = {};   // v1.61: 유저가 «센터에서 직접 결제했어요/없어요/나중에»라고 답한 센터
@@ -219,6 +220,9 @@ function gymStage(g) {
    우편 접수·발송 대기 판정은 gymReady(두 조건 모두) 그대로 */
 const gymHold = g => !!g && gymStage(g) === 2 && !gymReady(g);
 const gymHoldLine = (g, mail = '안내문') => { const r = gymRecent(g); return `이 중 최근 2주 안에 이 헬스장에서 운동을 기록한 ${r ? `분은 아직 ${r}명이에요` : '분이 아직 없어요'}. ${GYM_NEED_RECENT}명이 되면 저희가 사장님께 ${mail}을 보내요.`; };
+/* v1.64(COPY_REVIEW_v1.60 3장): 사장님이 거절·우편 그만 받기를 누른 헬스장 — 회원 화면에는 안 드러낸다. 우편 없이 칸 4가 된 곳은 «안내문을 보냈고»라고 말하지 않는다 */
+const gymOwnerNo = g => { const ow = g && S.gymSim.owner[g.id]; return ow === 'reject' || ow === 'optout'; };
+const gymNoMail4 = g => !!g && gymStage(g) === 4 && !S.gymSim.mail[g.id];
 const gymStepName = g => ['', '요청 접수', `${GYM_NEED}명 모임`, '사장님께 전달', '답 기다리는 중', '입점'][gymStage(g)];
 const gymFirstWeek = () => { ensureGym(); return Date.now() - S.joinAt < GYM_QUIET_DAYS * DAY_MS || realRecs().length <= GYM_QUIET_RECS; };
 
@@ -341,10 +345,10 @@ const gyOkBtn = (id = 'gySheetOk') => `<button class="btn" data-act="shClose" id
 const gymShareBtn = (id, cls = 'btn ghost') => `<button class="${cls}" data-act="gyShare" data-v="${esc(id)}" id="gyShare">같은 헬스장 다니는 친구에게 보내기</button>`;
 function gymSentHTML(m) {
   const n = gymWait(m), st = gymStage(m);
-  const line = st >= 4 ? '저희가 사장님께 안내문을 보냈고, 지금은 답을 기다리고 있어요.' : st === 3 ? '저희가 사장님께 이미 안내문을 보냈어요.' : st === 2 ? (gymHold(m) ? gymHoldLine(m, '우편으로 안내문') : '저희가 사장님께 보낼 안내문을 준비하고 있어요.') : `${GYM_NEED}명이 모이면 저희가 사장님께 우편으로 안내문을 보내요.`;
+  const hold = gymHold(m), line = st >= 4 ? (gymNoMail4(m) ? '사장님께 요청이 전달됐고, 지금은 답을 기다리고 있어요.' : '저희가 사장님께 안내문을 보냈고, 지금은 답을 기다리고 있어요.') : st === 3 ? '저희가 사장님께 이미 안내문을 보냈어요.' : st === 2 ? (hold ? gymHoldLine(m, '우편으로 안내문') : '저희가 사장님께 보낼 안내문을 준비하고 있어요.') : `${GYM_NEED}명이 모이면 저희가 사장님께 우편으로 안내문을 보내요.`;
   return `<div class="gydone" id="gySent"><div class="gychk"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7.5"/></svg></div><div class="h2">요청을 남겼어요</div>
   <div class="gyline"><b>${esc(m.name)}</b><span>지금까지 ${n}명이 입점을 요청했어요</span></div>
-  <div class="muted gysub" id="gySentSub">${line} ${esc(m.name)}${gjo(m.name, '이', '가')} 입점하면 바로 알려 드릴게요.</div>${gymShareBtn(m.id)}</div>`;
+  <div class="muted gysub" id="gySentSub">${line} ${hold ? '입점하면' : `${esc(m.name)}${gjo(m.name, '이', '가')} 입점하면`} 바로 알려 드릴게요.</div>${gymShareBtn(m.id)}</div>`;
 }
 /* 요청 버튼 공통(카드·장소 목록·결과 화면) — 되면 요청, 안 되면 까닭을 알려 준다 */
 /* v1.58 입점 요청 확인 창(정본 6-1) — 카드·장소 목록·결과 화면의 [입점 요청하기]는 이 창을 거친다. 이미 한 번 물은 화면(처음 설정 결과·취소 직후)은 go 로 바로 */
@@ -433,7 +437,7 @@ function vGymFlow() {
     <div class="gyline"><b>${esc(m.name)}</b></div><div class="muted gysub">앱에서 '입장하기'를 누르고 운동하면 경험치를 1.5배로 받아요.</div></div><button class="btn" data-act="gyNext" id="gyNext">${nextL}</button>`);
   const n = gymWait(m), why = gymCanReq(m);
   return wrap(`<div class="gydone" id="gyRes"><div class="h2 gyname">${esc(m.name)}${gjo(m.name, '은', '는')} 아직 입점 전이에요</div>${gymVLine(m, 'gyResV')}${(S.gymPick[m.id] || {}).v === 'no' ? '<div class="muted gyvnote" id="gyVNote">다른 지도에서는 같은 이름·주소로 확인하지 못했어요. 이대로 써도 괜찮아요.</div>' : ''}
-    <div class="muted gysub">이 헬스장이 니짐내짐에 입점하면 여기서 운동할 때 경험치를 더 받아요.${n ? `<br>지금까지 ${n}명이 입점을 요청했어요.` : ''}${why === 'norec' ? `<br><span id="gyNoRec">${GY_NOREC}.</span>` : why === 'did' ? '<br>입점 요청은 이미 남겨 두셨어요.' : ''}</div></div>
+    <div class="muted gysub"><span class="gybal" id="gyResL1">이 헬스장이 니짐내짐에 입점하면 여기서 운동할 때 경험치를 더 받아요.</span>${n ? `지금까지 ${n}명이 입점을 요청했어요.` : ''}${why === 'norec' ? `${n ? '<br>' : ''}<span id="gyNoRec">${GY_NOREC}.</span>` : why === 'did' ? `${n ? '<br>' : ''}입점 요청은 이미 남겨 두셨어요.` : ''}</div></div>
     ${why === 'ok' || why === 'full' ? `<button class="btn" data-act="gyReq" data-v="${esc(m.id)}" data-f="flow" id="gyReqBtn">입점 요청하기</button><button class="btn ghost" data-act="gyNext" id="gyLater" style="margin-top:8px">다음에</button>` : `<button class="btn" data-act="gyNext" id="gyNext">${nextL}</button>`}`);
 }
 
@@ -624,10 +628,12 @@ function eqAltReply(q, lastEx) {
 
 /* ===== 알림(실제 앱에서는 푸시) — 입점 성사 · 5명 모임 · 센터가 기구 정보를 올림 ===== */
 function gymNoteSheet() {
-  ensureGym(); const n = S.gymNotes.shift(); if (!n) return; save();
+  ensureGym(); const n = S.gymNotes.shift(); if (!n) return;
+  if (n.t === 'five') { const fg = gymById(n.id); if (fg && gymOwnerNo(fg)) { save(); return gymNoteSheet(); } if (n.id) S.gymFiveSeen[n.id] = Date.now(); }   // 거절·그만 받기 헬스장은 띄우지 않는다 · 본 헬스장은 다시 안 보낸다
+  save();
   const ok = `<button class="btn" data-act="shClose" id="gyNoteOk" style="margin-top:14px">확인</button>`, push = `<div class="muted demoonly" style="margin-top:8px">실제 앱에서는 푸시 알림으로도 가요</div>`;
   if (n.t === 'join') sheet(`<div class="gydone" id="gyJoinNote">${n.item ? `<div class="gybadge">${gymItemImg('lg')}</div>` : `<div class="gychk"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7.5"/></svg></div>`}<div class="h2 gyname">${esc(n.name)}${gjo(n.name, '이', '가')} 입점했어요!</div><div class="muted gysub">오늘부터 경험치 1.5배예요.${n.item ? `<br>입점을 요청해 주셔서 한정 꾸미기 아이템 «${GYM_ITEM}»를 드렸어요.` : ''}</div></div>${ok}${push}`);
-  else if (n.t === 'five') sheet(`<div class="gydone" id="gyFiveNote"><div class="h2 gyname">${esc(n.name)} 입점 요청, ${GYM_NEED}명이 모였어요!</div><div class="muted gysub" id="gyFiveSub">${gymHold(gymById(n.id)) ? `이 중 최근 2주 안에 이 헬스장에서 운동을 기록한 분이 ${GYM_NEED_RECENT}명이 되면 저희가 사장님께 안내문을 보낼게요` : '이제 사장님께 안내문을 보낼게요'}</div></div>${ok}${push}`);
+  else if (n.t === 'five') sheet(`<div class="gydone" id="gyFiveNote"><div class="h2 gyname">${esc(n.name)} 입점 요청, ${GYM_NEED}명이&nbsp;모였어요!</div><div class="muted gysub" id="gyFiveSub">${gymHold(gymById(n.id)) ? gymHoldLine(gymById(n.id)) : '이제 사장님께 안내문을 보낼게요'}</div></div>${ok}${push}`);
   else if (n.t === 'eq') sheet(`<div class="gydone" id="gyEqNote"><div class="gychk"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7.5"/></svg></div><div class="h2 gyname">${esc(n.name)}${gjo(n.name, '이', '가')} 기구 정보를 올렸어요</div><div class="muted gysub">이제 코치가 이 센터에 있는 기구에 맞춰 알려드려요.</div></div>${ok}${push}`);
 }
 function gymBoot() { try { ensureGym(); if (S.gymNotes.length && S.chosen && S.onboarded && !/^#admin/.test(location.hash)) setTimeout(gymNoteSheet, 500); } catch (e) { console.error('[gymBoot]', e); } }
@@ -728,7 +734,8 @@ function vH8() {
     ${row('다른 사람 요청 수(내 헬스장)', gs('wait', m ? gymOthers(m) : '', [[0, '0명'], [2, '2명'], [4, '4명'], [11, '11명']]), '내 요청은 따로 +1')}
     ${row('그중 최근 2주 기록자(다른 사람)', gs('recent', m ? gymRecentOthers(m) : '', [[0, '0명'], [2, '2명'], [3, '3명'], [8, '8명']]), m ? `회원 화면 칸 2 «5명 모임» = 요청 ${GYM_NEED}명 이상 · 우편 발송 대기 = 요청 ${GYM_NEED}명 이상 + 그중 최근 2주에 이 헬스장에서 기록한 사람 ${GYM_NEED_RECENT}명 이상 · 지금 요청 ${gymWait(m)}명 · 최근 2주 ${gymRecent(m)}명(내 기록 ${gymReqd(m) && gymMeRecent(m) ? '+1' : '0'}) → ${ready ? '기준 넘음(발송 대기 목록)' : gymWait(m) >= GYM_NEED ? '요청만 넘음 — 회원 화면은 칸 2에서 기다리고 발송 대기는 아님' : '기준 미달(칸 1에 머묾)'} · 다른 사람 요청 수보다 크게는 안 들어가요` : '')}
     ${row('안내문 우편(흉내 · 실제 발송 없음)', gs('mail', mailCur, [['none', '접수 전'], ['sent', '이번 주 묶음 우편 접수됨'], ['due', `도착 예정일 지남(영업일 ${GYM_MAIL_BIZ}일)`]]), `사람이 누르는 «전달함»은 없어졌어요 · 실서비스는 주 1회 묶음 접수 때 자동으로 칸 3, 접수 다음 날부터 영업일 ${GYM_MAIL_BIZ}일 뒤 자동으로 칸 4${m && !sim.mail[m.id] && !ready ? ' · <b>아직 기준 미달이라 눌러도 접수되지 않아요</b>' : ''}`)}
-    ${row('사장님 쪽 내부 기록', gs('owner', m ? (sim.owner[m.id] || 'none') : 'none', [['none', '없음'], ['open', '열람(QR·주소 접속)'], ['reject', '거절'], ['optout', '우편 그만 받기']]), '회원 화면에는 보이지 않아요 · 열람해도 «사장님이 확인했어요»를 띄우지 않고, 거절·그만 받기여도 «답 기다리는 중»까지만')}
+    ${row('사장님 쪽 내부 기록', gs('owner', m ? (sim.owner[m.id] || 'none') : 'none', [['none', '없음'], ['open', '열람(QR·주소 접속)'], ['reject', '거절'], ['optout', '우편 그만 받기']]), '회원 화면에는 보이지 않아요 · 열람해도 «사장님이 확인했어요»를 띄우지 않고, 거절·그만 받기여도 «답 기다리는 중»까지만 · 우편 접수 전에 거절·그만 받기면 회원 화면은 그 칸(1·2) 그대로, 두 조건을 다 넘으면 우편 없이 칸 4')}
+    ${row('«5명 모임» 알림', `<button class="abtn ghost sm" data-gadm="fiveSeen" data-v="1" id="fiveSeenClear">본 기록 지우기</button>`, `요청이 막 ${GYM_NEED}명이 됐을 때 한 번 · 5번째로 요청한 본인에겐 안 띄움(요청 직후 창이 대신 말함) · 한 헬스장에서 한 번만(4명으로 줄었다 다시 ${GYM_NEED}명이 돼도) · 사장님 내부 기록이 거절·그만 받기면 안 보냄 · 이 헬스장 알림 ${m && S.gymFiveSeen[m.id] ? '<b>이미 봄</b>' : '아직 안 봄'}`)}
     ${row('입점(내 헬스장)', gs('stage', m && sim.stage[m.id] === 'join' ? 'join' : 'auto', [['auto', '입점 전'], ['join', '입점 성사']]), '«입점 성사»는 알림 + 요청자에게 한정 꾸미기 1개 · 입점하면 요청 3곳 중 한 자리가 비어요')}
     ${row('가입 시점', gs('join', days < GYM_QUIET_DAYS ? 0 : 1, [[0, '오늘 가입(첫 7일)'], [1, '가입 8일째']]), '첫 7일·첫 3회 기록까지는 결과 화면에 입점 안내·요청 버튼을 안 띄워요')}
     ${row('사장님용 안내 페이지', `<a class="abtn ghost sm" href="${ownerUrl}" target="_blank" rel="noopener" id="ownerLink" style="text-decoration:none">시안 열기 (새 창)</a>`, '헬스장마다 주소 1개 · 이름 없이 숫자만 · 비용·조건 칸은 [형 입력] · 입점 신청(확인 코드·동의 2개)·채팅·우편 그만 받기는 시안(실제 접수·발송 없음)')}
@@ -749,7 +756,7 @@ document.addEventListener('click', e => {
   e.preventDefault(); e.stopImmediatePropagation(); ensureGym();
   const k = b.dataset.gadm, v = b.dataset.v, g = S.gym, sim = S.gymSim, m0 = myGym();
   const pushNote = n => { S.gymNotes = S.gymNotes.filter(x => x.t !== n.t); S.gymNotes.push(n); };
-  const five = x => !!x && gymReqd(x) && gymWait(x) >= GYM_NEED, wasFive = five(m0), wasId = m0 && m0.id;
+  const five = x => !!x && gymReqd(x) && gymWait(x) >= GYM_NEED, wasFive = five(m0), wasId = m0 && m0.id, wasReq = gymReqd(m0);
   if (k === 'who') {
     if (v === 'none') Object.assign(g, { kind: null, id: null, name: '', area: '' });
     else if (v === 'home') Object.assign(g, { kind: 'home', id: null, name: '', area: '' });
@@ -760,6 +767,7 @@ document.addEventListener('click', e => {
   else if (k === 'rec') gymSimRec(v);
   else if (k === 'req') { if (m0 && !gymJoined(m0)) { if (+v) gymRequest(m0.id); else delete S.gymReqs[m0.id]; } }
   else if (k === 'reqClear') S.gymReqs = {};
+  else if (k === 'fiveSeen') S.gymFiveSeen = {};
   else if (k === 'wait') { if (m0) sim.wait[m0.id] = +v; }
   else if (k === 'recent') { if (m0) sim.recent[m0.id] = +v; }
   else if (k === 'mail') { if (m0 && !m0.linked) {   // 우편 접수는 기준(5명 + 최근 2주 3명)을 넘은 헬스장만
@@ -778,8 +786,10 @@ document.addEventListener('click', e => {
   else if (k === 'eqWait') sim.eqWait['니짐 봉천점'] = +v;
   else if (k === 'eqClear') S.eqReq = {};
   { const m1 = myGym();   // «5명 모임» 알림: 요청이 막 5명이 됐을 때 요청자에게 한 번(본문은 최근 2주 기록자 3명 여부로 갈린다 · 나중에 3명이 돼도 다시 안 보낸다)
-    if (m1 && m1.id === wasId && !wasFive && five(m1) && !sim.mail[m1.id] && !gymJoined(m1)) pushNote({ t: 'five', name: m1.name, id: m1.id });
-    else if (m1 && !five(m1)) S.gymNotes = S.gymNotes.filter(x => x.t !== 'five'); }
+    /* v1.64(COPY_REVIEW_v1.60 2장): ① 5번째로 요청한 본인(이 조작으로 내가 요청해서 5명이 된 경우)에겐 안 띄운다 — 요청 직후 창이 대신 말한다
+       ② 한 헬스장에서 한 사람에게 한 번만(이미 본 사람은 4명→5명이 다시 돼도 안 보낸다 · 안 본 알림은 4명이 되면 거둔다) ③ 사장님이 거절·우편 그만 받기를 누른 헬스장은 안 보낸다 */
+    if (m1 && m1.id === wasId && !wasFive && five(m1) && wasReq && !S.gymFiveSeen[m1.id] && !gymOwnerNo(m1) && !sim.mail[m1.id] && !gymJoined(m1)) pushNote({ t: 'five', name: m1.name, id: m1.id });
+    else if (m1 && (!five(m1) || gymOwnerNo(m1))) S.gymNotes = S.gymNotes.filter(x => x.t !== 'five'); }
   save();
   if (typeof rerender === 'function') rerender();
 }, true);

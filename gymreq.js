@@ -190,6 +190,8 @@ const gymRecN = g => (g ? realRecs().filter(r => isGymRec(r) && gnorm(placeBase(
 const gymOthers = g => Math.max(0, S.gymSim.wait[g.id] ?? g.wait ?? 0);
 const gymReqd = g => !!(g && S.gymReqs[g.id]);
 const gymWait = g => gymOthers(g) + (gymReqd(g) ? 1 : 0);
+/* v1.62 COPY_CONFIRMED_v1.58: 이미 요청한 사람에게는 «나 포함», 나 혼자면 따로 말한다(숫자 값은 gymWait 그대로) */
+const gymMineN = n => n > 1 ? `나 포함 ${n}명` : '아직 나 혼자';
 const gymReqList = () => Object.keys(S.gymReqs).map(gymById).filter(g => g && !gymJoined(g)).sort((a, b) => S.gymReqs[a.id].at - S.gymReqs[b.id].at);   // 지금 살아 있는 요청(입점한 곳은 자리에서 빠진다)
 /* 요청할 수 있나: ok · joined(이미 입점) · did(이미 요청) · norec(여기서 운동한 기록 없음) · full(3곳이 참) */
 const gymCanReq = g => (!g ? 'none' : gymJoined(g) ? 'joined' : gymReqd(g) ? 'did' : !gymRecN(g) ? 'norec' : gymReqList().length >= GYM_REQ_MAX ? 'full' : 'ok');
@@ -358,14 +360,14 @@ function gymReqTry(id, go) {
 /* 내 입점 요청 목록(취소하는 곳). pend = 3곳이 차서 못 넣은 헬스장 id → 맨 위에 «하나를 취소하면 여기에 요청할 수 있어요» */
 function gymReqsSheet(pend) {
   ensureGym(); const list = gymReqList(), x = pend ? gymById(pend) : null, p = x ? ` data-p="${esc(x.id)}"` : '';
-  const rows = list.map(g => `<div class="gyrq" data-gym="${esc(g.id)}"><div><b>${esc(g.name)}</b><small>${gymWait(g)}명이 기다리는 중 · ${gymStepName(g)}</small><button class="linkbtn gyrqqr" data-act="gyQr" data-v="${esc(g.id)}">사장님께 QR 보여 드리기 ›</button></div><button class="btn sm ghost" data-act="gyCancelAsk" data-v="${esc(g.id)}"${p}>요청 취소</button></div>`).join('');
+  const rows = list.map(g => `<div class="gyrq" data-gym="${esc(g.id)}"><div><b>${esc(g.name)}</b><small>${gymMineN(gymWait(g))} · ${gymStepName(g)}</small><button class="linkbtn gyrqqr" data-act="gyQr" data-v="${esc(g.id)}">사장님께 QR 보여 드리기 ›</button></div><button class="btn sm ghost" data-act="gyCancelAsk" data-v="${esc(g.id)}"${p}>요청 취소</button></div>`).join('');
   sheet(`${x ? `<div class="h2 gyname" id="gyFullT">이미 ${GYM_REQ_MAX}곳에 입점을 요청했어요</div><div class="muted gysub" id="gyFullSub">아래 요청 중 하나를 취소하면 <b>${esc(x.name)}</b> 입점을 요청할 수 있어요.</div>`
     : `<div class="h2" id="gyReqsT">내 입점 요청 <span class="gycnt">${list.length}곳 / 최대 ${GYM_REQ_MAX}곳</span></div><div class="muted gysub">입점 요청은 ${GYM_REQ_MAX}곳까지 해 둘 수 있어요. 요청한 곳이 입점하면 자리가 다시 비어요.</div>`}
     <div class="gyrqs" id="gyReqList">${rows || '<div class="muted gyrqnone">아직 요청한 곳이 없어요</div>'}</div><button class="btn${x ? ' ghost' : ''}" data-act="shClose" id="gyReqsClose" style="margin-top:12px">닫기</button>`);
 }
 function gymCancelAsk(id, pend) {
   const x = gymById(id); if (!x) return;
-  sheet(`<div class="h2 gyname" id="gyCancelT">${esc(x.name)} 입점 요청을 취소할까요?</div><div class="muted gysub">기다리는 사람 수에서 내 요청이 빠져요. 나중에 다시 요청할 수 있어요.</div>
+  sheet(`<div class="h2 gyname" id="gyCancelT">${esc(x.name)} 입점 요청을 취소할까요?</div><div class="muted gysub">취소하면 요청 인원에서 빠져요. 나중에 다시 요청할 수 있어요.</div>
     <button class="btn" data-act="gyCancel" data-v="${esc(id)}"${pend ? ` data-p="${esc(pend)}"` : ''} id="gyCancelOk">요청 취소</button><button class="btn ghost" data-act="gyReqs"${pend ? ` data-p="${esc(pend)}"` : ''} id="gyCancelNo" style="margin-top:8px">그대로 둘게요</button>`);
 }
 function gymCancel(id, pend) {
@@ -431,7 +433,7 @@ function vGymFlow() {
     <div class="gyline"><b>${esc(m.name)}</b></div><div class="muted gysub">앱에서 '입장하기'를 누르고 운동하면 경험치를 1.5배로 받아요.</div></div><button class="btn" data-act="gyNext" id="gyNext">${nextL}</button>`);
   const n = gymWait(m), why = gymCanReq(m);
   return wrap(`<div class="gydone" id="gyRes"><div class="h2 gyname">${esc(m.name)}${gjo(m.name, '은', '는')} 아직 입점 전이에요</div>${gymVLine(m, 'gyResV')}${(S.gymPick[m.id] || {}).v === 'no' ? '<div class="muted gyvnote" id="gyVNote">다른 지도에서는 같은 이름·주소로 확인하지 못했어요. 이대로 써도 괜찮아요.</div>' : ''}
-    <div class="muted gysub">니짐내짐에 입점하면 여기서 운동할 때 경험치를 더 받아요.${n ? `<br>지금 ${n}명이 입점을 기다리고 있어요.` : ''}${why === 'norec' ? `<br><span id="gyNoRec">${GY_NOREC}.</span>` : why === 'did' ? '<br>입점 요청은 이미 남겨 두셨어요.' : ''}</div></div>
+    <div class="muted gysub">이 헬스장이 니짐내짐에 입점하면 여기서 운동할 때 경험치를 더 받아요.${n ? `<br>지금까지 ${n}명이 입점을 요청했어요.` : ''}${why === 'norec' ? `<br><span id="gyNoRec">${GY_NOREC}.</span>` : why === 'did' ? '<br>입점 요청은 이미 남겨 두셨어요.' : ''}</div></div>
     ${why === 'ok' || why === 'full' ? `<button class="btn" data-act="gyReq" data-v="${esc(m.id)}" data-f="flow" id="gyReqBtn">입점 요청하기</button><button class="btn ghost" data-act="gyNext" id="gyLater" style="margin-top:8px">다음에</button>` : `<button class="btn" data-act="gyNext" id="gyNext">${nextL}</button>`}`);
 }
 
@@ -459,7 +461,7 @@ function gymCard0(label) {
   const tail = gymReqsRow();
   if (st === 5 && !gymReqd(m)) return `<div class="card gycard" id="gymCard" data-st="in">${head}<div class="gymsg on">경험치 1.5배 헬스장이에요</div><div class="muted">앱에서 '입장하기'를 누르고 운동하면 돼요</div>${tail}</div>`;
   if (st === 0) { const can = gymRecN(m) > 0;
-    return `<div class="card gycard" id="gymCard" data-st="0">${head}<div class="gymsg">아직 입점 전이에요</div><div class="muted">니짐내짐에 입점하면 여기서 운동할 때 경험치를 더 받아요${n ? ` · 지금까지 ${n}명이 입점을 요청했어요` : ''}</div>
+    return `<div class="card gycard" id="gymCard" data-st="0">${head}<div class="gymsg">아직 입점 전이에요</div><div class="muted">이 헬스장이 니짐내짐에 입점하면 여기서 운동할 때 경험치를 더 받아요${n ? ` · 지금까지 ${n}명이 입점을 요청했어요` : ''}</div>
     ${can ? `<button class="btn" data-act="gyReq" data-v="${esc(m.id)}" id="gyReqBtn">입점 요청하기</button>` : `<div class="gyhint" id="gyNoRec">${GY_NOREC}</div>`}${tail}</div>`; }
   const msg = [null,
     [`지금까지 ${n}명이 입점을 요청했어요`, `${GYM_NEED}명이 모이면 저희가 사장님께 안내문을 보내요`],
@@ -475,7 +477,7 @@ const gymPill = () => { const g = ensureGym(); return g.item && g.itemOn ? `<spa
 function gymPlaceRow(p) {
   const g = gymById(p.id) || { id: p.id, name: p.name, wait: 0 }, mine = gymReqd(g), can = gymRecN(g) > 0;
   if (!mine && !can) return `<button class="prow tap plc" data-act="place" data-v="${esc(p.name)}" data-gym="${esc(p.id)}"><div><b>${esc(p.name)}</b><small>${esc(p.dist)}${gymQuiet() ? '' : ' · 아직 입점 전'}</small></div><span class="muted">선택</span></button>`;
-  return `<div class="prow plc gyrow" data-gym="${esc(p.id)}"><button class="tap gymain" data-act="place" data-v="${esc(p.name)}"><b>${esc(p.name)}</b><small>${esc(p.dist)} · 아직 입점 전${mine ? ` · ${gymWait(g)}명이 기다리는 중` : ''}</small></button>
+  return `<div class="prow plc gyrow" data-gym="${esc(p.id)}"><button class="tap gymain" data-act="place" data-v="${esc(p.name)}"><b>${esc(p.name)}</b><small>${esc(p.dist)} · 아직 입점 전${mine ? (gymWait(g) > 1 ? ` · 나 포함 ${gymWait(g)}명 요청` : ' · 내가 요청함') : ''}</small></button>
     ${mine ? '<button class="gydid" data-act="gyReqs">요청함</button>' : `<button class="btn sm ghost gyreq" data-act="gyReq" data-v="${esc(p.id)}">입점 요청하기</button>`}</div>`;
 }
 /* 검색 카드 아래 — 지도 검색에 없는 헬스장을 직접 적어 그 장소로 운동 시작 */
@@ -497,7 +499,7 @@ function gymResultCard(rec) {
   if (isPend(rec.place)) return `<div class="cbif gyres" id="msPendRes"><span><b class="gynm">${esc(placeBase(rec.place))}</b> 센터가 멤버십을 등록하면 그때부터 경험치를 1.5배로 받아요<small>오늘 기록은 그대로 저장됐어요</small></span></div>`;   // v1.61: 유저가 직접 결제했다고 알려준 센터 — 보너스·입점 요청·«입장하기» 안내 없음
   if (m && !gymJoined(m)) {
     const n = gymWait(m), nm = esc(m.name);
-    if (gymReqd(m)) return `<div class="cbif gyres" id="gymResCard" data-gym="${esc(m.id)}"><span><b class="gynm">${nm}</b> · 지금 ${n}명이 입점을 기다리고 있어요</span><button class="linkbtn" data-act="gyShare" data-v="${esc(m.id)}">친구에게 보내기 ›</button></div>`;
+    if (gymReqd(m)) return `<div class="cbif gyres" id="gymResCard" data-gym="${esc(m.id)}"><span><b class="gynm">${nm}</b> ${n > 1 ? `입점을 나 포함 ${n}명이 요청했어요` : '입점을 아직 나만 요청했어요'}</span><button class="linkbtn" data-act="gyShare" data-v="${esc(m.id)}">친구에게 보내기 ›</button></div>`;
     if (first) return '';
     return `<div class="cbif gyres" id="gymResCard" data-gym="${esc(m.id)}"><span><b class="gynm">${nm}</b>${gjo(m.name, '이', '가')} 니짐내짐에 입점하면 운동할 때마다 경험치를 더 받아요${n ? `<small>지금까지 ${n}명이 입점을 요청했어요</small>` : ''}</span><button class="btn sm" data-act="gyReq" data-v="${esc(m.id)}" id="gyResReq">입점 요청하기</button></div>`;
   }

@@ -124,7 +124,7 @@ function gymSentHTML() {
   const m = myGym(), n = gymWait(m);
   return `<div class="gydone" id="gySent"><div class="gychk"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7.5"/></svg></div><div class="h2">요청을 남겼어요</div>
   <div class="gyline"><b>${esc(m.name)}</b><span>지금 ${n}명이 기다리고 있어요</span></div>
-  <div class="muted gysub">${GYM_NEED}명이 요청하면 저희가 사장님께 연락드려요. 입점하면 바로 알려 드릴게요.${gymCounted() ? '' : '<br>아직 내 요청은 이 숫자에 안 들어갔어요. 운동을 한 번 기록하면 바로 들어가요.'}</div>${gymShareBtn()}</div>`;
+  <div class="muted gysub">${n >= GYM_NEED ? `${GYM_NEED}명이 넘게 모여서 저희가 곧 사장님께 연락드릴게요.` : `${GYM_NEED}명이 요청하면 저희가 사장님께 연락드려요.`} 입점하면 바로 알려 드릴게요.${gymCounted() ? '' : '<br>아직 내 요청은 이 숫자에 안 들어갔어요. 운동을 한 번 기록하면 바로 들어가요.'}</div>${gymShareBtn()}</div>`;
 }
 function gymShare() {
   const m = myGym(); if (!m) return;

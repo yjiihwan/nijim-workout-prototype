@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.58';
+const VER = 'v1.59';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -175,6 +175,12 @@ function sanitize() {
   if (typeof S.tab !== 'string' || !MAIN[S.tab]) S.tab = 'workout';
   if (S.sub != null && typeof S.sub !== 'string') S.sub = null;
   if (!S.session && ['session', 'set', 'cardio', 'pick'].includes(S.sub)) S.sub = null;
+  /* v1.59: 유산소 타이머를 없앴다. 앞 판에서 타이머를 켠 채 저장된 운동(it.run)은 그 시간을 버리지 않고 분 입력 칸에 채워 두고(it.pre), 회원이 확인·수정해 저장한다 */
+  if (S.session) S.session.items.forEach(it => { if (!plainObj(it) || !it.run) return;
+    const okRun = plainObj(it.run) && num(it.run.startAt), ms = okRun ? Math.max(0, Date.now() - it.run.startAt + (num(it.run.offset) ? it.run.offset : 0)) : 0;
+    const m = Math.min(CFG.LIM.cardioMaxMin, (num(it.min) ? it.min : 0) + Math.max(1, Math.round(ms / 60000)));
+    delete it.run; if (okRun && plainObj(it.draft)) { it.draft.min = m; it.pre = m; } });
+  if (S.session) S.session.items.forEach(it => { if (plainObj(it) && plainObj(it.draft)) delete it.draft.mode; });
   if (S.session && S.cur && !S.session.items.some(i => i.ex === S.cur)) { S.cur = null; if (S.sub === 'set' || S.sub === 'cardio') S.sub = 'session'; }
   S.editRec = null;
   /* QA 치10: 먹이기 «하나 더» 대기 줄에 서 있다가 앱이 닫힌 음식은 효과 없이 사라지지 않게 보유함으로 되돌린다 */
@@ -527,9 +533,9 @@ function vSession() {
   ${lr ? `<button class="card routine" data-act="routine" id="routineCard"><div class="h3">지난번 루틴 그대로</div><b>${md(lr.date)} · ${esc(placeBase(lr.place))}</b><div class="rchips">${lr.items.filter(i => EX[i.ex]).map(i => `<span>${EX[i.ex].name}</span>`).join('')}</div><span class="rgo">한 번에 불러오기 ›</span></button>` : ''}
   <div class="card" id="recoCard"><div class="h3">오늘 추천</div>${eqCtx(s).mode === 'equip' ? `<div class="muted" id="recoEq" style="margin:-2px 0 4px">${esc(eqCtx(s).center)}에 있는 기구로 골랐어요</div>` : ''}${recs.map(([id, why]) => `<button class="prow tap" data-act="addEx" data-v="${id}"><div><b>${EX[id].name}</b><small>${why}</small></div><span class="plus">+</span></button>`).join('')}</div>`
   : `<div class="card" id="sessList">${s.items.map(it => { const e = EX[it.ex], ds = (it.sets || []).filter(x => x.done);
-      const sub = e.mode === 'cardio' ? ((it.min ? `${it.min}분 · ${({ light: '가벼움', normal: '보통', hard: '힘듦' })[it.level || 'normal']}${it.km ? ` · ${it.km}km` : ''}` : '') + (it.run ? `${it.min ? ' · ' : ''}타이머 도는 중 ${clock(Date.now() - it.run.startAt + (it.run.offset || 0))}` : it.min ? '' : '아직 기록 전'))
+      const sub = e.mode === 'cardio' ? ((it.min ? `${it.min}분 · ${({ light: '가벼움', normal: '보통', hard: '힘듦' })[it.level || 'normal']}${it.km ? ` · ${it.km}km` : ''}` : '') + (it.pre ? `${it.min ? ' · ' : ''}시간 확인 전` : it.min ? '' : '아직 기록 전'))
         : e.mode === 'lesson' ? `${it.min}분 · 선생님 확인` : ds.length ? setsTxt(e, ds) : (it.plan ? `지난번 ${it.plan}` : '아직 0세트');
-      return `<button class="prow tap" data-act="openEx" data-v="${it.ex}"><div><b>${e.name}${ds.some(x => x.pr) ? ' <span class="prtag">PR</span>' : ''}</b><small>${esc(sub)}</small></div><span class="cnt">${e.mode === 'cardio' || e.mode === 'lesson' ? (it.min ? '✓' : it.run ? '⏱' : '') : `${ds.length}세트`}</span></button>`; }).join('')}</div>`;
+      return `<button class="prow tap" data-act="openEx" data-v="${it.ex}"><div><b>${e.name}${ds.some(x => x.pr) ? ' <span class="prtag">PR</span>' : ''}</b><small>${esc(sub)}</small></div><span class="cnt">${e.mode === 'cardio' || e.mode === 'lesson' ? (it.min ? '✓' : '') : `${ds.length}세트`}</span></button>`; }).join('')}</div>`;
   const sfPct = CFG.SELFIE_BONUS.pct, selfieBtn = s.selfie ? sfCard('sfSess', s.photo, '오운완 셀카 찍음', `저장하면 경험치 +${sfPct}%${r.selfieXP ? ` (+${fmt(r.selfieXP)})` : ''}가 들어가요`, 'session')
     : selfieClaims() ? `<div class="muted sfnote" id="sfSess">오늘 보너스 받음 ✓ · 오운완 보너스는 하루 1번이에요</div>`
     : `<button class="btn ghost camb" data-act="selfie" data-v="session" id="sfSessBtn">${CAM}오운완 셀카 <span class="muted">찍으면 경험치 +${sfPct}% · 하루 1번 · 나만 봐요</span></button>`;
@@ -544,7 +550,7 @@ function vSession() {
   <div class="h3" style="margin-top:12px">상태 흉내</div><div class="chips"><button class="chip" data-act="autoEndDemo" id="autoEndDemo">3시간 무입력 → 자동 종료</button><button class="chip ${S.holdDemo ? 'on' : ''}" data-act="holdDemo">세트 간격 20초 미만 3회(보류)</button></div>
   <div class="h3" style="margin-top:12px">검증 등급 바꿔 보기</div><div class="chips">${[['V1',`입점센터 입장(×${CFG.VERIFY.V1})`],['V0',`비입점·집·야외(×${CFG.VERIFY.V0})`],['V3',`레슨 확정(×${CFG.VERIFY.V3})`]].map(([k, l]) => `<button class="chip ${s.verify===k?'on':''}" data-act="vdemo" data-v="${k}">${l}</button>`).join('')}</div></div>
   <div class="honest end" id="honestEnd">적은 그대로 AI 코칭에 쓰여요. 오늘도 수고했어요!</div></div>
-  <div class="endzone"><div class="endbar" id="endBar"><button class="btn ghost" data-act="sub" data-v="pick" id="addExBtn">+ 운동 추가</button><button class="btn" data-act="endAsk" id="endBtn">${!done.length && !s.items.some(i => i.run) && S.demo === 'none' ? '운동 끝' : held ? '운동 끝 · 기록 저장' : `운동 끝 · +${fmt(est)} XP 저장`}</button></div></div>`;
+  <div class="endzone"><div class="endbar" id="endBar"><button class="btn ghost" data-act="sub" data-v="pick" id="addExBtn">+ 운동 추가</button><button class="btn" data-act="endAsk" id="endBtn">${!done.length && S.demo === 'none' ? '운동 끝' : held ? '운동 끝 · 기록 저장' : `운동 끝 · +${fmt(est)} XP 저장`}</button></div></div>`;
 }
 /* 결정 36 ⑥ C3 위치별 보너스 줄 — 입점센터 적용 중 / 이번 주 900 다 참 / 그 밖 장소 안내 / 레슨은 줄 없음 */
 function centerLine(s) { return s.verify === 'V3' ? '' : (msSessLine(s) || centerLine0(s)) + msChangeLink(s); }   // v1.55: 멤버십·미발급 안내 줄 + «다른 곳에서 운동해요»
@@ -653,22 +659,18 @@ function restHTML(left) {
 /* ===== C6b 유산소 ===== */
 function vCardio() {
   const it = curItem(); if (!it) return vSession();
-  const e = EX[it.ex], c = it.draft, run = it.run, el = run ? (Date.now() - run.startAt + (run.offset || 0)) : 0, prev = histOf(it.ex).find(h => h.min);
+  const e = EX[it.ex], c = it.draft, prev = histOf(it.ex).find(h => h.min);
   const lv = [['light', '가벼움'], ['normal', '보통'], ['hard', '힘듦']];
   return `${subHead(e.name, 'session', '오늘 운동')}<div class="sec">
-  <div class="seg"><button class="${c.mode === 'timer' ? 'on' : ''}" data-act="cmode" data-v="timer">타이머</button><button class="${c.mode === 'input' ? 'on' : ''}" data-act="cmode" data-v="input">직접 입력</button></div>
   <div class="card"><div class="prevrec">${prev ? `지난번 ${md(prev.date)} · ${prev.min}분${prev.km ? ` · ${prev.km}km` : ''}` : '이 운동은 처음이에요'}</div>
-  ${c.mode === 'timer' ? `<div class="clockxl" data-clock="cardio" id="cardioClock">${clock(el)}</div>
-    ${run ? `<button class="btn big" data-act="cStop" id="cStop">종료 · 시간 저장</button><button class="chip demochip" data-act="cFwd">🧪 10분 빨리 감기</button>` : `<button class="btn big" data-act="cStart" id="cStart">${it.min ? '다시 시작' : '시작'}</button>`}
-    ${it.min ? `<div class="muted" style="text-align:center;margin-top:8px">저장된 시간 ${it.min}분</div>` : ''}`
-  : `<div class="setsteps">${stepper('cmin', c.min, '시간', '분', nInput('min', c.min, 'id="minIn" data-w="draft"'))}<div class="qrow" id="qMin">${[10, 20, 30, 45, 60].map(n => `<button class="chip ${c.min === n ? 'on' : ''}" data-act="qmin" data-v="${n}">${n}분</button>`).join('')}</div></div>${run ? `<div class="warn" id="runNote">타이머가 돌고 있어요. 여기서 저장하면 타이머 시간(<span data-clock="cardio">${clock(el)}</span>) 대신 <b>${c.min}분</b>으로 저장돼요</div>` : ''}<div class="muted" style="margin-top:8px;word-break:keep-all">숫자를 누르면 직접 적을 수 있어요 · 한 번에 최대 ${CFG.LIM.cardioMaxMin}분까지 기록돼요</div>`}
+  <div class="setsteps">${stepper('cmin', c.min, '시간', '분', nInput('min', c.min, 'id="minIn" data-w="draft"'))}<div class="qrow" id="qMin">${[10, 20, 30, 45, 60].map(n => `<button class="chip ${c.min === n ? 'on' : ''}" data-act="qmin" data-v="${n}">${n}분</button>`).join('')}</div></div>${it.pre ? `<div class="warn" id="preNote">전에 재던 시간 <b>${it.pre}분</b>을 넣어 뒀어요. 실제로 한 시간이 맞는지 보고 저장해 주세요</div>` : ''}<div class="muted" style="margin-top:8px;word-break:keep-all">숫자를 누르면 직접 적을 수 있어요 · 한 번에 최대 ${CFG.LIM.cardioMaxMin}분까지 기록돼요</div>
   </div>
   <div class="card"><div class="h3">얼마나 힘들었어요?</div><div class="chips" id="cLevel">${lv.map(([k, l]) => `<button class="chip ${c.level === k ? 'on' : ''}" data-act="clevel" data-v="${k}">${l}</button>`).join('')}</div>
   <div class="muted" style="margin-top:8px">캐릭터 표정에만 써요 · 경험치는 시간으로만 계산해요</div>
   <details class="more" ${c.open ? 'open' : ''} data-act="cmore"><summary>거리·속도·경사 <span class="muted">(선택)</span></summary>
     ${stepper('ckm', c.km.toFixed(1), '거리', 'km')}${stepper('ckmh', c.kmh.toFixed(1), '속도', 'km/h')}${e.id === 'treadmill' ? stepper('cinc', c.inc, '경사', '%') : ''}
     ${c.kmh > 25 ? '<div class="warn">25km/h 넘는 속도는 25로 계산해요</div>' : ''}</details></div>
-  <button class="btn" data-act="cSave" id="cSave">${c.mode === 'input' ? `${c.min}분 저장` : '저장'}</button></div>`;
+  <button class="btn" data-act="cSave" id="cSave">${c.min}분 저장</button></div>`;
 }
 
 /* ===== C7 오늘 요약 · 경험치 ===== */
@@ -1066,7 +1068,7 @@ function pickPlace(name) {
 }
 function newItem(ex) {
   const e = EX[ex], prev = histOf(ex).find(h => (h.sets && h.sets.length) || h.min);
-  if (e.mode === 'cardio') return { ex, min: 0, level: 'normal', draft: { mode: 'timer', min: prev && prev.min ? prev.min : 20, level: 'normal', km: 0, kmh: 0, inc: 0, open: false } };   // v1.40(QA 중1): 거리는 0에서 시작 — 지난번 거리는 «지난번» 줄에만
+  if (e.mode === 'cardio') return { ex, min: 0, level: 'normal', draft: { min: prev && prev.min ? prev.min : 20, level: 'normal', km: 0, kmh: 0, inc: 0, open: false } };   // v1.40(QA 중1): 거리는 0에서 시작 — 지난번 거리는 «지난번» 줄에만
   const p = prev && prev.sets ? prev.sets[0] : null;
   return { ex, sets: [], plan: prev && prev.sets ? setsTxt(e, prev.sets) : '', draft: { w: p ? p.w : (e.w || 0), r: p ? p.r : 10, s: p && p.s ? p.s : 60 } };
 }
@@ -1147,13 +1149,6 @@ function demoXP() {
   if (S.demo === 'multi') return xpToReach(Math.min(99, S.level + 5)) + 50;
   return 0;
 }
-/* 돌고 있는 유산소 타이머를 «종료 · 시간 저장»과 같은 방식으로 기록에 넣는다(QA 치2: 타이머 켠 채 «운동 끝»이면 시간이 사라짐) */
-function foldTimers(s) {
-  const out = [];
-  s.items.forEach(it => { if (!it.run) return; const ms = Date.now() - it.run.startAt + (it.run.offset || 0);
-    it.min = Math.min(CFG.LIM.cardioMaxMin, (it.min || 0) + Math.max(1, Math.round(ms / 60000))); it.run = null; if (it.draft) { it.draft.min = it.min; it.level = it.draft.level; } out.push(`${EX[it.ex].name} ${it.min}분`); });
-  return out;
-}
 function saveFailSheet() {
   const nPhoto = S.records.filter(r => r.photo).length;
   sheet(`<div class="h2" id="saveFailTitle">기록을 저장하지 못했어요</div><div class="muted" style="line-height:1.6;word-break:keep-all" id="saveFailBody">휴대폰 저장 공간이 꽉 찼어요.<br>${nPhoto ? '오운완 사진을 몇 장 지우고' : '안 쓰는 사진이나 앱을 지우고'} <b style="color:var(--ink)">«운동 끝»</b>을 다시 눌러 주세요.</div>
@@ -1164,16 +1159,15 @@ function saveFailSheet() {
 function endAsk() {
   const s = S.session; if (!s) return;
   if (!commitWeightField()) return;
-  const worked = it => (it.sets || []).some(x => x.done) || it.min > 0 || !!it.run;
+  const worked = it => (it.sets || []).some(x => x.done) || it.min > 0;
   if (!s.items.some(worked) && S.demo === 'none') return endSession();   // «기록한 운동이 없어요» 창(기존)
   onDay(sessDay(s), () => {
-    const c = JSON.parse(JSON.stringify(s)); foldTimers(c);   // 돌고 있는 타이머까지 넣은 «지금 끝내면» 값
-    const { r, cap } = sessCalc(c), est = S.demo === 'none' ? cap.gained + centerBonus(r, ledger()).cb : demoXP(), held = sessHeld(s) || S.holdDemo;
+    const c = s, { r, cap } = sessCalc(c), est = S.demo === 'none' ? cap.gained + centerBonus(r, ledger()).cb : demoXP(), held = sessHeld(s) || S.holdDemo;
     const w = c.items.filter(worked), nSets = w.reduce((a, it) => a + (it.sets || []).filter(x => x.done).length, 0), cMin = w.reduce((a, it) => a + (EX[it.ex].mode === 'cardio' ? it.min || 0 : 0), 0);
     const sum = [`${w.length}종목`, nSets ? `${nSets}세트` : '', cMin ? `유산소 ${cMin}분` : ''].filter(Boolean).join(' · ');
     const notes = [];
     s.items.forEach(it => { const e = EX[it.ex]; if (e.mode === 'lesson') return;
-      if (it.run) notes.push(`${esc(e.name)} 타이머가 돌고 있어요 · 지금까지 잰 시간으로 저장해요`);
+      if (it.pre) notes.push(`${esc(e.name)} · 전에 재던 ${it.pre}분은 아직 저장 전이에요${it.min ? ` (지금은 ${it.min}분으로 저장돼요)` : ''}`);
       else if (!worked(it)) notes.push(`${esc(e.name)} · 적은 게 없어서 저장 안 해요`);
       else if (it.dirty && e.mode !== 'cardio') notes.push(`${esc(e.name)}에 «완료» 안 누른 세트가 있어요 (${setTxt(e, it.draft)})`); });
     sheet(`<div class="h2" id="endTitle">오늘 운동을 끝낼까요?</div>
@@ -1186,11 +1180,11 @@ function endAsk() {
 function endSession(auto = false) {
   const s = S.session; if (!s) return;
   syncToday();
-  const snap = JSON.stringify(S), folded = foldTimers(s);
+  const snap = JSON.stringify(S);
   const out = onDay(sessDay(s), () => endSession0(s, auto));
   if (!out) return;
   if (!save()) { S = JSON.parse(snap); shClose(); render(); return saveFailSheet(); }   // QA 치3: 저장이 안 됐으면 «저장 완료»·레벨업 연출 없이 운동 화면으로 되돌린다
-  S.savedNote = `기록을 저장했어요 · ${out.held ? `${fmt(out.held)} XP는 24시간 뒤에 들어와요` : `+${out.got.toLocaleString()} XP`}${folded.length ? ` · 돌고 있던 타이머(${folded.join(', ')})도 함께 저장했어요` : ''}`;
+  S.savedNote = `기록을 저장했어요 · ${out.held ? `${fmt(out.held)} XP는 24시간 뒤에 들어와요` : `+${out.got.toLocaleString()} XP`}`;
   afterGain(out.res, {});
 }
 function endSession0(s, auto) {
@@ -1520,7 +1514,7 @@ document.addEventListener('click', e => {
   if (a === 'cxOk') return cxCreate();
   if (a === 'endSession' || a === 'endOk') { shClose(); return endSession(); }
   if (a === 'endAsk') return endAsk();
-  if (a === 'discardAsk') { const n = s ? s.items.filter(i => (i.sets || []).some(x => x.done) || i.min > 0 || i.run).length : 0;
+  if (a === 'discardAsk') { const n = s ? s.items.filter(i => (i.sets || []).some(x => x.done) || i.min > 0).length : 0;
     return sheet(`<div class="h2" id="discTitle">저장하지 않고 끝낼까요?</div><div class="muted" style="line-height:1.6;word-break:keep-all">오늘 적은 운동 ${n}종목이 사라지고, 되돌릴 수 없어요. 경험치도 못 받아요.</div>
       <div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="shClose" id="discNo">계속 운동하기</button><button class="btn danger" data-act="discard" id="discOk">그만두기</button></div>`); }
   if (a === 'rapidAsk') return rapidAsk();
@@ -1561,18 +1555,13 @@ document.addEventListener('click', e => {
   else if (a === 'qs') { if (!commitWeightField()) return; it.draft.s = Math.min(1800, it.draft.s + +v); it.dirty = true; }
   else if (a === 'qmin') { if (!commitWeightField()) return; it.draft.min = +v; }
   else if (a === 'rest') { if (+v === 0) S.rest = null; else { S.rest.until += +v * 1000; S.rest.total = Math.max(S.rest.total, Math.ceil((S.rest.until - Date.now()) / 1000)); } }
-  else if (a === 'cmode') it.draft.mode = v;
-  else if (a === 'cStart') { it.run = { startAt: Date.now(), offset: 0 }; s.lastAt = Date.now(); }
-  else if (a === 'cFwd') { it.run.offset += 600000; }
-  else if (a === 'cStop') { const ms = Date.now() - it.run.startAt + it.run.offset; it.min = Math.min(CFG.LIM.cardioMaxMin, (it.min || 0) + Math.max(1, Math.round(ms / 60000))); it.run = null; it.draft.min = it.min; it.level = it.draft.level; s.lastAt = Date.now(); toast(`${EX[it.ex].name} ${it.min}분 기록`); }
   else if (a === 'cmin') { if (!commitWeightField()) return; it.draft.min = clampStep(Math.round(it.draft.min / 5) * 5 === it.draft.min ? it.draft.min : (dd > 0 ? Math.floor(it.draft.min / 5) * 5 : Math.ceil(it.draft.min / 5) * 5), dd, 5, 5, CFG.LIM.cardioMaxMin); }
   else if (a === 'clevel') { it.draft.level = v; if (it.min) it.level = v; }
   else if (a === 'ckm') { it.draft.km = clampStep(it.draft.km, dd, 0.5, 0, 60); it.draft.open = true; }
   else if (a === 'ckmh') { it.draft.kmh = clampStep(it.draft.kmh, dd, 0.5, 0, 30); it.draft.open = true; }
   else if (a === 'cinc') { it.draft.inc = clampStep(it.draft.inc, dd, 1, 0, 15); it.draft.open = true; }
-  else if (a === 'cSave') { if (!commitWeightField()) return; if (it.draft.mode === 'input') { it.min = it.draft.min; it.run = null; }   // QA 중13: 직접 입력으로 저장하면 버튼에 적힌 시간 그대로(돌던 타이머는 버림)
-    if (it.run) { const ms = Date.now() - it.run.startAt + it.run.offset; it.min = Math.min(CFG.LIM.cardioMaxMin, (it.min || 0) + Math.max(1, Math.round(ms / 60000))); it.run = null; }
-    if (!it.min) return toast('시간을 적어 주세요 — 시작을 누르거나 직접 적으면 돼요');
+  else if (a === 'cSave') { if (!commitWeightField()) return; it.min = it.draft.min; delete it.pre;   // v1.59: 유산소는 적은 시간 그대로 저장(타이머 없음)
+    if (!it.min) return toast('시간을 적어 주세요');
     it.level = it.draft.level; it.km = it.draft.km || undefined; it.kmh = it.draft.kmh ? Math.min(25, it.draft.kmh) : undefined; it.inc = it.draft.inc || undefined; it.draft.min = it.min; s.lastAt = Date.now();
     toast(`${EX[it.ex].name} ${it.min}분 저장`); return go('workout', 'session'); }
   else if (a === 'demo') S.demo = v;
@@ -1713,7 +1702,7 @@ document.addEventListener('contextmenu', e => { if (e.target.closest && e.target
 document.addEventListener('click', e => { if ((!HOLD || !HOLD.busy) && Date.now() - HOLD_END < 350 && e.target.closest && e.target.closest('.step button[data-act][data-d]')) { e.stopPropagation(); e.preventDefault(); HOLD_END = 0; } }, true);
 function playPending() { const ev = S.events.find(x => x.id === S.pending); if (!ev) { S.pending = null; save(); return render(); } play(ev, { onDone: backToTab }); }
 
-/* 1초 시계: 세션 시간·휴식·유산소 — 해당 글자만 바꾼다(화면 전체 다시 그리지 않음) */
+/* 1초 시계: 세션 시간·휴식 — 해당 글자만 바꾼다(화면 전체 다시 그리지 않음) */
 setInterval(() => {
   const s = S.session;
   document.querySelectorAll('[data-clock="sess"]').forEach(el => { if (s) el.textContent = clock(Date.now() - s.startedAt); });
@@ -1721,8 +1710,6 @@ setInterval(() => {
   if (rc && S.rest) { const left = Math.ceil((S.rest.until - Date.now()) / 1000);
     if (left <= 0) { S.rest = null; save(); toast('휴식 끝! 다음 세트 가볼까?'); tone(660, 0, .15); tone(880, .15, .2); if (navigator.vibrate) navigator.vibrate(200); const box = $('restBox'); if (box) { box.innerHTML = restHTML(0); box.classList.add('idle'); } }
     else { rc.textContent = clock(left * 1000); const bar = document.querySelector('[data-restbar]'); if (bar) bar.style.width = Math.round(left / S.rest.total * 100) + '%'; } }
-  const cc = document.querySelector('[data-clock="cardio"]'), it = curItem();
-  if (cc && it && it.run) cc.textContent = clock(Date.now() - it.run.startAt + (it.run.offset || 0));
   if (s && S.tab === 'workout' && (S.sub === 'session' || !S.sub) && Date.now() - s.lastAt > CFG.AUTO_END_MIN * 60000) render();
   /* QA 치5: 화면을 켜 둔 채 날짜가 바뀌면 다시 그린다(글자를 적는 중이면 다음 기회에) */
   if (ymd(new Date()) !== TODAY && !P && !EAT.cur && !$('sheet').classList.contains('on') && !(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))) render();

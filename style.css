@@ -313,7 +313,6 @@ select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--g2)
 .prburst b{font-size:16px;display:block;color:#A86B00}.prburst small{display:block;font-size:13px;color:var(--ink);margin-top:2px}
 @keyframes prin{0%{transform:scale(.9);opacity:0}100%{transform:none;opacity:1}}
 /* 유산소 */
-.clockxl{font-size:52px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;margin:14px 0 4px;letter-spacing:-1px}
 .demochip{display:block;margin:10px auto 0;border:1.5px dashed #C9C9D2;background:#FAFAFB;color:var(--g5)}
 .more{margin-top:12px;border-top:1px solid var(--g1);padding-top:10px}
 .more summary{font-size:14px;font-weight:600;cursor:pointer;list-style:none;padding:4px 0}

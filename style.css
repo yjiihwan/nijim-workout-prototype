@@ -1153,3 +1153,12 @@ body.deep .csavebar{margin-bottom:calc(-24px - env(safe-area-inset-bottom));padd
 .app{padding-top:env(safe-area-inset-top)}
 .wseg{margin-top:10px}
 .verfoot{margin-top:14px;text-align:center;font-size:11px;color:#B4B4BD}
+
+/* v1.80: 코치 = 내 캐릭터(형 11-16) — 말풍선·«코치에게 물어보기»를 캐릭터 카드 맨 밑으로 합침. 말풍선 꼬리는 큰 캐릭터 쪽 */
+.scoach{margin-top:12px}
+.scoach .say{position:relative;margin:0}
+.scoach .say::before{content:"";position:absolute;left:70px;top:-7px;border:8px solid transparent;border-top:0;border-bottom-color:#EAF6FF}
+.scrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
+.scrow .cquota{margin:0;text-align:left;min-width:0;word-break:keep-all;line-height:1.35}
+.scrow .coachbtn{width:auto;flex:none;min-height:36px;margin:0;padding:0 12px;border-radius:10px;font-size:13px}
+.scrow .coachbtn svg{width:16px;height:16px}

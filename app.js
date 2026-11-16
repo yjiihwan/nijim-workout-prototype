@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.79';
+const VER = 'v1.80';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -351,7 +351,7 @@ const coachLineBase = () => {
 };
 /* v1.78: AI가 운동기록을 보고 쓴 오늘의 한마디(coach_ai.js)가 있으면 그것, 없으면 기존 문구 */
 const coachLine = () => (typeof aiLine === 'function' && aiLine()) || coachLineBase();
-/* v1.77: 첫 화면의 캐릭터 말풍선은 코치 카드 하나만(형 11-16) — 캐릭터 카드 아래 칸·주간 카드 한마디 삭제 */
+/* v1.80: 코치 카드는 따로 없다 — 말풍선·«코치에게 물어보기»·남은 질문 수는 캐릭터 카드 맨 밑(#coachBox). 첫 화면의 캐릭터 말풍선은 이 하나만(형 11-16) */
 /* 요즘 한 주에 몇 번 운동하는지(지난 4주 평균 · 기록 없으면 3) — 계산기 기본값용 */
 const usualWeek = () => { const m0 = weekDays()[0], a = new Date(m0); a.setDate(a.getDate() - 28); const from = ymd(a);
   const n = new Set((typeof statRecs === 'function' ? statRecs() : realRecs()).filter(r => r.date >= from && r.date < m0).map(r => r.date)).size; return n ? Math.min(7, Math.max(1, Math.round(n / 4))) : 3; };
@@ -481,10 +481,10 @@ function vWorkout() {
     <div class="bar"><i style="width:${lv>=99?100:Math.max(0, Math.round(S.xp/need(lv)*100))}%"></i></div>
     <div class="muted">${lv>=99?'최고 레벨':`Lv.${lv+1}까지 ${toNext.toLocaleString()} XP`} · ${nextEvo}</div>
     <div class="eqs">${eqNames || '<button class="pill none eqpill" data-act="myItems">장착 아이템 없음<i>›</i></button>'}</div>
-    <button class="linkbtn" data-act="sub" data-v="me" id="goMe">내 캐릭터 자세히 ›</button></div></div></div>
+    <button class="linkbtn" data-act="sub" data-v="me" id="goMe">내 캐릭터 자세히 ›</button></div></div>
+    <div class="scoach" id="coachBox"><div class="say" id="coachSay"><span>${esc(coachLine())}</span></div><div class="scrow"><div class="cquota" id="coachQuota">${coachQuota()}</div><button class="coachbtn" data-act="coach" id="coachBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg><span class="ctxt">코치에게 물어보기</span></button></div></div></div>
   <button class="btn" data-act="start" id="goRecord" style="margin-top:0">${S.session ? '운동 이어서 하기' : '오늘 운동 기록하기'}</button>
   <div class="muted" style="text-align:center;margin:6px 0 12px">${S.session ? `${esc(S.session.place.name)}에서 운동 중 · <span data-clock="sess">${clock(Date.now() - S.session.startedAt)}</span>` : gymQuiet() ? '운동을 시작할 때 눌러 주세요' : `센터에 입장하면 바로 시작돼요 · ${CB_TXT}`}</div>
-  <div class="card coach" id="coachCard"><div class="cbox">${charFit(t, lv, 52, ex)}</div><div class="cmain"><div class="say" id="coachSay"><span>${esc(coachLine())}</span></div><button class="coachbtn" data-act="coach" id="coachBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg><span class="ctxt">코치에게 물어보기</span></button><div class="cquota" id="coachQuota">${coachQuota()}</div></div></div>   
   <div class="card" id="streakCard"><div style="display:flex;justify-content:space-between;align-items:center"><div class="h2" style="margin:0;font-size:16px" id="weekCnt">이번 주 ${wk}회 운동</div><span class="pill ${wk>=1?'tier4':'tier1'}">🔥 ${S.streakWeeks}주 연속</span></div>
     <div class="week">${week}</div>
     <div class="wxp" id="weekXP"><span>이번 주 운동 경험치</span><b>${weekXP().toLocaleString()}/${CFG.WEEK_CAP.toLocaleString()}</b></div><div class="bar thin"><i style="width:${Math.min(100, Math.round(weekXP() / CFG.WEEK_CAP * 100))}%"></i></div>${centerWeek() ? `<div class="wxp itm" id="weekCenterXP"><span>+ 입점센터 보너스</span><b>${centerWeek().toLocaleString()} · 따로 계산</b></div>` : ''}${itemWeek() ? `<div class="wxp itm" id="weekItemXP"><span>+ 아이템 경험치</span><b>${itemWeek().toLocaleString()} · 한도 없음</b></div>` : ''}

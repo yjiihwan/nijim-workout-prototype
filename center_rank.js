@@ -7,9 +7,8 @@
   'use strict';
   const HOME_WINDOW_DAYS = 30;
 
-  /* «센터 랭킹에 안 보이기»(계정 1개) — 켜면 모든 센터 DID·앱 내 센터·전국에서 빠진다(⑨-2 A). 옛 필드 hide_on_did 도 같은 뜻으로 읽는다 */
-  const hiddenOf = m => !!(m && (m.hide_in_center_ranking === true || m.hide_on_did === true));
-  const visible = list => (Array.isArray(list) ? list : []).filter(m => m && !hiddenOf(m) && m.nickname);
+  /* 랭킹은 누구나 항상 보인다 — 옛 숨김 필드(hide_in_center_ranking·hide_on_did)는 값이 있어도 읽지 않는다 */
+  const visible = list => (Array.isArray(list) ? list : []).filter(m => m && m.nickname);
 
   const inWeek = (date, weekStart) => {
     if (!weekStart) return true;
@@ -37,7 +36,7 @@
     return out;
   }
 
-  /* 순위표 — 점수 0 은 빼고, 동점은 닉네임순(화면마다 같은 순서). rank 는 숨김 회원을 뺀 뒤 매긴다 */
+  /* 순위표 — 점수 0 은 빼고, 동점은 닉네임순(화면마다 같은 순서). */
   function board(xpByMember, members) {
     const byId = {}; (members || []).forEach(m => { byId[m.member_id] = m; });
     return visible(Object.keys(xpByMember).map(id => byId[id] && { ...byId[id], weekly_xp: xpByMember[id] }))
@@ -69,5 +68,5 @@
   const cmpDefault = (a, b) => b.entries_30d - a.entries_30d || String(b.last_entry_at || '').localeCompare(String(a.last_entry_at || ''));
   const defaultCenter = list => (list && list.length ? list.slice().sort(cmpDefault)[0].center_id : null);
 
-  root.CenterRank = { HOME_WINDOW_DAYS, hiddenOf, visible, centerWeeklyXP, nationalWeeklyXP, centerBoard, nationalBoard, rankRows, homeCenters, defaultCenter };
+  root.CenterRank = { HOME_WINDOW_DAYS, visible, centerWeeklyXP, nationalWeeklyXP, centerBoard, nationalBoard, rankRows, homeCenters, defaultCenter };
 })(typeof window !== 'undefined' ? window : globalThis);

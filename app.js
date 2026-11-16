@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.81';
+const VER = 'v1.82';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -37,7 +37,8 @@ const ITEMS = [
   { id:'boost1', img:'headband_gold', kind:'effect', use:1, name:'2배 부스터 · 운동 1번', desc:'다음 운동 1번 2배 · 한도 없음', price:300 },
   { id:'boost7', img:'shaker', kind:'effect', use:1, name:'2배 부스터 · 7일', desc:'7일 동안 운동 2배 · 한도 없음', price:1500 },
   { id:'potion', img:null, kind:'effect', use:1, name:'경험치 물약 +300', desc:'운동 없이 +300 · 한도 없음 · 💰', price:1000 },
-  { id:'charm', img:'charm', kind:'effect', use:1, name:'연속 보호권', desc:'운동 못 간 주 1회 보호', price:500 },
+  { id:'ticket', img:null, kind:'effect', hold:1, name:'쉬어가기 티켓', desc:'운동 못 간 주 1회 보호', price:0 },   // v1.82: 파는 물건이 아님(매달 1일 1장) — 남은 장수만 보여 준다
+  { id:'charm', img:'charm', kind:'effect', hold:1, name:'연속 보호권', desc:'운동 못 간 주 1회 보호', price:500 },
   { id:'crown', img:'crown', kind:'effect', name:'리그 왕관', desc:'리그 표시 꾸미기 · 7일', price:800 },
   /* v1.70: 장착 아이템 27종 — 목록·값·효과·유효기간은 item_config.js GEAR 한 곳 */
   ...GEAR.map(g => ({ id:g.id, img:g.img || null, kind:'look', gear:g, name:g.name, desc:gearFxText(g), price:g.price || 0 })),
@@ -114,7 +115,7 @@ const fresh = () => ({ type:'mungchi', chosen:false, onboarded:false, perm:{ not
   events:[], pending:null, sound:true, placeholder:false, demo:'none', quitDemo:false,
   exprDemo:'auto', moodDemo:'auto', mood:null, lowRun:0,
   owned:{ cap:1 }, equipped:{ cap:true }, inv:{ boost1:0, boost7:0, potion:0, charm:0 }, boostNext:false, boost7Until:null, nextBoosts:[], timedBoosts:[], eatCat:'all', paidLog:[], shields:0,
-  records: seedRecords(), hist: seedHist(), streakWeeks: 5, ticketLeft: 1, ticketAuto: true, custom: [],
+  records: seedRecords(), hist: seedHist(), streakWeeks: 5, ticketLeft: 1, missDone: null, custom: [],
   session:null, lastResult:null, entryDemo:true, verifyDemo:'auto', holdDemo:false, selfieSeen:false, selfieStep:'guide', selfieFor:null, bump:0,
   tab:'home', sub:null, wseg:'mine', fTab:'week', rkMode:'all', sTab:'effect', pick:null, cur:null, recId:null, editRec:null, part:'all', gear:'all', q:'', placeQ:'', cx:null,
   calc:null });
@@ -148,6 +149,8 @@ function sanitize() {
   const xpOk = (lv, x) => !num(x) ? 0 : lv >= 99 ? 0 : x < 0 && lv > 1 ? 0 : Math.min(x, need(lv) - 1);   // 필요량을 넘는 값(«Lv.19까지 -99,486 XP») 방지
   S.xp = xpOk(S.level, S.xp); S.exXp = xpOk(S.exLv, S.exXp);
   ['points', 'streakWeeks', 'ticketLeft', 'shields', 'lowRun'].forEach(k => { if (!num(S[k]) || S[k] < 0) S[k] = F[k]; });
+  if (plainObj(S.inv) && S.inv.charm > 0) { S.shields += S.inv.charm; S.inv.charm = 0; }   // v1.82: 보호권은 사면 바로 장수로(«사용» 단계 없음)
+  delete S.ticketAuto;
   delete S.goal; delete S.goalNext;   // v1.42: 주간 목표 삭제(옛 저장값 정리)
   const okItem = it => plainObj(it) && !!EX[it.ex] && (it.sets == null || Array.isArray(it.sets));
   const fixSets = it => { if (it.sets) it.sets = it.sets.filter(plainObj); return it; };
@@ -924,11 +927,6 @@ function centerCard() {
 function vSettings() {
   const evs = [...S.events].reverse(), photos = S.records.filter(r => r.photo);
   return `${subHead('설정')}<div class="sec">
-  <div class="card" id="ticketCard"><div class="h2" style="font-size:16px">쉬어가기 티켓</div>
-    <div class="row"><div><b>이번 달 ${S.ticketLeft}장 남음</b><div class="muted">한 번도 운동 못 간 주를 1번 지켜 줘요 · 매달 1일에 1장</div></div></div>
-    <div class="row"><div><b>연속 보호권 ${S.shields}장</b><div class="muted">상점에서 산 보호권 · 티켓 다음에 써요</div></div><button class="btn sm ghost" data-act="sub" data-v="shop">상점</button></div>${charmRow()}
-    <div class="row"><span>운동 못 간 주에 자동으로 쓰기</span>${sw('ticketAuto', S.ticketAuto)}</div>
-    <div class="muted">티켓·보호권이 없으면 연속은 절반으로 줄어요(0이 되지 않아요)</div></div>
   <div class="card" id="notiCard"><div class="h2" style="font-size:16px">알림</div>
     <div class="row"><div><span>입장 확인 알림</span><div class="muted">«입장 확인! 캐릭터가 기다려요»</div></div>${sw('noti', S.noti.entry, 'notiEntry').replace('data-act="noti"', 'data-act="noti" data-v="entry"')}</div>
     <div class="row"><div><span>캐릭터가 보고 싶어 할 때</span><div class="muted">7일 넘게 쉬면 주 1번까지</div></div>${sw('noti', S.noti.nudge).replace('data-act="noti"', 'data-act="noti" data-v="nudge"')}</div>
@@ -960,7 +958,7 @@ function vSettings() {
 }
 
 /* ===== 상점 · 부스터·물약 계산기 ===== */
-const itemImg = i => i.img ? `<img src="assets/item_${i.img}.png" alt="">` : i.gear ? gearIcon(i.id) : FLASK;
+const itemImg = i => i.img ? `<img src="assets/item_${i.img}.png" alt="">` : i.gear ? gearIcon(i.id) : i.id === 'ticket' ? TICKET : FLASK;
 function vShop() {
   if (S.sTab === 'food') return `${subHead('아이템 상점')}<div class="sec"><div style="display:flex;justify-content:flex-end;margin-bottom:8px"><b>${S.points.toLocaleString()}P</b></div>
   <div class="seg"><button data-act="stab" data-v="effect">효과</button><button data-act="stab" data-v="look">장착 아이템</button><button class="on" data-act="stab" data-v="food" id="stabFood">먹고 마시는</button></div>${vEatTab()}</div>`;
@@ -971,6 +969,7 @@ function vShop() {
   <div class="seg"><button class="${S.sTab==='effect'?'on':''}" data-act="stab" data-v="effect">효과</button><button class="${S.sTab==='look'?'on':''}" data-act="stab" data-v="look" id="stabLook">장착 아이템</button><button class="${S.sTab==='food'?'on':''}" data-act="stab" data-v="food" id="stabFood">먹고 마시는</button></div>
   ${S.sTab === 'effect' ? `<div class="muted wkleft" id="wkLeft">이번 주 운동 경험치 ${weekXP().toLocaleString()}/${CFG.WEEK_CAP.toLocaleString()} · <b>아이템 경험치는 한도 없어요</b>${boostOn() ? ` · <b>${boostLabel()} 부스터 적용 중</b>` : ''}</div>` : ''}
   <div class="grid2">${list.map(i => { const n = i.use ? (S.inv[i.id] || 0) : 0, own = i.use ? n > 0 : S.owned[i.id], eq = S.equipped[i.id];
+    if (i.hold) return `<div class="item" data-id="${i.id}" id="hold_${i.id}"><span class="tag">${holdCnt(i.id)}장</span>${itemImg(i)}<b>${i.name}</b><small>${i.desc}</small>${i.id === 'ticket' ? '<button class="btn ghost glock" data-act="holdInfo" id="ticketInfo">매달 1일에 1장</button>' : `<button class="btn" data-act="buy" data-id="${i.id}">${i.price.toLocaleString()}P</button>`}</div>`;
     return `<div class="item">${i.use ? (n ? `<span class="tag">${n}개</span>` : '') : eq?'<span class="tag">장착 중</span>':own?'<span class="tag">보유</span>':''}${itemImg(i)}<b>${i.name}</b><small>${i.desc}</small>
     ${i.use ? (n ? `<div class="grid2 ib"><button class="btn ghost" data-act="buy" data-id="${i.id}">${i.price.toLocaleString()}P</button><button class="btn" data-act="use" data-id="${i.id}">사용</button></div>` : `<button class="btn" data-act="buy" data-id="${i.id}">${i.price.toLocaleString()}P</button>`)
       : own ? `<button class="btn ${eq?'ghost':''}" data-act="equip" data-id="${i.id}">${eq?'해제':'장착'}</button>` : `<button class="btn" data-act="buy" data-id="${i.id}">${i.price.toLocaleString()}P</button>`}</div>`; }).join('')}</div>
@@ -1106,7 +1105,7 @@ function render() {
   /* v1.75: 운동기록 첫 화면에서 한 번이라도 들어간 화면은 하단 메뉴바를 숨기고 아래 끝까지 쓴다 — 나가는 길은 위 뒤로가기 */
   document.body.classList.toggle('deep', !!((S.tab === 'workout' && S.sub && (S.chosen || S.sub.startsWith('onb')) && SUB[S.sub]) || (S.tab === 'all' && S.allSub)));
   document.body.classList.toggle('hasbar', !!$('endBar'));
-  eatMount(); animMount(); gearNoteDue();
+  eatMount(); animMount(); missDue(); gearNoteDue();
   if (typeof aiFits === 'function' && $('coachSay') && !aiFits($('coachSay').textContent)) $('coachSay').firstElementChild.textContent = coachLineBase();   // v1.78: 좁은 화면에서 AI 문구가 두 줄을 넘으면 기존 문구
   document.querySelectorAll('.tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
   if (S.tab === 'workout' && S.sub === 'selfie' && S.selfieStep === 'cam') camStart();
@@ -1420,10 +1419,52 @@ function applySelfie() {
 function sheet(html, keep = false) { const el = $('sheet'); el.innerHTML = `<div class="sh-bg" data-act="shClose"></div><div class="sh${keep ? ' still' : ''}" role="dialog">${html}</div>`; el.classList.add('on'); }
 function shClose() { const el = $('sheet'); el.classList.remove('on'); el.innerHTML = ''; }
 
+/* ===== v1.82 운동 못 간 주 — 설정의 «자동으로 쓰기»는 없앴다. 지난주에 운동이 한 번도 없으면 다음에 운동기록을 열 때 한 번 묻는다 =====
+   순서: 행운 부적 목걸이(착용 중이면 저절로) → 쉬어가기 티켓 → 연속 보호권. 티켓·보호권이 없으면 묻지 않고 절반.
+   S.missDone = 이미 답한(처리한) 주의 월요일 · S.missSim = 시연용(?miss=1·시연 도구)으로 «못 간 주»라 치는 주 */
+const TICKET = '<svg viewBox="0 0 64 64" class="itemsvg"><g transform="rotate(-8 32 32)"><path d="M7 21a4 4 0 0 1 4-4h42a4 4 0 0 1 4 4v5.5a5.5 5.5 0 0 0 0 11V43a4 4 0 0 1-4 4H11a4 4 0 0 1-4-4v-5.5a5.5 5.5 0 0 0 0-11z" fill="#FFE3EE" stroke="#16161C" stroke-width="3" stroke-linejoin="round"/><path d="M23 19v26" stroke="#16161C" stroke-width="2.5" stroke-dasharray="3 4"/><path d="M32 30.5c0-3.8 5-5 7-1.5 2-3.5 7-2.3 7 1.5 0 4-4.5 6.3-7 8-2.5-1.700-7-4-7-8z" fill="#FF0065"/></g></svg>';
+const missWeek = () => { const d = new Date(TODAY); d.setDate(d.getDate() - 7); return weekDaysOf(ymd(d)); };
+const halfStreak = n => Math.max(1, Math.floor(n / 2));
+const missHave = () => S.ticketLeft > 0 ? 'ticket' : S.shields > 0 ? 'shield' : null;
+function missPending() {
+  if (!S.chosen || !S.onboarded) return null;
+  const wd = missWeek(), key = wd[0];
+  if (S.missDone === key) return null;
+  if (S.missSim !== key && (S.records.some(r => wd.includes(r.date)) || !S.records.some(r => r.date < key))) return null;
+  return key;
+}
+function missDue() {
+  try {
+    const key = missPending(); if (!key) return;
+    if (S.tab !== 'workout' || S.session || S.pending || $('sheet').classList.contains('on') || /^#admin/.test(location.hash) || ['result', 'selfie'].includes(S.sub)) return;
+    const n = S.streakWeeks, done = () => { S.missDone = key; if (S.missSim) delete S.missSim; save(); };
+    if (n < 2) return done();   // 줄어들 연속이 없으면 묻지 않는다
+    if (typeof charmUse === 'function' && charmUse()) { done(); return void setTimeout(() => toast(`지난주엔 운동을 못 갔지만 행운 부적 목걸이가 연속 ${n}주를 지켜 줬어요`), 500); }
+    if (!missHave()) { S.streakWeeks = halfStreak(n); done(); return void setTimeout(() => { render(); toast(`지난주에 운동을 못 가서 연속이 ${n}주에서 ${S.streakWeeks}주로 줄었어요`); }, 450); }
+    setTimeout(() => { if (!$('sheet').classList.contains('on') && missPending() === key && !S.session) missSheet(); }, 450);
+  } catch (e) { console.error('[miss]', e); }
+}
+function missSheet() {
+  const k = missHave(), n = S.streakWeeks, tk = S.ticketLeft, sh = S.shields, nm = k === 'ticket' ? '쉬어가기 티켓' : '연속 보호권';
+  const have = tk > 0 && sh > 0 ? `쉬어가기 티켓 <b>${tk}장</b> · 연속 보호권 <b>${sh}장</b> 있어요 · 티켓부터 써요` : `${nm} <b>${k === 'ticket' ? tk : sh}장</b> 남았어요`;
+  sheet(`<div id="missAsk" data-k="${k}"><div class="h2" id="missT">지난주엔 운동을 못 갔어요</div>
+  <div class="missbody" id="missBody">${nm}을 쓰면 <b>연속 ${n}주</b>가 그대로 지켜져요.<br>안 쓰면 연속이 ${halfStreak(n)}주로 줄어요.</div>
+  <div class="misshave" id="missHave">${k === 'ticket' ? TICKET : '<img src="assets/item_charm.png" alt="">'}<span>${have}</span></div>
+  <div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="missNo" id="missNo">안 쓰기</button><button class="btn" data-act="missUse" id="missUse">${k === 'ticket' ? '티켓' : '보호권'} 쓰기</button></div></div>`);
+}
+function missAnswer(use) {
+  const key = missPending(), k = missHave(), n = S.streakWeeks; shClose(); if (!key) return;
+  S.missDone = key; if (S.missSim) delete S.missSim;
+  if (use && k) { if (k === 'ticket') S.ticketLeft--; else S.shields--; }
+  else S.streakWeeks = halfStreak(n);
+  save(); render();
+  toast(use && k ? `${k === 'ticket' ? `쉬어가기 티켓을 썼어요 · 연속 ${n}주 그대로예요 · 남은 티켓 ${S.ticketLeft}장` : `연속 보호권을 썼어요 · 연속 ${n}주 그대로예요 · 남은 보호권 ${S.shields}장`}` : `연속이 ${n}주에서 ${S.streakWeeks}주로 줄었어요`);
+}
+const holdCnt = id => id === 'ticket' ? S.ticketLeft : S.shields;
+
 /* ===== 효과형 아이템 사용 — 계산기와 같은 함수로 효과 미리 보여 주기(결정 33: 아이템 경험치는 한도 없음) ===== */
 function useItem(id) {
   const it = ITEMS.find(i => i.id === id), L = ledger();
-  if (id === 'charm') { S.inv.charm--; S.shields++; save(); render(); return toast('연속 보호권 1장을 넣어 뒀어요 · 설정에서 확인할 수 있어요'); }
   const nolimit = `<div class="notice nolimit" id="useNoLimit">💰 아이템 경험치는 <b>한도 없음</b><br>이번 주 운동 한도(${fmt(weekXP())}/${CFG.WEEK_CAP.toLocaleString()})와는 따로 계산해요</div>`;
   if (id === 'potion' && S.level >= 99) return toast('최고 레벨이라 경험치는 더 오르지 않아요 · 물약은 그대로 있어요');
   if (id === 'potion') {
@@ -1559,7 +1600,10 @@ document.addEventListener('click', e => {
   if (a === 'pose') { sigPlayHome(); return; }
   if (a === 'sigSeg') { sigSegPlay(v); return; }
   if (a === 'flexPlay') { flexPlay(v); return; }
-  if (a === 'shClose') return shClose();
+  if (a === 'shClose') return $('missAsk') ? missAnswer(false) : shClose();   // v1.82: 묻는 창을 그냥 닫으면 «안 쓰기»
+  if (a === 'missUse') return missAnswer(true);
+  if (a === 'missNo') return missAnswer(false);
+  if (a === 'holdInfo') return toast('쉬어가기 티켓은 매달 1일에 1장씩 들어와요 · 운동 못 간 주가 생기면 쓸지 물어봐요');
   if (a === 'myItems') { shClose(); go('workout', 'me'); const e = $('myItems'); if (e) e.scrollIntoView({ block: 'center' }); return; }
   if (a === 'sub') { if (v === 'calc') S.calc = null; shClose(); return go('workout', v); }
   if (a === 'goPhotos') { shClose(); go('workout', 'settings'); const pc = $('photoCard'); if (pc) pc.scrollIntoView({ block: 'center' }); return; }
@@ -1674,7 +1718,7 @@ document.addEventListener('click', e => {
   else if (a === 'gear') { S.gear = v; }
   else if (a === 'buy') { const x = ITEMS.find(i => i.id === id); if (id === 'potion' && S.level >= 99) return toast('최고 레벨이라 경험치 물약은 효과가 없어요 · 포인트는 그대로예요'); if (x.gear && !S.owned[id] && gearBlock(x.gear)) return toast(gearBlock(x.gear)); if (S.points < x.price) return toast('포인트가 부족해요 · 니짐 포인트 충전 화면으로 넘어가요');
     const had = !!S.owned[id]; if (x.gear && had && !x.gear.days) return;   // 기간 없는 장착 아이템은 한 번만 산다
-    S.points -= x.price; if (x.use) S.inv[id] = (S.inv[id] || 0) + 1; else S.owned[id] = 1; toast(x.gear ? gearBought(x.gear, had) : `${x.name} 구매 완료 · -${x.price}P`); }
+    S.points -= x.price; if (id === 'charm') S.shields++; else if (x.use) S.inv[id] = (S.inv[id] || 0) + 1; else S.owned[id] = 1; toast(x.gear ? gearBought(x.gear, had) : id === 'charm' ? `연속 보호권 ${S.shields}장 · 운동 못 간 주가 생기면 쓸지 물어봐요` : `${x.name} 구매 완료 · -${x.price}P`); }
   else if (a === 'use') return useItem(id);
   else if (a === 'eatUse') return eatUse(id);
   else if (a === 'buyFood') return buyFood(id);
@@ -1690,7 +1734,6 @@ document.addEventListener('click', e => {
   else if (a === 'equip') { if (GEAR_BY[id]) gearToggle(id); else S.equipped[id] = !S.equipped[id]; }
   else if (a === 'wear') { gearToggle(id); }
   else if (a === 'gslot' || a === 'gearShop' || a === 'gearLock' || a === 'gearDay' || a === 'gearDemo') { if (gearAct(a, v, id) === 'done') return; }
-  else if (a === 'ticketAuto') S.ticketAuto = !S.ticketAuto;
   else if (a === 'noti') S.noti[v] = !S.noti[v];
   else if (a === 'hideTips') S.hideTips = !S.hideTips;
   else if (a === 'bw') S.bodyweight = S.bodyweight ? (S.bodyweight + dd < 30 ? null : Math.min(200, S.bodyweight + dd)) : 70;
@@ -1808,6 +1851,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && ym
 const DEMO_UI = /[?&]demo=1\b/.test(location.search);
 document.body.classList.toggle('demoui', DEMO_UI);
 try { sanitize(); } catch (err) { console.error('[sanitize]', err); S = fresh(); S.tab = 'workout'; }
+if (/[?&]miss=1\b/.test(location.search)) { S.missSim = missWeek()[0]; S.missDone = null; }   // 확인용: 주소 끝 ?miss=1 → 지난주에 운동을 못 간 것으로 친다
 releaseDue();
 render();
 if (S.fixNote) { const f = S.fixNote; S.fixNote = 0;

@@ -1162,3 +1162,8 @@ body.deep .csavebar{margin-bottom:calc(-24px - env(safe-area-inset-bottom));padd
 .scrow .cquota{margin:0;text-align:left;min-width:0;word-break:keep-all;line-height:1.35}
 .scrow .coachbtn{width:auto;flex:none;min-height:36px;margin:0;padding:0 12px;border-radius:10px;font-size:13px}
 .scrow .coachbtn svg{width:16px;height:16px}
+
+/* ===== v1.82 운동 못 간 주 묻는 창 · 상점 «효과» 칸의 쉬어가기 티켓 ===== */
+.missbody{font-size:15px;line-height:1.6;word-break:keep-all;color:var(--ink)}
+.misshave{display:flex;align-items:center;gap:10px;background:var(--g1);border-radius:12px;padding:10px 12px;margin-top:12px;font-size:13px;color:var(--g5);word-break:keep-all;line-height:1.45}
+.misshave b{color:var(--ink)}.misshave img,.misshave .itemsvg{height:36px;width:36px;object-fit:contain;flex:none;margin:0}

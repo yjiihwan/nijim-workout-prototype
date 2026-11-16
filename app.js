@@ -2,14 +2,14 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.80';
+const VER = 'v1.81';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
   dot:       { name: '도트', josa: '가', intro: '꼼꼼한 기록광 픽셀 정령' },
   shadow:    { name: '섀도', josa: '가', intro: '말 없이 따라오는 노력의 그림자' },
   rilla:     { name: '릴라', josa: '가', intro: '말수 적은 쿨한 아기 고릴라' },
-  ttukbi:    { name: '뚝비', josa: '가', intro: '호탕한 동네 코치 도깨비' },
+  ttukbi:    { name: '뚝비', josa: '가', intro: '호탕한 동네 친구 같은 도깨비' },
   youngcha:  { name: '영차', josa: '가', intro: '쉬지 않는 성실한 일꾼 개미' },
   saetbyeol: { name: '샛별', josa: '이', intro: '새벽마다 응원하는 다정한 별' },
   imu:       { name: '이무', josa: '가', intro: '과묵하게 수련하는 이무기' },
@@ -25,6 +25,10 @@ const stageName = (t, lv) => levelTitle(lv) || (lv >= 99 ? '완성' : `${stageId
 const tierOf = lv => lv >= 99 ? 6 : lv >= 80 ? 5 : lv >= 60 ? 4 : lv >= 40 ? 3 : lv >= 20 ? 2 : 1;
 const ro = w => { const c = w.charCodeAt(w.length - 1) - 0xAC00; if (c < 0 || c > 11171) return '로'; const j = c % 28; return j === 0 || j === 8 ? '로' : '으로'; };
 const wa = t => CH[t].josa === '가' ? '와' : '과';
+/* v1.81: 캐릭터는 «코치»가 아니라 같이 운동하는 짝꿍 — 화면 글에서는 캐릭터 이름으로 부른다. chJo('이','가') → «샛별이»·«뭉치가» */
+const chNm = (t = S.type) => CH[t].name;
+const chJo = (a, b, t = S.type) => { const w = CH[t].name, c = w.charCodeAt(w.length - 1) - 0xAC00; return w + (c >= 0 && c <= 11171 && c % 28 ? a : b); };
+const askTitle = () => `${chNm()}한테 물어보기`;
 const TIER_NAME = ['', '기본', '하늘 링', '하늘 링+입자', '로즈 링', '로즈 2중 링', '골드 아우라'];
 const isBigBoundary = lv => lv % 10 === 0 || lv === 99;
 
@@ -347,7 +351,7 @@ const coachLineBase = () => {
   const ex = exprNow(); if (EXPR[ex].line) return EXPR[ex].line;
   if (todayDone()) return '오늘 기록 완료! 내일은 어깨 쪽 한번 가볼까?';
   if (!S.records.length) return '첫 운동을 기록해 볼까? [오늘 운동 기록하기]를 눌러 줘';
-  return '오늘 같이 운동하면 내가 더 단단해질 거야 💧';
+  return '오늘도 같이 운동하자. 네가 운동한 만큼 나도 커 💧';
 };
 /* v1.78: AI가 운동기록을 보고 쓴 오늘의 한마디(coach_ai.js)가 있으면 그것, 없으면 기존 문구 */
 const coachLine = () => (typeof aiLine === 'function' && aiLine()) || coachLineBase();
@@ -369,7 +373,7 @@ function vHome() {
         ? `<span class="st ok ${moodToday().verdict}">${moodToday().verdict === 'high' ? '<svg viewBox="0 0 12 12"><path class="f" d="M6 .8 7.3 4.7 11.2 6 7.3 7.3 6 11.2 4.7 7.3.8 6 4.7 4.7Z"/></svg>기록 완료 · 오늘 신남!' : '<svg viewBox="0 0 11.4 9.4"><path d="M1 5.2 4.4 8.4 10.4 2"/></svg>기록 완료 · 살짝 아쉬운 날'}</span>`
         : '<span class="st ok"><svg viewBox="0 0 11.4 9.4"><path d="M1 5.2 4.4 8.4 10.4 2"/></svg>오늘 기록 완료</span>')
         : S.session ? '<span class="st"><i></i>운동 중이에요</span>' : '<span class="st"><i></i>오늘 기록 아직이에요</span>'}</div>${chev}</button>`
-    : `<button class="mini" data-tab="workout" id="homeMini"><div class="mbox plus"><svg viewBox="0 0 22 22"><path d="M11 4V18M4 11H18"/></svg></div><div class="mtxt"><b>운동 친구 고르기</b><span class="st">운동할수록 자라는 캐릭터</span></div>${chev}</button>`;
+    : `<button class="mini" data-tab="workout" id="homeMini"><div class="mbox plus"><svg viewBox="0 0 22 22"><path d="M11 4V18M4 11H18"/></svg></div><div class="mtxt"><b>운동 짝꿍 고르기</b><span class="st">내가 운동하면 같이 커요</span></div>${chev}</button>`;
   const pend = S.pending ? `<div class="notice"><span>⏳ 못 본 레벨업 장면이 있어요</span><button class="btn sm" data-act="playPending">보기</button></div>` : '';
   return `<div class="dummy">${pend}${card}
   <div class="ph tall">실제 앱 «홈» 화면 자리 (배너 · 추천 · 내주변 헬스장 …)</div><div class="ph">실제 앱 «홈» 콘텐츠 자리</div><div class="ph">실제 앱 «홈» 콘텐츠 자리 (맨 아래 블록 — 탭바에 가리면 안 됨)</div></div>`;
@@ -432,7 +436,7 @@ const FLASK = '<svg viewBox="0 0 64 64" class="itemsvg"><path d="M25 8h14M27 8v1
 /* ===== C2 온보딩 — 1/2 캐릭터 선택(C2a) · v1.42: «주 몇 회» 질문 화면 삭제로 2단계 ===== */
 function vChoose() {
   const pick = S.pick || S.type;
-  return `<div class="sec">${S.onboarded ? '' : obProg(1)}<div class="h2">같이 운동할 친구를 골라 주세요</div><div class="muted" style="margin-bottom:12px">능력치는 모두 같고 생김새·말투만 달라요. Lv.10 전에 1번 바꿀 수 있어요.</div>
+  return `<div class="sec">${S.onboarded ? '' : obProg(1)}<div class="h2">같이 운동할 짝꿍을 골라 주세요</div><div class="muted" style="margin-bottom:12px" id="chooseSub"><b style="color:var(--ink)">내가 운동한 만큼 짝꿍도 같이 커요.</b><br>능력치는 모두 같고 생김새·말투만 달라요. Lv.10 전에 1번 바꿀 수 있어요.</div>
   <div class="choose" id="chooseGrid">${Object.keys(CH).map(k => `<button class="cc ${pick===k?'on':''}" data-act="pick" data-v="${k}">${charHTML(k, 1, 84, false, null, true)}<b>${CH[k].name}</b></button>`).join('')}</div>
   <div class="card" style="text-align:center"><div class="muted"><b style="color:var(--ink)">${esc(CH[pick].name)}</b> — ${esc(CH[pick].intro)} · 레벨이 오르면 모습이 달라져요</div></div>
   <button class="btn" data-act="choose" id="chooseBtn">${esc(CH[pick].name)}${wa(pick)} 시작하기</button>
@@ -482,7 +486,7 @@ function vWorkout() {
     <div class="muted">${lv>=99?'최고 레벨':`Lv.${lv+1}까지 ${toNext.toLocaleString()} XP`} · ${nextEvo}</div>
     <div class="eqs">${eqNames || '<button class="pill none eqpill" data-act="myItems">장착 아이템 없음<i>›</i></button>'}</div>
     <button class="linkbtn" data-act="sub" data-v="me" id="goMe">내 캐릭터 자세히 ›</button></div></div>
-    <div class="scoach" id="coachBox"><div class="say" id="coachSay"><span>${esc(coachLine())}</span></div><div class="scrow"><div class="cquota" id="coachQuota">${coachQuota()}</div><button class="coachbtn" data-act="coach" id="coachBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg><span class="ctxt">코치에게 물어보기</span></button></div></div></div>
+    <div class="scoach" id="coachBox"><div class="say" id="coachSay"><span>${esc(coachLine())}</span></div><div class="scrow"><div class="cquota" id="coachQuota">${coachQuota()}</div><button class="coachbtn" data-act="coach" id="coachBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg><span class="ctxt">${esc(askTitle())}</span></button></div></div></div>
   <button class="btn" data-act="start" id="goRecord" style="margin-top:0">${S.session ? '운동 이어서 하기' : '오늘 운동 기록하기'}</button>
   <div class="muted" style="text-align:center;margin:6px 0 12px">${S.session ? `${esc(S.session.place.name)}에서 운동 중 · <span data-clock="sess">${clock(Date.now() - S.session.startedAt)}</span>` : gymQuiet() ? '운동을 시작할 때 눌러 주세요' : `센터에 입장하면 바로 시작돼요 · ${CB_TXT}`}</div>
   <div class="card" id="streakCard"><div style="display:flex;justify-content:space-between;align-items:center"><div class="h2" style="margin:0;font-size:16px" id="weekCnt">이번 주 ${wk}회 운동</div><span class="pill ${wk>=1?'tier4':'tier1'}">🔥 ${S.streakWeeks}주 연속</span></div>
@@ -544,7 +548,7 @@ function vSession() {
     : selfieClaims() ? `<div class="muted sfnote" id="sfSess">오늘 보너스 받음 ✓ · 오운완 보너스는 하루 1번이에요</div>`
     : `<button class="btn ghost camb" data-act="selfie" data-v="session" id="sfSessBtn">${CAM}오운완 셀카 <span class="muted">찍으면 경험치 +${sfPct}% · 하루 1번 · 공개는 내가 정해요</span></button>`;
   const demos = [['none','실제 기록대로'],['next','다음 레벨까지 (짧은 연출)'],['boundary','10레벨 경계 넘기 (큰 연출)'],['multi','+5레벨 한꺼번에 (묶음)']];
-  return `${subHead('오늘 운동')}<div class="sec"><div class="honest" id="honestTop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg><span>한 만큼만 솔직하게 기록해 주세요. 기록이 정확해야 AI 코칭이 내 몸에 맞게 나와요.</span></div>${head}${empty}
+  return `${subHead('오늘 운동')}<div class="sec"><div class="honest" id="honestTop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg><span>한 만큼만 솔직하게 기록해 주세요. 기록이 정확해야 ${esc(chJo('이', '가'))} 나한테 딱 맞게 답해 줘요.</span></div>${head}${empty}
   ${selfieBtn}
   <div class="card" style="margin-top:12px"><label class="lightrow" style="margin:0;padding:0;border:0"><input type="checkbox" data-act="light" ${s.light ? 'checked' : ''}><span><b>오늘은 살살 한 날</b><small>재활·컨디션 조절로 일부러 가볍게 했다면 체크해요. 경험치는 그대로 받아요.</small></span></label></div>
   <div class="card demo"><div class="h3">🧪 시연 도구 — 저장 시 얻는 경험치</div><div class="chips">${demos.map(([k, l]) => `<button class="chip ${S.demo===k?'on':''}" data-act="demo" data-v="${k}">${l}</button>`).join('')}</div>
@@ -553,7 +557,7 @@ function vSession() {
   <div class="muted" style="margin-top:8px" id="moodPreview">${moodPreviewText()}</div>
   <div class="h3" style="margin-top:12px">상태 흉내</div><div class="chips"><button class="chip" data-act="autoEndDemo" id="autoEndDemo">3시간 무입력 → 자동 종료</button><button class="chip ${S.holdDemo ? 'on' : ''}" data-act="holdDemo">세트 간격 20초 미만 3회(보류)</button></div>
   <div class="h3" style="margin-top:12px">검증 등급 바꿔 보기</div><div class="chips">${[['V1',`입점센터 입장(×${CFG.VERIFY.V1})`],['V0',`비입점·집·야외(×${CFG.VERIFY.V0})`],['V3',`레슨 확정(×${CFG.VERIFY.V3})`]].map(([k, l]) => `<button class="chip ${s.verify===k?'on':''}" data-act="vdemo" data-v="${k}">${l}</button>`).join('')}</div></div>
-  <div class="honest end" id="honestEnd">적은 그대로 AI 코칭에 쓰여요. 오늘도 수고했어요!</div></div>
+  <div class="honest end" id="honestEnd">적은 그대로 ${esc(chJo('이', '가'))} 기억해요. 오늘도 수고했어요!</div></div>
   <div class="endzone"><div class="endbar" id="endBar"><button class="btn ghost" data-act="sub" data-v="pick" id="addExBtn">+ 운동 추가</button><button class="btn" data-act="endAsk" id="endBtn">${!done.length && S.demo === 'none' ? '운동 끝' : held ? '운동 끝 · 기록 저장' : `운동 끝 · +${fmt(est)} XP 저장`}</button></div></div>`;
 }
 /* 결정 36 ⑥ C3 위치별 보너스 줄 — 입점센터 적용 중 / 이번 주 900 다 참 / 그 밖 장소 안내 / 레슨은 줄 없음 */

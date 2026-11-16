@@ -174,7 +174,7 @@ function vReport() {
   const head = `<div class="card coach" id="repSay"><div class="cbox">${charFit(t, S.level, 52)}</div><div><div class="say">${esc(say)}</div></div></div>`;
   const tiles = `<div class="card" id="repTiles"><div class="tiles" style="margin-top:0"><div class="tile"><small>운동</small><b>${R.sessions}회</b><small>7일 중</small></div><div class="tile"><small>운동 경험치</small><b>${fmt(R.exXP)}</b><small>XP</small></div><div class="tile"><small>연속</small><b>${streakVal()}주</b><small>${R.sessions >= 1 ? '이어 가는 중' : S.repWeek === 0 ? '1번 가면 이어져요' : '쉬어 간 주'}</small></div></div>
     <div class="muted" style="margin-top:8px">지난 4주 평균 주 ${R.avg4}회${R.sessions > R.avg4 ? ' · 평소보다 많이 했어요' : ''}</div></div>`;
-  if (thin) return `${subHead('주간 리포트', S.repFrom || 'stats', S.repFrom === 'coach' ? '코치' : '통계')}<div class="sec">${nav}${head}${tiles}
+  if (thin) return `${subHead('주간 리포트', S.repFrom || 'stats', S.repFrom === 'coach' ? '물어보기' : '통계')}<div class="sec">${nav}${head}${tiles}
     <div class="card zero-card" id="repThin"><div class="h3">기록이 아직 적어요</div><div class="muted">한 주에 2번 이상 기록하면 부위 비율·PR·다음 주 제안·쉬는 날 조언까지 보여 드려요.</div><button class="btn" data-act="start" style="margin-top:12px">오늘 운동 기록하기</button></div>
     ${dataDemoCard()}</div>`;
   const prHTML = R.prs.length ? R.prs.map(e => `<div class="rec"><div><b>${EX[e.ex].name} <span class="prtag">PR</span></b><small>${md(e.date)} · ${setTxt(EX[e.ex], e.set)}</small></div></div>`).join('') : '<div class="muted">이 주엔 PR이 없어요 · 무게보다 꾸준함이 먼저예요</div>';
@@ -183,7 +183,7 @@ function vReport() {
   const plateau = (() => { const ev = prEvents(rs).filter(e => e.ex === 'bench'); const last = ev.length ? ev[ev.length - 1].date : null; const wks = last ? Math.floor((dOf(R.sun) - dOf(last)) / (7 * DAY)) : 0;
     return wks >= 4 && rs.some(r => r.date >= mon && r.date <= R.sun && (r.items || []).some(i => i.ex === 'bench')) ? `벤치프레스가 ${wks}주째 제자리예요. 다음엔 2.5kg만 올려 볼까요?` : ''; })();
   const rest = R.maxRun >= 3 ? `${R.maxRun}일 연속으로 운동한 적이 있었어요. 다음 주엔 사이사이 하루씩 쉬어 가요` : R.sameLeg ? '같은 부위를 이틀 연달아 한 날이 있었어요. 부위를 번갈아 가면 회복이 빨라요' : '쉬는 날을 잘 섞었어요. 지금 리듬 좋아요';
-  return `${subHead('주간 리포트', S.repFrom || 'stats', S.repFrom === 'coach' ? '코치' : '통계')}<div class="sec">${nav}${head}${tiles}
+  return `${subHead('주간 리포트', S.repFrom || 'stats', S.repFrom === 'coach' ? '물어보기' : '통계')}<div class="sec">${nav}${head}${tiles}
   <div class="card" id="repDonut"><div class="h3">부위 비율</div>${donut(R.ps)}</div>
   ${lessonHTML ? `<div class="card" id="repLesson"><div class="h3">레슨 · 선생님 확인 2배</div>${lessonHTML}</div>` : ''}
   <div class="card" id="repPR"><div class="h3">이 주의 PR</div>${prHTML}</div>
@@ -479,12 +479,12 @@ function coachReply(kind, q = '') {
   const nextAns = () => {
     if (none) { const l = startList(PICK_IDS); if (!l.length) return ['아직 운동 기록이 없어.', `처음이면 ${pick}부터 편한 무게로 3세트씩 어때?`, eqSay, eqMach, H('w')];
       return ['아직 운동 기록이 없어.', `처음이면 ${l.map(([id, r]) => `${EX[id].name} ${rangeTxt(r)}`).join(', ')}부터 10회씩 3세트 어때?`, eqSay, eqMach, barNote(l), warm, !P.sex ? H('sex') : null]; }
-    const base = allDone ? ['이번 주 큰 부위 4곳 다 했어!', `오늘은 4주 동안 제일 적게 한 ${jo(lo, '을', '를')} ${pick}로 3세트씩 어때?`] : [`이번 주 아직 ${jo(notYet, '을', '를')} 안 했어.`, `오늘은 ${pick} 3세트씩 어때?`];
+    const base = allDone ? ['이번 주 큰 부위 4곳 다 했어!', `오늘은 4주 동안 제일 적게 한 ${jo(lo, '을', '를')} ${pick}로 3세트씩 어때?`] : [`이번 주에 ${jo(notYet, '은', '는')} 아직 안 했더라.`, `오늘 ${pick} 3세트씩 같이 해 볼래?`];
     const fresh = startList(PICK_IDS.filter(id => !lastTop(id)));
-    return [...base, eqSay, eqMach, fresh.length ? `${fresh.map(([id, r]) => `${EX[id].name} ${rangeTxt(r)}`).join(', ')} — 처음 하는 거라 이 무게부터 해 봐.` : null, warm, !fresh.length && !P.w && PICK_IDS.some(id => !lastTop(id) && COACH_CFG.BEGIN_1RM[id]) ? H('w') : null];
+    return [...base, eqSay, eqMach, fresh.length ? `${fresh.map(([id, r]) => `${EX[id].name} ${rangeTxt(r)}`).join(', ')} — 처음 하는 거니까 이 무게부터 같이 해 보자.` : null, warm, !fresh.length && !P.w && PICK_IDS.some(id => !lastTop(id) && COACH_CFG.BEGIN_1RM[id]) ? H('w') : null];
   };
   const safetyAns = () => {
-    const ip = incPair(P); if (!ip) return ['무게는 지난번보다 10% 안쪽으로 올려 줘.', '한 번에 20% 넘게 올리면 내가 알려 줄게. 천천히 가자!', H('w')];
+    const ip = incPair(P); if (!ip) return ['무게는 지난번보다 10% 안쪽으로만 올려 보자.', '한 번에 20% 넘게 올리면 내가 알려 줄게. 천천히 가자!', H('w')];
     const ex = exHit(q) || [...rs].reverse().flatMap(r => (r.items || []).filter(it => EX[it.ex] && EX[it.ex].mode === 'wr' && doneSets(it).some(x => x.w > 0)).map(it => it.ex))[0];
     const basis = [P.sex === 'm' ? '남' : P.sex === 'f' ? '여' : '', P.w ? kg(P.w) : ''].filter(Boolean).join('·');
     const lw = ex ? lastTop(ex) : 0;
@@ -494,7 +494,7 @@ function coachReply(kind, q = '') {
     const rh = restHours(P), old = !last ? ['아직 운동 기록이 없어.', '몸이 괜찮으면 오늘 가볍게 시작해 보자. 아프면 쉬는 게 먼저야.'] : run >= 3 ? [`${run}일 연속 운동했어. 진짜 대단해!`, '오늘은 쉬거나 스트레칭 10분만 하자.'] : [run ? `최근 ${run}일 연속 운동했어.` : (lastDays ? `마지막 운동이 ${lastDays}일 전이야.` : '오늘 운동 기록이 있어.'), '몸이 괜찮으면 오늘 해도 좋아. 같은 부위만 이틀 연속은 피하자.'];
     if (rh == null) return [...old, H('age')];
     if (!last) return [old[0], `몸이 괜찮으면 오늘 가볍게 시작해 보자. 같은 부위는 ${rh}시간 쉬고 다시 하자.`, warm];
-    if (run >= 3) return [...old, `같은 부위는 ${rh}시간 쉬는 게 기준이야.`];
+    if (run >= 3) return [...old, `같은 부위는 ${{ 24: '하루', 48: '이틀', 72: '사흘' }[rh] || rh + '시간'}쯤 쉬었다가 다시 하자.`];
     const recent = {}; for (let d = 0; d * 24 < rh; d++) { const ps = partSets(inRange(rs, addD(TODAY, -d), addD(TODAY, -d))); ['가슴', '등', '하체', '어깨'].forEach(p => { if (ps[p] && recent[p] == null) recent[p] = d; }); }
     const blocked = Object.keys(recent), free = ['가슴', '등', '하체', '어깨'].filter(p => !blocked.includes(p));
     return [old[0], blocked.length ? `${jo(blocked.join('·'), '은', '는')} 쉰 지 ${rh}시간이 안 됐어. 오늘은 ${free.length ? free.join('·') : '유산소·스트레칭'} 어때?` : `큰 부위 모두 ${rh}시간 이상 쉬었어. 몸이 괜찮으면 오늘 해도 좋아.`, warm];
@@ -504,7 +504,7 @@ function coachReply(kind, q = '') {
     if (eqOn && !exAvail(ex, EQ)) { const a = eqAlt(ex, EQ), r0 = a.length ? startRange(a[0], P) : null;   // 그 센터에 없는 기구 → 같은 부위·있는 기구로
       return [`${EQ.center}엔 ${jo(e.name, '을', '를')} 할 기구가 없어.`, a.length ? `같은 ${e.part} 운동으로 ${a.map(id => EX[id].name).join('·')} 어때?` : '센터 선생님에게 비슷한 운동을 물어봐 줘.',
         eqMachineLine(a, EQ), r0 ? `${EX[a[0]].name} 처음이면 ${rangeTxt(r0)}부터 10회씩 3세트 해 보자.` : a.length ? '처음이면 15회는 거뜬히 할 수 있는 무게로 시작하자.' : null, warm]; }
-    if (lw) return [`${jo(e.name, '은', '는')} 지난번에 ${kg(lw)} 했어.`, nextStepLine(ex, lw, P) || '지난번 무게에서 천천히 올려 가자.'];
+    if (lw) return [`${jo(e.name, '은', '는')} 지난번에 ${kg(lw)} 했잖아.`, nextStepLine(ex, lw, P) || '지난번 무게에서 천천히 올려 가자.'];
     const r = startRange(ex, P);
     if (r) return [`${e.name} 처음이면 ${rangeTxt(r)}부터 10회씩 3세트 해 보자.`, barNote([[ex, r]]), warm, !P.sex ? H('sex') : null];
     if (!P.w) return [`${e.name} 처음이면 15회는 거뜬히 할 수 있는 무게로 시작하자.`, '자세 먼저 익히고 조금씩 올리면 돼.', H('w')];
@@ -545,7 +545,7 @@ function ask(q, kind = classify(q)) {
   if (!fixed && c.used >= COACH_MAX) return toast('이번 달 질문 20번을 다 썼어요');
   c.msgs.push({ who: 'me', text: q });
   if (fixed) c.msgs.push({ who: 'bot', lines: MED_FIXED[kind], fixed: true, kind });
-  else { c.used++; const out = kind === 'unknown' ? ['그건 내가 잘 모르는 질문이야.', '루틴·휴식·운동 방법이라면 하나씩 물어봐 줘!'] : coachReply(kind, q);
+  else { c.used++; const out = kind === 'unknown' ? ['그건 나도 잘 몰라. 내가 아는 건 네 운동 기록이랑 센터 기구뿐이야.', '루틴·휴식·운동 방법이라면 하나씩 물어봐 줘!'] : coachReply(kind, q);
     c.msgs.push({ who: 'bot', lines: out.filter(x => typeof x === 'string'), hint: (out.find(x => x && x.hint) || {}).hint || null, kind }); }
   c.msgs = c.msgs.slice(-30);
 }
@@ -553,26 +553,26 @@ function vCoach() {
   if (typeof ensureMe !== 'function') return '';   // coach_info.js 가 아직 안 읽힘 — 그 파일 끝에서 다시 그림
   ensure2();
   const c = S.coach, t = S.type, left = Math.max(0, COACH_MAX - c.used), nm = CH[t].name;
-  const head = `<div class="card coachhead" id="coachHead"><div class="cbox">${charFit(t, S.level, 44)}</div><div><b>${esc(nm)} 코치</b><small>루틴·휴식·운동 방법을 물어봐요</small></div><span class="pill ${left ? 'tier2' : 'tier4'}" id="coachLeft">남은 질문 ${left}/${COACH_MAX}</span></div>`;
-  if (!c.agreed) return `${subHead('코치에게 물어보기')}<div class="sec">${head}
+  const head = `<div class="card coachhead" id="coachHead"><div class="cbox">${charFit(t, S.level, 44)}</div><div><b>${esc(nm)}</b><small>내 운동 기록과 센터 기구를 알고 있어요</small></div><span class="pill ${left ? 'tier2' : 'tier4'}" id="coachLeft">남은 질문 ${left}/${COACH_MAX}</span></div>`;
+  if (!c.agreed) return `${subHead(esc(askTitle()))}<div class="sec">${head}
     <div class="card" id="medNotice"><div class="h2" style="margin-top:0">시작하기 전에</div>
-    <div class="medbox">캐릭터 코치의 말은 <b>운동 습관 참고용</b>이에요. <b>의학적 조언이 아니에요.</b></div>
+    <div class="medbox">캐릭터의 말은 <b>운동 습관 참고용</b>이에요. <b>의학적 조언이 아니에요.</b></div>
     <div class="rline">🩺 아프거나 어지러우면 운동을 멈추고 의사·물리치료사와 상담하세요.</div>
     <div class="rline">💊 진단·치료·약·보충제 양·식단 칼로리는 답하지 않아요.</div>
     <div class="rline">💬 질문은 한 달에 ${COACH_MAX}번까지 무료예요.</div>
     <button class="btn" data-act="coachAgree" id="coachAgree">알겠어요, 시작할게요</button><div class="muted" style="text-align:center;margin-top:8px">이 안내는 처음 1번만 · 설정에서 다시 볼 수 있어요</div></div></div>`;
   ensureMe(); if (!S.me.asked) { if (!S.me.ob) obStart(); return coachObHTML(head, t); }
   const sum = meSummary(), info = `<button class="card replink tap mibar" data-act="myinfo" data-v="coach" id="coachInfo"><div><b>내 정보</b><small>${esc(sum || '안 적음 · 적으면 무게·쉬는 시간을 더 정확히 말해 줘요')}</small></div><span class="muted">고치기 ›</span></button>`;
-  const greet = `<div class="msg bot"><div class="cbox">${charFit(t, S.level, 30)}</div><div><div class="bub">안녕! 운동 습관은 내가 같이 볼게. 궁금한 거 하나씩 물어봐 💬</div></div></div>`;
+  const greet = `<div class="msg bot"><div class="cbox">${charFit(t, S.level, 30)}</div><div><div class="bub">${realRecs().length ? '안녕! 네가 운동한 건 내가 다 기억해. 궁금한 거 편하게 물어봐 💬' : '안녕! 이제부터 네 운동은 내가 다 기억할게. 궁금한 거 편하게 물어봐 💬'}</div></div></div>`;
   const msgs = c.msgs.map(m => m.who === 'me' ? `<div class="msg me"><div class="bub">${esc(m.text)}</div></div>`
     : `<div class="msg bot"><div class="cbox">${charFit(t, S.level, 30)}</div><div><div class="bub ${m.fixed ? 'fixed' : ''}">${m.lines.map(esc).join('<br>')}${m.hint ? `<small class="hintl">${esc(m.hint)}</small>` : ''}</div><small class="mtag">${m.fixed ? '🛡 안전 안내 · 질문 횟수는 줄지 않아요' : m.kind === 'unknown' ? '' : m.kind === 'info' ? '내 정보 저장 · 질문 횟수는 줄지 않아요' : ''}</small></div></div>`).join('');
   const full = left <= 0;
   const chips = `<div class="qchips" id="coachChips">${Object.entries(KINDS).filter(([k]) => k !== 'alt' || eqCtx().mode === 'equip').map(([k, v]) => `<button class="chip" data-act="coachQ" data-v="${k}" ${full ? 'disabled' : ''}>${v.q}</button>`).join('')}<button class="chip med" data-act="coachQ" data-v="pain">무릎이 아파</button><button class="chip med" data-act="coachQ" data-v="disease">고혈압 있는데 괜찮아?</button></div>`;
-  return `${subHead('코치에게 물어보기')}<div class="sec">${head}${eqCoachCard()}${info}
+  return `${subHead(esc(askTitle()))}<div class="sec">${head}${eqCoachCard()}${info}
   <div class="chat" id="chat">${greet}${msgs}</div>
   ${full ? `<div class="notice limit" id="coachFull"><span>이번 달 질문 ${COACH_MAX}번을 다 썼어요. <b>다음 달 1일</b>에 다시 ${COACH_MAX}번 생겨요.<br>아프거나 불편하면 운동을 멈추고 센터 선생님에게 말해 주세요.</span></div>` : ''}
   <div class="h3" style="margin-top:4px">이렇게 물어봐요</div>${chips}
-  <div class="cin" id="coachIn"><input id="coachQ" placeholder="${full ? '다음 달에 다시 물어볼 수 있어요' : '코치에게 물어보기'}" maxlength="80" autocomplete="off" ${full ? 'disabled' : ''}><button class="btn sm" data-act="coachSend" ${full ? 'disabled' : ''}>보내기</button></div>
+  <div class="cin" id="coachIn"><input id="coachQ" placeholder="${full ? '다음 달에 다시 물어볼 수 있어요' : '궁금한 걸 적어 주세요'}" maxlength="80" autocomplete="off" ${full ? 'disabled' : ''}><button class="btn sm" data-act="coachSend" ${full ? 'disabled' : ''}>보내기</button></div>
   <div class="muted" style="margin-top:8px">의학적 조언이 아니에요 · 통증이나 병에 관한 질문에는 미리 정해 둔 안내만 드려요</div>
   <button class="card replink tap" data-act="report" data-v="coach" style="margin-top:12px"><div><b>주간 리포트 보기</b><small>지난주 부위·PR·다음 주 제안</small></div><span class="muted">›</span></button>
   ${demoCard('남은 횟수', 'coachUsed', String(c.used), [['3', '17번 남음'], ['19', '1번 남음'], ['20', '20번 도달']])}
@@ -585,7 +585,7 @@ const vMe0 = vMe, vSettings0 = vSettings;
 SUB.coach = vCoach; SUB.report = vReport; SUB.stats = vStats2; SUB.profile = vProfile; SUB.addFriend = vAddFriend; SUB.friends = vFriends2;
 SUB.me = () => vMe0().replace(/<div class="card"><div class="h2" style="font-size:16px">업적<\/div>.*?<\/div><\/div>/, achieveCard());
 SUB.settings = () => vSettings0().replace('<div class="card demo"><div class="h3">🧪 시연 도구</div>',
-  `<div class="card" id="coachNoteCard"><div class="h2" style="font-size:16px">코치 안내</div><div class="muted">캐릭터 코치의 말은 운동 습관 참고용이에요. 의학적 조언이 아니에요.</div><button class="btn ghost" data-act="coachReset" style="margin-top:10px">코치 첫 안내 다시 보기</button></div><div class="card demo"><div class="h3">🧪 시연 도구</div>`);
+  `<div class="card" id="coachNoteCard"><div class="h2" style="font-size:16px">물어보기 안내</div><div class="muted">캐릭터의 말은 운동 습관 참고용이에요. 의학적 조언이 아니에요.</div><button class="btn ghost" data-act="coachReset" style="margin-top:10px">첫 안내 다시 보기</button></div><div class="card demo"><div class="h3">🧪 시연 도구</div>`);
 
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if (!b || b.closest('#evo') || b.disabled) return;

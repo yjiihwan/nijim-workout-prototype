@@ -79,8 +79,9 @@ const LATER = '나중에 바꿀 수 있어';
 function obStart() {
   ensureMe();
   S.me.ob = { step: 0, log: [
-    { who: 'bot', lines: ['시작하기 전에 4가지만 물어볼게!', '성별·나이·키·몸무게를 알아야 너한테 맞는 무게랑 운동량을 정확히 짜 줄 수 있어.'] },
-    { who: 'bot', lines: ['말하기 싫은 건 «나중에 할게»를 눌러도 코칭은 그대로 돼. 다른 회원에겐 안 보여.'] },
+    { who: 'bot', lines: ['나는 너랑 같이 운동하는 짝꿍이야. 네가 운동하면 나도 같이 커!'] },
+    { who: 'bot', lines: ['시작하기 전에 4가지만 물어볼게.', '성별·나이·키·몸무게를 알면 너한테 맞는 운동 무게를 더 정확히 맞춰 줄 수 있어.'] },
+    { who: 'bot', lines: ['말하기 싫은 건 «나중에 할게» 눌러도 돼. 안 적어도 나한테 물어보는 건 그대로야. 다른 사람한텐 안 보여.'] },
     { who: 'bot', lines: OB_Q[0].q, small: LATER },
   ] };
 }
@@ -117,7 +118,7 @@ function coachObHTML(head, t) {
   const dock = Q.k === 'sex'
     ? `<div class="obbtns">${[['m', '남자'], ['f', '여자'], ['n', '선택 안 할래']].map(([v, l]) => `<button class="chip" data-act="obSex" data-v="${v}">${l}</button>`).join('')}</div>`
     : `<div class="cin obin"><label class="obfield"><input id="obIn" type="text" inputmode="${Q.mode}" enterkeyhint="done" autocomplete="off" maxlength="6" placeholder="${Q.ph}" aria-label="${Q.k}"><i>${Q.unit}</i></label><button class="btn sm" data-act="obOk" id="obOk">확인</button></div>`;
-  return `${subHead('코치에게 물어보기')}<div class="sec">${head}
+  return `${subHead(esc(askTitle()))}<div class="sec">${head}
   <div class="chat" id="obChat">${log}</div>
   <div class="obdock" id="obDock"><div class="obprog2">${ob.step + 1}/${OB_Q.length}</div>${dock}<button class="btn ghost sm oblater" data-act="obSkip" id="obSkip">나중에 할게</button></div></div>`;
 }
@@ -125,13 +126,13 @@ function coachObHTML(head, t) {
 /* ===== ⑤ 내 정보 화면 ===== */
 function vMyInfo() {
   const p = me(), field = (k, label, v, unit, mode, ph) => `<div class="row mirow" id="mi_${k}"><span>${label}</span><div class="mival"><label class="obfield"><input class="pin" data-k="${k}" type="text" inputmode="${mode}" enterkeyhint="done" autocomplete="off" maxlength="6" placeholder="${ph}" value="${v == null ? '' : +(+v).toFixed(1)}" aria-label="${label}"><i>${unit}</i></label>${v == null ? '' : `<button class="mix" data-act="meClear" data-v="${k}" aria-label="${label} 지우기">×</button>`}</div></div>`;
-  return `${subHead('내 정보', S.infoFrom || 'settings', S.infoFrom === 'coach' ? '코치' : '설정')}<div class="sec">
-  <div class="card" id="miCard"><div class="h2" style="font-size:16px;margin-top:0">코치가 쓰는 내 정보</div>
+  return `${subHead('내 정보', S.infoFrom || 'settings', S.infoFrom === 'coach' ? '물어보기' : '설정')}<div class="sec">
+  <div class="card" id="miCard"><div class="h2" style="font-size:16px;margin-top:0">${esc(chJo('이', '가'))} 아는 내 정보</div>
   <div class="muted" style="margin-bottom:6px">처음 무게·올리는 폭·쉬는 시간·유산소 칼로리 계산에만 써요 · 다른 회원에겐 안 보여요 · 비워 둔 건 계산에 안 써요</div>
   <div class="row mirow" id="mi_sex"><span>성별</span><div class="chips">${[['m', '남'], ['f', '여'], ['n', '선택 안 함']].map(([v, l]) => `<button class="chip ${p.sex === v ? 'on' : ''}" data-act="meSex" data-v="${v}">${l}</button>`).join('')}</div></div>
   ${field('age', '나이', p.age, '살', 'numeric', '비어 있음')}${field('height', '키', p.height, 'cm', 'decimal', '비어 있음')}${field('weight', '몸무게', p.w, 'kg', 'decimal', '비어 있음')}
   <div class="muted" style="margin-top:8px">몸무게는 기록한 무게가 너무 무거울 때 «정말 맞아요?» 하고 묻는 데도 써요 · 비우면 70kg으로 봐요</div></div>
-  <button class="btn ghost" data-act="coach" id="miToCoach">코치에게 물어보기</button></div>`;
+  <button class="btn ghost" data-act="coach" id="miToCoach">${esc(askTitle())}</button></div>`;
 }
 SUB.myinfo = vMyInfo;
 
@@ -139,7 +140,7 @@ SUB.myinfo = vMyInfo;
 const vSettingsCoach = SUB.settings;
 SUB.settings = () => vSettingsCoach()
   .replace(/<div class="row"><div><span>체중 <span class="muted">\(선택\)<\/span><\/span>.*?<\/button><\/div><\/div>/, '')
-  .replace('<div class="card" id="ticketCard">', `<button class="card replink tap" data-act="myinfo" data-v="settings" id="myInfoCard"><div><b>내 정보</b><small>${esc(meSummary() || '아직 안 적었어요 · 코치가 무게를 정확히 잡는 데 써요')}</small></div><span class="muted">›</span></button><div class="card" id="ticketCard">`);
+  .replace('<div class="card" id="ticketCard">', `<button class="card replink tap" data-act="myinfo" data-v="settings" id="myInfoCard"><div><b>내 정보</b><small>${esc(meSummary() || '아직 안 적었어요 · 적어 두면 ' + chJo('이', '가') + ' 무게를 더 정확히 맞춰 줘요')}</small></div><span class="muted">›</span></button><div class="card" id="ticketCard">`);
 
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if (!b || b.closest('#evo') || b.disabled) return;
@@ -149,7 +150,7 @@ document.addEventListener('click', e => {
     obOk: () => { const el = $('obIn'); obAnswer(el ? el.value : ''); },
     obSkip: () => obAnswer(null, true),
     myinfo: () => { S.infoFrom = v || S.sub; return go('workout', 'myinfo'); },
-    meSex: () => { ensureMe(); S.me.sex = S.me.sex === v ? null : v; toast('저장했어요 · 코치가 이제 이걸 보고 답해요'); },
+    meSex: () => { ensureMe(); S.me.sex = S.me.sex === v ? null : v; toast(`저장했어요 · 이제 ${chJo('이', '가')} 이걸 보고 답해요`); },
     meClear: () => { setVal(v, null); toast('지웠어요 · 이건 이제 계산에 안 써요'); },
   };
   if (!H[a]) return;
@@ -169,7 +170,7 @@ document.addEventListener('change', e => {
   const el = e.target; if (!el.classList || !el.classList.contains('pin')) return;
   const k = el.dataset.k;
   if (!el.value.trim()) { setVal(k, null); toast('지웠어요 · 이건 이제 계산에 안 써요'); }
-  else { const r = checkVal(k, el.value); if (r.msg) toast(r.msg.replace(/ ?🙂/, '').replace('줄래? 소수점', '주세요 · 소수점').replace('줄래?', '주세요').replace('한 자리까지 돼 (', '한 자리까지 돼요 (').replace(/^음, (\S+)가 (\S+)\? 조금 이상한데 한 번만 다시 알려 주세요/, '$1 $2? 조금 이상해요. 한 번만 다시 적어 주세요').replace('눌러도 돼.', '눌러도 돼요.')); else { setVal(k, r.v); toast('저장했어요 · 코치가 이제 이걸 보고 답해요'); } }
+  else { const r = checkVal(k, el.value); if (r.msg) toast(r.msg.replace(/ ?🙂/, '').replace('줄래? 소수점', '주세요 · 소수점').replace('줄래?', '주세요').replace('한 자리까지 돼 (', '한 자리까지 돼요 (').replace(/^음, (\S+)가 (\S+)\? 조금 이상한데 한 번만 다시 알려 주세요/, '$1 $2? 조금 이상해요. 한 번만 다시 적어 주세요').replace('눌러도 돼.', '눌러도 돼요.')); else { setVal(k, r.v); toast(`저장했어요 · 이제 ${chJo('이', '가')} 이걸 보고 답해요`); } }
   save();
   const redraw = () => { if (!document.activeElement || !document.activeElement.classList.contains('pin')) render(); };
   if (typeof ptrDown !== 'undefined' && ptrDown) setTimeout(redraw, 160); else redraw();

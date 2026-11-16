@@ -202,7 +202,6 @@ select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--g2)
 .moodpill svg{width:11px;height:12px;fill:currentColor}
 .moodpill.sm{font-size:11px;padding:2px 8px}
 .say.moodsay.low{background:#EEF2F7;color:#3F4B5E}.say.moodsay.high{background:#FFF6E3;color:#6B4700}
-.stage + .moodsay{margin-top:12px}
 .lightrow{display:flex;gap:10px;align-items:flex-start;margin-top:12px;padding-top:12px;border-top:1px solid var(--g1);cursor:pointer}
 .lightrow input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--rose);flex:none}
 .lightrow b{display:block;font-size:14px}.lightrow small{display:block;color:var(--g5);font-size:12px;margin-top:2px;word-break:keep-all}
@@ -764,9 +763,6 @@ button.setrow.tapset:active{background:var(--g1)}
 #qMin{display:grid;grid-template-columns:repeat(5,1fr)}#qMin .chip{padding:8px 0;text-align:center}
 
 /* ===== v1.42 (11-11) — «주 몇 회» 목표 삭제 · 홈 «이번 주 n회 운동» 아래 캐릭터 한마디 ===== */
-.wsay{display:flex;align-items:center;gap:8px;background:#EAF6FF;border-radius:12px;padding:6px 11px 6px 8px;font-size:13px;line-height:1.4;margin-top:10px}
-.wsay .cbox{flex:0 0 30px;width:30px;height:30px;display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
-.wsay span:last-child{min-width:0}
 /* v1.50 오운완 인증 사진 보너스 안내 — 자랑하기 셀카 칸 아래 한 줄(미리보기 높이를 그만큼 줄여 아래 버튼이 밀리지 않게) */
 .shr-sh.hasbonus .shr-prev{height:min(400px,calc(100dvh - 450px));min-height:276px;margin-bottom:10px}
 .shr-sh.hasbonus .shr-kinds~.shr-prev{height:min(400px,calc(100dvh - 496px))}
@@ -1000,7 +996,7 @@ body:has(#cSaveBar) .toast{bottom:156px}
 .mi.on{background:#FFE3EE;border-color:var(--rose)}.mi.on small{color:var(--rose);font-weight:700}
 .miempty,.minote{font-size:12px;color:var(--g5);background:var(--g1);border-radius:10px;padding:10px;text-align:center}.minote{margin-top:6px;background:none;padding:2px 0 0}
 .slots:empty{display:none}
-.mini .mbox:has(.wcap),.wsay .cbox:has(.wcap),.rank .av:has(.wcap){overflow:visible}
+.mini .mbox:has(.wcap),.rank .av:has(.wcap){overflow:visible}
 @media (max-width:350px){.migrid{gap:4px}.mi small{font-size:10px;letter-spacing:-.3px}}
 
 /* ===== v1.70 장착 아이템 27종 — 상점 «장착 아이템» 칸 · 내 아이템 칸 · 알림 ===== */

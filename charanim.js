@@ -1,8 +1,6 @@
 'use strict';
 /* v1.34 — 캐릭터 애니(디자인봇 11-08~09 최종본): 3단계 시그니처 포즈(홈 8~12초 무작위·탭 즉시), 2단계 알통(Lv.1·50·99), 4단계 팔 흔들기 ±5°(rig 부품), 5단계 진화 클립.
    클립은 투명 WebP loop=1(전환 구간만) → 매번 새 blob URL 로 다시 재생(같은 URL 은 브라우저가 끝 프레임에 멈춘 채 다시 돌리지 않음). 데이터 = assets/anim/anim.js(window.ANIM) */
-const SEGS = ['01', '01_big', '10', '10_big', '20', '30', '30_big', '40', '50', '50_big', '60', '70', '80', '80_big', '90', '99'];
-const segLabel = s => 'Lv.' + (+s.slice(0, 2)) + (s.endsWith('_big') ? '+' : '');
 const CLIP_BLOBS = {}, CLIP_URLS = new WeakMap();
 async function clipURL(src) { if (!CLIP_BLOBS[src]) CLIP_BLOBS[src] = fetch(src).then(r => { if (!r.ok) throw new Error(src + ' ' + r.status); return r.blob(); }); return URL.createObjectURL(await CLIP_BLOBS[src]); }
 /* img 에 클립을 처음부터 재생. 이전 blob URL 은 교체 뒤 해제 */
@@ -52,34 +50,9 @@ function sigClipHTML(t, lv) {
   return `<img class="sigclip" id="sigClip" alt="" style="transform-origin:50% ${fy.toFixed(2)}%${Math.abs(r - 1) > 1e-3 ? `;transform:scale(${r.toFixed(4)})` : ''}">`;
 }
 
-/* ===== 내 캐릭터 카드 — 시그니처 포즈 16구간 · 알통 Lv.1·50·99 ===== */
-function sigCard(t, lv) {
-  /* v1.74: 앞으로 될 단계는 안 보여 준다 — 지금 단계와 지나온 단계만. 칩이 하나뿐이면 띠 자체를 뺀다 */
-  const cut = cutOf(lv), segs = ANIM.sig[t] || {}, seen = SEGS.filter(s => segs[s] && +s.slice(0, 2) <= +cut && (!s.endsWith('_big') || s === cut || +s.slice(0, 2) < +cut));
-  const strip = seen.length > 1;
-  return `<div class="card" id="sigCard"><div class="h2" style="font-size:16px">시그니처 포즈</div><div class="muted" style="margin-bottom:8px">홈 화면에서 8~12초마다 한 번씩 해요 · 캐릭터를 탭하면 바로 해요${strip ? ' · 지나온 단계를 누르면 그때 포즈가 나와요' : ''}</div>
-  <button class="sigview" id="sigView" data-act="sigSeg" data-v="${cut}" aria-label="포즈 다시 보기"><img id="sigViewClip" alt=""><span class="pill lvpill sigtag" id="sigViewTag">${segLabel(cut)}</span></button>
-  ${strip ? `<div class="sigstrip" id="sigStrip">${seen.map(s => `<button class="sigthumb ${s === cut ? 'on' : ''}" data-act="sigSeg" data-v="${s}"><img src="assets/anim/sig/${t}/lv${s}_base.png?v=${VER}" alt=""><small>${segLabel(s)}</small></button>`).join('')}</div>` : ''}</div>`;
-}
-function flexCard(t, lv) {
-  const f = ANIM.flex[t] || {}, segs = ['01', '50', '99'].filter(s => f[s] && +s <= Math.max(1, lv)); if (!segs.length) return '';   // v1.74: 아직 안 된 레벨의 알통은 안 보여 준다
-  const many = segs.length > 1;
-  return `<div class="card" id="flexCard"><div class="h2" style="font-size:16px">알통 자랑${many ? ' · Lv.' + segs.map(s => +s).join(' → ') : ''}</div><div class="muted" style="margin-bottom:8px">${many ? '레벨이 오르면서 같은 캐릭터가 얼마나 커졌는지 보여요 · ' : ''}탭하면 다시 봐요</div>
-  <div class="flexrow${many ? '' : ' one'}">${segs.map(s => `<button class="flexcell" data-act="flexPlay" data-v="${s}"><img id="flex_${s}" alt=""><small>Lv.${+s}</small></button>`).join('')}</div></div>`;
-}
-async function sigSegPlay(seg) {
-  const img = $('sigViewClip'); if (!img) return; const t = S.type;
-  document.querySelectorAll('#sigStrip .sigthumb').forEach(b => b.classList.toggle('on', b.dataset.v === seg));
-  $('sigView').dataset.v = seg; $('sigViewTag').textContent = segLabel(seg);
-  await clipPlay(img, sigPath(t, seg));
-}
-async function flexPlay(seg) { const img = $('flex_' + seg); if (img) await clipPlay(img, `assets/anim/flex/${S.type}/lv${seg}.webp?v=${VER}`); }
-
-/* render() 뒤 — 홈 무대 예약·내 캐릭터 카드 재생 */
+/* render() 뒤 — 홈 무대 예약 (v1.87: 내 캐릭터 화면의 «시그니처 포즈»·«알통 자랑» 칸은 없앰 — 홈 무대 포즈는 그대로) */
 function animMount() {
   if ($('sigClip')) { SIG.playing = false; sigSchedule(); } else clearTimeout(SIG.timer);
-  if ($('sigViewClip')) { sigSegPlay(cutOf(S.level)); const on = document.querySelector('#sigStrip .sigthumb.on'); if (on) on.scrollIntoView({ inline: 'center', block: 'nearest' }); }   // 띠는 현재 단계가 보이게
-  if ($('flexCard')) ['01', '50', '99'].forEach((s, i) => setTimeout(() => flexPlay(s), i * 350));
 }
 
 /* ===== 5단계 진화 클립(다크 GIF 160×128·128×128 → 2배) — 큰 경계에 디자인 클립이 있으면 그걸 쓴다 ===== */

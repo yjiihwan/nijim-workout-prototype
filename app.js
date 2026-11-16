@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.86';
+const VER = 'v1.87';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -911,9 +911,6 @@ function vMe() {
   <button class="btn" data-act="sub" data-v="shop" id="shopBtn">🛍️ 아이템 상점</button>
   <button class="btn ghost" data-act="rechoose" style="margin-top:8px">캐릭터 바꾸기 <span class="muted">(Lv.10 전 1회 무료)</span></button></div>
   ${centerCard()}
-  <div class="card" id="exprCard"><div class="h2" style="font-size:16px">컨디션 표정 5종</div><div class="muted" style="margin-bottom:8px">얼굴만 바뀌어요 · 레벨·경험치와는 상관없어요 · 지금: <b style="color:var(--ink)">${EXPR[exprNow()].label}</b></div>
-  <div class="exprs">${EXPR_KEYS.map(ex => `<div class="ex5 ${exprNow()===ex?'on':''}">${charHTML(t, S.level, 64, false, ex)}<small>${EXPR[ex].label}</small></div>`).join('')}</div></div>
-  ${sigCard(t, S.level)}${flexCard(t, S.level)}
   <div class="card"><div class="h2" style="font-size:16px">업적</div><div class="muted">업적 24개 잠김/달성 목록 자리 (프로토타입 범위 밖)</div></div></div>`;
 }
 
@@ -1600,8 +1597,6 @@ document.addEventListener('click', e => {
   const a = b.dataset.act, id = b.dataset.id, v = b.dataset.v, dd = +b.dataset.d || 0;
   const s = S.session, it = curItem();
   if (a === 'pose') { sigPlayHome(); return; }
-  if (a === 'sigSeg') { sigSegPlay(v); return; }
-  if (a === 'flexPlay') { flexPlay(v); return; }
   if (a === 'shClose') return $('missAsk') ? missAnswer(false) : shClose();   // v1.82: 묻는 창을 그냥 닫으면 «안 쓰기»
   if (a === 'missUse') return missAnswer(true);
   if (a === 'missNo') return missAnswer(false);

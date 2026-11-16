@@ -54,15 +54,18 @@ function sigClipHTML(t, lv) {
 
 /* ===== 내 캐릭터 카드 — 시그니처 포즈 16구간 · 알통 Lv.1·50·99 ===== */
 function sigCard(t, lv) {
-  const cut = cutOf(lv), segs = ANIM.sig[t] || {};
-  return `<div class="card" id="sigCard"><div class="h2" style="font-size:16px">시그니처 포즈</div><div class="muted" style="margin-bottom:8px">홈 화면에서 8~12초마다 한 번씩 해요 · 캐릭터를 탭하면 바로 해요 · 아래 단계를 누르면 그 단계 포즈가 나와요</div>
+  /* v1.74: 앞으로 될 단계는 안 보여 준다 — 지금 단계와 지나온 단계만. 칩이 하나뿐이면 띠 자체를 뺀다 */
+  const cut = cutOf(lv), segs = ANIM.sig[t] || {}, seen = SEGS.filter(s => segs[s] && +s.slice(0, 2) <= +cut && (!s.endsWith('_big') || s === cut || +s.slice(0, 2) < +cut));
+  const strip = seen.length > 1;
+  return `<div class="card" id="sigCard"><div class="h2" style="font-size:16px">시그니처 포즈</div><div class="muted" style="margin-bottom:8px">홈 화면에서 8~12초마다 한 번씩 해요 · 캐릭터를 탭하면 바로 해요${strip ? ' · 지나온 단계를 누르면 그때 포즈가 나와요' : ''}</div>
   <button class="sigview" id="sigView" data-act="sigSeg" data-v="${cut}" aria-label="포즈 다시 보기"><img id="sigViewClip" alt=""><span class="pill lvpill sigtag" id="sigViewTag">${segLabel(cut)}</span></button>
-  <div class="sigstrip" id="sigStrip">${SEGS.filter(s => segs[s]).map(s => `<button class="sigthumb ${s === cut ? 'on' : ''}" data-act="sigSeg" data-v="${s}"><img src="assets/anim/sig/${t}/lv${s}_base.png?v=${VER}" alt=""><small>${segLabel(s)}</small></button>`).join('')}</div></div>`;
+  ${strip ? `<div class="sigstrip" id="sigStrip">${seen.map(s => `<button class="sigthumb ${s === cut ? 'on' : ''}" data-act="sigSeg" data-v="${s}"><img src="assets/anim/sig/${t}/lv${s}_base.png?v=${VER}" alt=""><small>${segLabel(s)}</small></button>`).join('')}</div>` : ''}</div>`;
 }
-function flexCard(t) {
-  const f = ANIM.flex[t] || {}, segs = ['01', '50', '99'].filter(s => f[s]); if (!segs.length) return '';
-  return `<div class="card" id="flexCard"><div class="h2" style="font-size:16px">알통 자랑 · Lv.1 → 50 → 99</div><div class="muted" style="margin-bottom:8px">레벨이 오르면 같은 캐릭터가 얼마나 커지는지 보여요 · 탭하면 다시 봐요</div>
-  <div class="flexrow">${segs.map(s => `<button class="flexcell" data-act="flexPlay" data-v="${s}"><img id="flex_${s}" alt=""><small>Lv.${+s}</small></button>`).join('')}</div></div>`;
+function flexCard(t, lv) {
+  const f = ANIM.flex[t] || {}, segs = ['01', '50', '99'].filter(s => f[s] && +s <= Math.max(1, lv)); if (!segs.length) return '';   // v1.74: 아직 안 된 레벨의 알통은 안 보여 준다
+  const many = segs.length > 1;
+  return `<div class="card" id="flexCard"><div class="h2" style="font-size:16px">알통 자랑${many ? ' · Lv.' + segs.map(s => +s).join(' → ') : ''}</div><div class="muted" style="margin-bottom:8px">${many ? '레벨이 오르면서 같은 캐릭터가 얼마나 커졌는지 보여요 · ' : ''}탭하면 다시 봐요</div>
+  <div class="flexrow${many ? '' : ' one'}">${segs.map(s => `<button class="flexcell" data-act="flexPlay" data-v="${s}"><img id="flex_${s}" alt=""><small>Lv.${+s}</small></button>`).join('')}</div></div>`;
 }
 async function sigSegPlay(seg) {
   const img = $('sigViewClip'); if (!img) return; const t = S.type;

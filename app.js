@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.73';
+const VER = 'v1.74';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -432,7 +432,7 @@ function vChoose() {
   const pick = S.pick || S.type;
   return `<div class="sec">${S.onboarded ? '' : obProg(1)}<div class="h2">같이 운동할 친구를 골라 주세요</div><div class="muted" style="margin-bottom:12px">능력치는 모두 같고 생김새·말투만 달라요. Lv.10 전에 1번 바꿀 수 있어요.</div>
   <div class="choose" id="chooseGrid">${Object.keys(CH).map(k => `<button class="cc ${pick===k?'on':''}" data-act="pick" data-v="${k}">${charHTML(k, 1, 84, false, null, true)}<b>${CH[k].name}</b></button>`).join('')}</div>
-  <div class="card" style="text-align:center"><div class="muted">진화 미리보기 · <b style="color:var(--ink)">${esc(CH[pick].name)}</b> — ${esc(CH[pick].intro)}</div><div style="display:flex;justify-content:space-around;align-items:flex-end;margin-top:8px">${[1,30,60,99].map(l => `<div style="text-align:center">${charHTML(pick, l, 76, l >= 99)}<div class="muted" style="font-size:11px;margin-top:4px">Lv.${l}</div></div>`).join('')}</div></div>
+  <div class="card" style="text-align:center"><div class="muted"><b style="color:var(--ink)">${esc(CH[pick].name)}</b> — ${esc(CH[pick].intro)} · 레벨이 오르면 모습이 달라져요</div></div>
   <button class="btn" data-act="choose" id="chooseBtn">${esc(CH[pick].name)}${wa(pick)} 시작하기</button>
   <div class="muted demoonly" style="text-align:center;margin-top:8px">시연용: 고른 뒤에도 레벨·경험치는 예시값(Lv.18)을 유지해요</div></div>`;
 }
@@ -452,7 +452,7 @@ function vWorkout() {
   if (!S.chosen) return vChoose();
   const t = S.type, lv = S.level, tr = tierOf(lv);
   const toNext = lv >= 99 ? 0 : Math.max(0, need(lv) - S.xp);
-  const nextEvo = lv >= 99 ? '만렙 달성!' : lv >= 90 ? 'Lv.99에 골드 아우라' : `Lv.${(Math.floor(lv/10)+1)*10}에 진화해요`;
+  const nextEvo = lv >= 99 ? '만렙 달성!' : lv >= 90 ? 'Lv.99가 최고 레벨이에요' : `Lv.${(Math.floor(lv/10)+1)*10}에 진화해요`;
   const pend = S.pending ? `<div class="notice"><span>⏳ 못 본 레벨업 장면이 있어요</span><button class="btn sm" data-act="playPending">보기</button></div>` : '';
   const eqNames = gearPills() + ITEMS.filter(i => i.kind !== 'look' && S.equipped[i.id]).map(i => `<span class="pill">${i.name}</span>`).join('') + gymPill();   // v1.68: 알약을 누르면 내 캐릭터 «내 아이템» 칸으로 · v1.70: 4개부터는 한 줄로
   const seg = `<div class="seg wseg"><button class="${S.wseg==='mine'?'on':''}" data-act="wseg" data-v="mine">내 운동</button><button class="${S.wseg==='feed'?'on':''}" data-act="wseg" data-v="feed">오운완 피드</button></div>`;
@@ -900,7 +900,7 @@ function vMe() {
   ${centerCard()}
   <div class="card" id="exprCard"><div class="h2" style="font-size:16px">컨디션 표정 5종</div><div class="muted" style="margin-bottom:8px">얼굴만 바뀌어요 · 레벨·경험치와는 상관없어요 · 지금: <b style="color:var(--ink)">${EXPR[exprNow()].label}</b></div>
   <div class="exprs">${EXPR_KEYS.map(ex => `<div class="ex5 ${exprNow()===ex?'on':''}">${charHTML(t, S.level, 64, false, ex)}<small>${EXPR[ex].label}</small></div>`).join('')}</div></div>
-  ${sigCard(t, S.level)}${flexCard(t)}
+  ${sigCard(t, S.level)}${flexCard(t, S.level)}
   <div class="card"><div class="h2" style="font-size:16px">업적</div><div class="muted">업적 24개 잠김/달성 목록 자리 (프로토타입 범위 밖)</div></div></div>`;
 }
 

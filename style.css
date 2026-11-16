@@ -1071,3 +1071,6 @@ body:has(#cSaveBar) .toast{bottom:156px}
 /* ⑧ 작은 버튼·스위치: 모양은 그대로, 눌리는 영역만 위아래로 넓힘 */
 .btn.sm{position:relative}.btn.sm::before,.sw::before{content:"";position:absolute;left:0;right:0;top:-6px;bottom:-6px}
 .sw::before{top:-8px;bottom:-8px}
+
+/* v1.74 — 알통 자랑 칸이 하나뿐일 때 가운데 한 칸 */
+.flexrow.one .flexcell{flex:none;width:140px;max-width:100%}

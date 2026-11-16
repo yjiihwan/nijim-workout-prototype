@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.77';
+const VER = 'v1.78';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -339,15 +339,18 @@ const moodPill = (m, small = false) => m ? `<span class="pill moodpill ${m.verdi
 /* «월 20회»=코치 질문 한 달 무료 횟수(screens2.js COACH_MAX) — screens2.js 가 늦게 읽혀도 깨지지 않게 기본값 */
 /* 첫 화면은 screens2.js(ensure2) 보다 먼저 그려짐 → 시연 기본값(used 3)을 같은 값으로 미리 넣어 코치 화면 «남은 질문»과 숫자를 맞춤 */
 const coachQuota = () => { if (typeof ensure2 === 'function') ensure2(); else S.coach = S.coach || { agreed: false, used: 3, msgs: [] }; const max = typeof COACH_MAX === 'number' ? COACH_MAX : 20, used = (S.coach && S.coach.used) || 0; return `이번 달 무료 질문 ${Math.max(0, max - used)}/${max}번 남음`; };
-const coachLine = () => {
+/* 기존(정해 둔) 문구 — AI 문구가 없거나 늦거나 실패했을 때 그대로 쓴다 */
+const coachLineBase = () => {
+  if (S.session) return '운동 중! 끝나면 [운동 끝]만 눌러 줘';   // v1.78: 운동 중이 먼저 — 졸림·시무룩 얼굴이어도 «같이 운동 갈래?»가 나오지 않게
   const m = moodToday(); if (m) return m.line;   // 결정 21: 그날 표정이 있으면 말풍선은 그 문구
   if (S.mood && S.mood.date === TODAY && S.mood.quiet) return QUIET_LINE;
   const ex = exprNow(); if (EXPR[ex].line) return EXPR[ex].line;
-  if (S.session) return '운동 중! 끝나면 [운동 끝]만 눌러 줘';
   if (todayDone()) return '오늘 기록 완료! 내일은 어깨 쪽 한번 가볼까?';
   if (!S.records.length) return '첫 운동을 기록해 볼까? [오늘 운동 기록하기]를 눌러 줘';
   return '오늘 같이 운동하면 내가 더 단단해질 거야 💧';
 };
+/* v1.78: AI가 운동기록을 보고 쓴 오늘의 한마디(coach_ai.js)가 있으면 그것, 없으면 기존 문구 */
+const coachLine = () => (typeof aiLine === 'function' && aiLine()) || coachLineBase();
 /* v1.77: 첫 화면의 캐릭터 말풍선은 코치 카드 하나만(형 11-16) — 캐릭터 카드 아래 칸·주간 카드 한마디 삭제 */
 /* 요즘 한 주에 몇 번 운동하는지(지난 4주 평균 · 기록 없으면 3) — 계산기 기본값용 */
 const usualWeek = () => { const m0 = weekDays()[0], a = new Date(m0); a.setDate(a.getDate() - 28); const from = ymd(a);
@@ -485,7 +488,7 @@ function vWorkout() {
     <div class="week">${week}</div>
     <div class="wxp" id="weekXP"><span>이번 주 운동 경험치</span><b>${weekXP().toLocaleString()}/${CFG.WEEK_CAP.toLocaleString()}</b></div><div class="bar thin"><i style="width:${Math.min(100, Math.round(weekXP() / CFG.WEEK_CAP * 100))}%"></i></div>${centerWeek() ? `<div class="wxp itm" id="weekCenterXP"><span>+ 입점센터 보너스</span><b>${centerWeek().toLocaleString()} · 따로 계산</b></div>` : ''}${itemWeek() ? `<div class="wxp itm" id="weekItemXP"><span>+ 아이템 경험치</span><b>${itemWeek().toLocaleString()} · 한도 없음</b></div>` : ''}
     <div class="muted" style="margin-top:8px;font-weight:700;color:var(--ink)">${now.getMonth()+1}월</div><div class="cal">${cal}</div></div>
-  ${gymCard()}<div class="card coach" id="coachCard"><div class="cbox">${charFit(t, lv, 52, ex)}</div><div class="cmain"><div class="say">${coachLine()}</div><button class="coachbtn" data-act="coach" id="coachBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg><span class="ctxt">코치에게 물어보기</span></button><div class="cquota" id="coachQuota">${coachQuota()}</div></div></div>
+  ${gymCard()}<div class="card coach" id="coachCard"><div class="cbox">${charFit(t, lv, 52, ex)}</div><div class="cmain"><div class="say" id="coachSay"><span>${esc(coachLine())}</span></div><button class="coachbtn" data-act="coach" id="coachBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg><span class="ctxt">코치에게 물어보기</span></button><div class="cquota" id="coachQuota">${coachQuota()}</div></div></div>
   <div class="card" id="recentCard"><div style="display:flex;justify-content:space-between;align-items:center"><div class="h2" style="margin:0;font-size:16px">최근 기록</div><button class="linkbtn" data-act="sub" data-v="stats" style="margin:0">전체 보기 ›</button></div>
     ${recent.map(r => `<div class="rec tap" data-act="rec" data-id="${r.id}"><div><b>${esc(r.summary)}</b><small>${r.date.slice(5).replace('-', '/')} · ${esc(r.place)} · ${vLabel(r.v)}</small></div>${recXP(r)}</div>`).join('')}</div>
   <div class="entries" id="entries">
@@ -767,7 +770,7 @@ function vResult() {
   ${rec && rec.auto ? `<div class="notice" id="autoNote"><span>3시간 동안 적은 게 없어서 자동으로 끝냈어요 · 마지막으로 적은 시각에 끝난 걸로 저장했어요</span></div>` : ''}
   <div class="card result ${v}" id="resultCard"><div class="cwrap big ${v}">${charHTML(t, lv, 170, true, exprOfMood(show), false, 170, { wear: true })}</div>
     <div class="rname"><span class="name">${esc(CH[t].name)}</span><span class="pill lvpill">Lv.${lv}</span>${show ? moodPill(show) : '<span class="pill tier1">평소 표정</span>'}</div>
-    <div class="say moodsay ${v}" id="resultSay">${esc(m && m.line ? m.line : coachLine())}</div>
+    <div class="say moodsay ${v}" id="resultSay">${esc(m && m.line ? m.line : coachLineBase())}</div>
     <div class="est"><span>오늘 얻은 경험치</span><em class="${S.bump ? 'bump' : ''}" id="resultXP">+${(rec ? rec.xp : 0).toLocaleString()} XP</em></div>
     <div class="rmeta">${rec ? vBadge(rec.v) + sfBadge(rec.selfieXP > 0) : ''}<span class="muted">${rec ? esc(rec.summary) : ''}</span></div>
     ${rec && rec.held ? `<div class="notice hold" id="holdNote"><span>세트 사이가 ${CFG.SET_GAP_SEC}초보다 짧아서 경험치 ${fmt(heldAll(rec))} XP는 24시간 뒤에 들어와요. 기록은 그대로 저장됐어요.</span><button class="btn sm ghost demoonly" data-act="release" data-id="${rec.id}">🧪 24시간 뒤</button></div>` : ''}
@@ -1099,6 +1102,7 @@ function render() {
   document.body.classList.toggle('deep', !!((S.tab === 'workout' && S.sub && (S.chosen || S.sub.startsWith('onb')) && SUB[S.sub]) || (S.tab === 'all' && S.allSub)));
   document.body.classList.toggle('hasbar', !!$('endBar'));
   eatMount(); animMount(); gearNoteDue();
+  if (typeof aiFits === 'function' && $('coachSay') && !aiFits($('coachSay').textContent)) $('coachSay').firstElementChild.textContent = coachLineBase();   // v1.78: 좁은 화면에서 AI 문구가 두 줄을 넘으면 기존 문구
   document.querySelectorAll('.tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
   if (S.tab === 'workout' && S.sub === 'selfie' && S.selfieStep === 'cam') camStart();
   S.bump = 0;
@@ -1279,6 +1283,7 @@ function endSession0(s, auto) {
   S.mood = { verdict, ratio: S.moodDemo === 'auto' ? j.ratio : null, why: j.why, date: TODAY, quiet: S.moodDemo === 'auto' && j.quiet, line: verdict === 'na' ? '' : MOOD[verdict].lines[Math.floor(Math.random() * MOOD[verdict].lines.length)] };
   if (S.mood.quiet) S.mood.line = QUIET_LINE;
   S.session = null; S.demo = 'none'; S.rest = null; S.lastResult = rec.id;
+  if (typeof aiWarm === 'function') aiWarm();   // v1.78: 운동을 끝내면 한마디를 한 번 더 받아 둔다(결과 화면 보는 동안)
   return { res, got: gained + cb, held: heldAll(rec) };
 }
 /* 보류 해제 — 24시간이 지나면 자동(앱을 열 때 releaseDue), 시연 버튼(🧪 24시간 뒤)도 같은 함수 */

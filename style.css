@@ -1147,3 +1147,8 @@ body.deep .csavebar{margin-bottom:calc(-24px - env(safe-area-inset-bottom));padd
 #fdManage{padding:6px 16px}
 .fdpost .btn.delrec{margin-top:10px}
 @media (max-width:350px){.fdcbtn{padding:0 12px;font-size:14px}.fdcn{font-size:12px}.fdstat{gap:16px}.fdpchar{width:76px;height:76px}}
+
+/* ===== v1.78 첫 화면 코치 말풍선 = AI 오늘의 한마디 — 칸 높이를 두 줄로 잡아 두고(글이 바뀌어도 아래 카드가 안 밀림) 바뀔 땐 한 번만 부드럽게 ===== */
+#coachSay{min-height:calc(13px*1.4*2 + 18px);display:flex;align-items:center;word-break:keep-all;overflow-wrap:anywhere}
+#coachSay>span{display:block;transition:opacity .18s ease}
+#coachSay.swap>span{opacity:0}

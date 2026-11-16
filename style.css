@@ -83,8 +83,7 @@ select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--g2)
 .evo.tier6 .evo-rays{background:repeating-conic-gradient(rgba(229,177,88,.22) 0 8deg,transparent 8deg 22deg)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .evo-top{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:calc(14px + env(safe-area-inset-top)) 14px 0;z-index:5}
-.evo-sound,.evo-skip{background:rgba(255,255,255,.14);border-radius:99px;padding:8px 14px;font-weight:700;font-size:14px;color:#fff}
-.evo-sound{width:40px;height:40px;padding:0;font-size:18px}
+.evo-skip{background:rgba(255,255,255,.14);border-radius:99px;padding:8px 14px;font-weight:700;font-size:14px;color:#fff}
 .evo-tag{font-size:12px;font-weight:700;opacity:.75}
 .evo-stage{position:relative;width:100%;height:min(320px,44vh);display:flex;align-items:flex-end;justify-content:center;z-index:2;margin-top:-6vh}
 .evo-stage img{position:absolute;bottom:0;left:50%;transform:translateX(-50%);transform-origin:50% 100%;max-width:86%;object-fit:contain}

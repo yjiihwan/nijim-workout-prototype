@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.83';
+const VER = 'v1.84';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -112,7 +112,7 @@ const seedHist = () => {
 const fresh = () => ({ type:'mungchi', chosen:false, onboarded:false, perm:{ noti:false },
   noti:{ entry:true, nudge:true, report:true }, hideTips:false, bodyweight:null,
   level:18, xp:need(18) - 120, exLv:18, exXp:need(18) - 120, points:2450,
-  events:[], pending:null, sound:true, placeholder:false, demo:'none', quitDemo:false,
+  events:[], pending:null, placeholder:false, demo:'none', quitDemo:false,
   exprDemo:'auto', moodDemo:'auto', mood:null, lowRun:0,
   owned:{ cap:1 }, equipped:{ cap:true }, inv:{ boost1:0, boost7:0, potion:0, charm:0 }, boostNext:false, boost7Until:null, nextBoosts:[], timedBoosts:[], eatCat:'all', paidLog:[], shields:0,
   records: seedRecords(), hist: seedHist(), streakWeeks: 5, ticketLeft: 1, missDone: null, custom: [],
@@ -171,6 +171,7 @@ function sanitize() {
   S.records = S.records.filter(r => !(r.edited && !r.items.length && !r.xp));   // 옛 판에서 세트를 다 지워 남은 «기록 없음 +0 XP» 줄 정리
   S.paidLog = S.paidLog.filter(p => plainObj(p) && typeof p.date === 'string' && num(p.xp));
   S.events = S.events.filter(ev => plainObj(ev) && num(ev.from) && num(ev.to) && CH[ev.type]);
+  delete S.sound; S.events.forEach(ev => { delete ev.replays; });   // v1.84 레벨업 소리는 늘 켜짐 · 다시 보기 없음 — 옛 저장값 지움
   if (S.pending != null && !S.events.some(ev => ev.id === S.pending)) S.pending = null;
   const s = S.session;
   if (s != null) {
@@ -925,7 +926,7 @@ function centerCard() {
 
 /* ===== C13 설정 (v1.42: 주간 목표 카드 삭제) ===== */
 function vSettings() {
-  const evs = [...S.events].reverse(), photos = S.records.filter(r => r.photo);
+  const photos = S.records.filter(r => r.photo);
   return `${subHead('설정')}<div class="sec">
   <div class="card" id="notiCard"><div class="h2" style="font-size:16px">알림</div>
     <div class="row"><div><span>입장 확인 알림</span><div class="muted">«입장 확인! 캐릭터가 기다려요»</div></div>${sw('noti', S.noti.entry, 'notiEntry').replace('data-act="noti"', 'data-act="noti" data-v="entry"')}</div>
@@ -940,11 +941,6 @@ function vSettings() {
   <div class="card" id="photoCard"><div class="h2" style="font-size:16px">내 사진</div><div class="muted" style="margin-bottom:8px">${photos.length}장 · 피드에 공개 ${fdPubCount()}장 <span id="photoPubNote">· «피드에 공개»를 켠 사진만 다른 회원에게 보여요</span></div>
     ${photos.length ? `<div class="thumbs">${photos.map(r => `<button data-act="rec" data-id="${r.id}"><img src="${r.photo}" alt=""><small>${r.date.slice(5).replace('-', '/')}</small></button>`).join('')}</div>` : '<div class="muted">아직 찍은 오운완 셀카가 없어요</div>'}
     <button class="btn ghost" data-act="delAllPhotos" id="delAll" ${photos.length ? '' : 'disabled'}>내 사진 전체 삭제</button></div>
-  <div class="card"><div class="h2" style="font-size:16px">레벨업 장면</div>
-  <div class="row"><span>레벨업 소리</span><button class="sw ${S.sound?'on':''}" data-act="sound" id="soundSw"></button></div>
-  <div class="row"><span class="muted">레벨업 장면은 화면 아무 데나 누르면 건너뛸 수 있어요</span></div></div>
-  <div class="card" id="replayCard"><div class="h2" style="font-size:16px">레벨업 다시 보기</div>
-  ${evs.length ? evs.map(e => `<div class="row"><div><b>Lv.${e.from} → ${e.to}</b> ${e.big?'<span class="pill tier4">진화</span>':''}<div class="muted">${e.at} · ${e.watched?(e.skipped?'건너뜀':'봤음'):'아직 못 봄'}${e.replays?` · 다시 본 횟수 ${e.replays}`:''}</div></div><button class="btn sm ghost" data-act="replay" data-id="${e.id}">다시 보기</button></div>`).join('') : '<div class="muted">아직 레벨업 기록이 없어요</div>'}</div>
   <div class="card demo"><div class="h3">🧪 시연 도구</div>
   <div class="row"><span>오늘 센터 입장 기록 있음</span>${sw('entryDemo', S.entryDemo)}</div>
   <div class="row"><div><span>아이템 경험치 한도</span><div class="muted">결정 33 · 운동 경험치만 하루 ${CFG.DAY_CAP}·주 ${CFG.WEEK_CAP.toLocaleString()}</div></div><b>없음</b></div>
@@ -1306,7 +1302,7 @@ function releaseDue() {
    입점 보너스·부스터 몫도 같이 다시 센다. 수정으로 레벨이 올라도 레벨업 연출은 다시 틀지 않는다(연출 반복 방지) */
 function shiftXP(diff, exDiff) {
   const from = S.level, a = applyXP({ level: S.level, xp: S.xp }, diff); S.level = a.level; S.xp = a.xp; gainEx(exDiff);
-  if (S.level < from) { S.events = S.events.filter(ev => ev.to <= S.level); if (!S.events.some(ev => ev.id === S.pending)) S.pending = null; }   // 내려간 레벨의 «레벨업 다시 보기»는 같이 정리
+  if (S.level < from) { S.events = S.events.filter(ev => ev.to <= S.level); if (!S.events.some(ev => ev.id === S.pending)) S.pending = null; }   // 내려간 레벨의 레벨업 기록은 같이 정리
   return { from, to: S.level };
 }
 const lvNote = m => m.to !== m.from ? ` · Lv.${m.from} → ${m.to}` : '';
@@ -1355,7 +1351,7 @@ function afterGain(res, { toast: msg, to = 'result' } = {}) {
   if (res.level > res.from) {
     let big = false; for (let l = res.from + 1; l <= res.level; l++) if (isBigBoundary(l)) big = true;
     const d = new Date(), at = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    const ev = { id: Date.now(), from: res.from, to: res.level, big, type: S.type, at, watched: false, skipped: false, replays: 0 };
+    const ev = { id: Date.now(), from: res.from, to: res.level, big, type: S.type, at, watched: false, skipped: false };
     S.events.push(ev); S.pending = ev.id; save();   // 연출 전에 먼저 기록 → 끊겨도 다음 진입 때 재생
     play(ev, { onDone: done });
   } else { save(); done(); }
@@ -1482,7 +1478,6 @@ function useItem(id) {
 /* ===== 사운드 (WebAudio 합성, 에셋 없음) ===== */
 let AC;
 function tone(freq, start, dur, type = 'sine', vol = .12) {
-  if (!S.sound) return;
   try {
     AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume();
     const o = AC.createOscillator(), g = AC.createGain(), t0 = AC.currentTime + start;
@@ -1502,20 +1497,19 @@ function burst(color) {
   for (let i = 0; i < 22; i++) { const a = Math.PI * 2 * i / 22, r = 110 + Math.random() * 70;
     box.insertAdjacentHTML('beforeend', `<i style="--dx:${Math.cos(a)*r}px;--dy:${Math.sin(a)*r}px;--d:${Math.random()*.15}s;background:${color}"></i>`); }
 }
-function play(ev, { replay = false, onDone } = {}) {
+function play(ev, { onDone } = {}) {
   const el = $('evo'), old = $('evoOld'), nw = $('evoNew'), ring = $('evoRing');
   const t = ev.type || S.type, tr = tierOf(ev.to);
   const boxH = $('evoStage').clientHeight || 300;
   const evolved = ev.big && stageIdx(ev.from) !== stageIdx(ev.to);
   const timers = [];
   const at = (ms, fn) => timers.push(setTimeout(fn, ms));
-  P = { ev, replay, onDone, timers, done: false, phase: 'run' };
+  P = { ev, onDone, timers, done: false, phase: 'run' };
   el.className = `evo on ${ev.big ? 'big' : 'short'} tier${tr}`; el.setAttribute('aria-hidden', 'false');
   [old, nw].forEach(i => { i.className = i.id === 'evoOld' ? 'evo-old' : 'evo-new'; i.style.opacity = 0; i.style.transform = ''; });
   ring.className = 'evo-ring'; $('evoFlash').className = 'evo-flash'; $('evoParts').innerHTML = ''; $('evoClip').style.display = 'none';
   $('evoOk').classList.remove('show');
-  $('evoSound').textContent = S.sound ? '🔊' : '🔇';
-  $('evoTag').textContent = replay ? '다시 보기' : (ev.to - ev.from > 1 ? `${ev.to - ev.from}레벨 한꺼번에` : '');
+  $('evoTag').textContent = ev.to - ev.from > 1 ? `${ev.to - ev.from}레벨 한꺼번에` : '';
   const name = CH[t].name;
   const oc = setImg(old, t, ev.from, boxH); const nc = setImg(nw, t, ev.to, boxH);
   const ringStyle = c => { ring.className = `evo-ring ring t${tr}`; ring.style.width = Math.max(c.w * 1.1, boxH * .7) + 'px'; ring.style.height = boxH * .14 + 'px'; };
@@ -1534,7 +1528,7 @@ function play(ev, { replay = false, onDone } = {}) {
     P.phase = 'result';
     if (ev.big) $('evoOk').classList.add('show'); else at(900, close);
   };
-  if (!replay && S.quitDemo) { S.quitDemo = false; save(); at(1500, () => location.reload()); }
+  if (S.quitDemo) { S.quitDemo = false; save(); at(1500, () => location.reload()); }
 
   if (!ev.big) {   // 짧은 연출 1~2초
     nw.className = 'evo-new glow'; nw.style.opacity = 1; ringStyle(nc); at(50, () => ring.classList.add('show'));
@@ -1576,8 +1570,8 @@ function close() {
   if (!P || P.done) return; P.done = true; P.timers.forEach(clearTimeout);
   const el = $('evo'); el.className = 'evo'; el.setAttribute('aria-hidden', 'true'); $('evoClip').style.display = 'none';
   const ev = S.events.find(e => e.id === P.ev.id);
-  if (ev) { if (P.replay) ev.replays = (ev.replays || 0) + 1; else { ev.watched = true; ev.skipped = !!P.skipped; } }
-  if (!P.replay && S.pending === P.ev.id) S.pending = null;
+  if (ev) { ev.watched = true; ev.skipped = !!P.skipped; }
+  if (S.pending === P.ev.id) S.pending = null;
   save(); const cb = P.onDone; P = null; cb ? cb() : render();
 }
 function skip() {
@@ -1586,8 +1580,7 @@ function skip() {
   P.skipped = true;
   if (P.ev.big) P.finish(); else close();
 }
-$('evo').addEventListener('click', e => { if (e.target.closest('#evoSound')) return; if (e.target.closest('#evoOk')) return close(); skip(); });
-$('evoSound').addEventListener('click', () => { S.sound = !S.sound; save(); $('evoSound').textContent = S.sound ? '🔊' : '🔇'; });
+$('evo').addEventListener('click', e => { if (e.target.closest('#evoOk')) return close(); skip(); });
 
 /* ===== 이벤트 ===== */
 const clampStep = (v, d, step, min, max) => Math.min(max, Math.max(min, Math.round((v + d * step) * 10) / 10));
@@ -1751,11 +1744,9 @@ document.addEventListener('click', e => {
   else if (a === 'delPhotoOk') { const r = S.records.find(x => x.id === +id); if (r) r.photo = null; shClose(); toast('사진을 지웠어요'); }
   else if (a === 'delAllPhotos') { const n = S.records.filter(r => r.photo).length; if (!n) return; return sheet(`<div class="h2">정말 사진 ${n}장을 모두 지울까요?</div><div class="muted">지운 사진은 되돌릴 수 없어요. 운동 기록·경험치·레벨은 그대로예요.</div><div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="shClose">취소</button><button class="btn" data-act="delAllOk">전체 삭제</button></div>`); }
   else if (a === 'delAllOk') { S.records.forEach(r => { r.photo = null; }); shClose(); toast('내 사진을 모두 지웠어요'); }
-  else if (a === 'sound') S.sound = !S.sound;
   else if (a === 'ph') S.placeholder = !S.placeholder;
   else if (a === 'quit') S.quitDemo = !S.quitDemo;
   else if (a === 'reset') { camStop(); S = fresh(); S.tab = 'workout'; }
-  else if (a === 'replay') { const ev = S.events.find(x => x.id === +id); if (ev) play(ev, { replay: true }); return; }
   else if (a === 'playPending') return playPending();
   else if (a === 'light') return;
   save(); render();

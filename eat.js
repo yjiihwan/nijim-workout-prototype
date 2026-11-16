@@ -263,7 +263,7 @@ async function eatNext() {
   if (res && res.level > from) {
     let big = false; for (let l = from + 1; l <= res.level; l++) if (isBigBoundary(l)) big = true;
     const d = new Date(), at = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    ev = { id: Date.now(), from, to: res.level, big, type: S.type, at, watched: false, skipped: false, replays: 0, item: id };
+    ev = { id: Date.now(), from, to: res.level, big, type: S.type, at, watched: false, skipped: false, item: id };
     S.events.push(ev); S.pending = ev.id;   // 연출 전에 먼저 기록 → 끊겨도 다음 진입 때 재생
   }
   save();
@@ -275,7 +275,7 @@ async function eatNext() {
     if ((await eat2Data(S.type))[cut].food[f.fid]) { EAT.cur.C = await eatCell2(S.type, cut, f.fid); EAT.cur.food = { fid: f.fid }; }
     else { const [C, img] = await Promise.all([eatCell(S.type, cut), foodImg(f.fid)]); EAT.cur.C = C; EAT.cur.food = { fid: f.fid, img }; }
   } catch (e) { console.error(e); EAT.cur = null; return eatFinish(ev); }
-  if (S.sound) { tone(520, 0, .08, 'triangle', .06); tone(660, .8, .08, 'triangle', .05); tone(780, 1.6, .08, 'triangle', .05); }
+  tone(520, 0, .08, 'triangle', .06); tone(660, .8, .08, 'triangle', .05); tone(780, 1.6, .08, 'triangle', .05);
   EAT.cur.t0 = performance.now(); tick();
 }
 function tick() {
@@ -285,7 +285,7 @@ function tick() {
   const lvCross = E.ev && E.ev.big && t >= ET.deflate1;   // 큰 진화만 끝 정지 생략 · 사이 레벨은 끝까지 본 뒤 짧은 레벨업(결정 19)
   frame({ C: E.C, t: lvCross ? ET.deflate1 : Math.min(t, ET.end), R: E.R, food: E.food, sparks: E.sparks, label: E.label });
   eatBar(E, t);
-  if (E.sfx !== 1 && t >= ET.shiver0 && t < ET.end) { E.sfx = 1; if (S.sound) { tone(330, 0, .25, 'sawtooth', .03); tone(880, .4, .18, 'sine', .07); } }
+  if (E.sfx !== 1 && t >= ET.shiver0 && t < ET.end) { E.sfx = 1; tone(330, 0, .25, 'sawtooth', .03); tone(880, .4, .18, 'sine', .07); }
   if (lvCross) return eatFinish(E.ev);   // §6: 끝 정지 생략 → 기존 큰 진화 바로
   if (t >= ET.end) return eatFinish(E.ev);
   EAT.raf = requestAnimationFrame(tick);

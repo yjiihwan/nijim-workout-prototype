@@ -560,7 +560,7 @@ function vCoach() {
     <div class="rline">🩺 아프거나 어지러우면 운동을 멈추고 의사·물리치료사와 상담하세요.</div>
     <div class="rline">💊 진단·치료·약·보충제 양·식단 칼로리는 답하지 않아요.</div>
     <div class="rline">💬 질문은 한 달에 ${COACH_MAX}번까지 무료예요.</div>
-    <button class="btn" data-act="coachAgree" id="coachAgree">알겠어요, 시작할게요</button><div class="muted" style="text-align:center;margin-top:8px">이 안내는 처음 1번만 · 설정에서 다시 볼 수 있어요</div></div></div>`;
+    <button class="btn" data-act="coachAgree" id="coachAgree">알겠어요, 시작할게요</button><div class="muted" style="text-align:center;margin-top:8px">이 안내는 처음 1번만 보여요</div></div></div>`;
   ensureMe(); if (!S.me.asked) { if (!S.me.ob) obStart(); return coachObHTML(head, t); }
   const sum = meSummary(), info = `<button class="card replink tap mibar" data-act="myinfo" data-v="coach" id="coachInfo"><div><b>내 정보</b><small>${esc(sum || '안 적음 · 적으면 무게·쉬는 시간을 더 정확히 말해 줘요')}</small></div><span class="muted">고치기 ›</span></button>`;
   const greet = `<div class="msg bot"><div class="cbox">${charFit(t, S.level, 30)}</div><div><div class="bub">${realRecs().length ? '안녕! 네가 운동한 건 내가 다 기억해. 궁금한 거 편하게 물어봐 💬' : '안녕! 이제부터 네 운동은 내가 다 기억할게. 궁금한 거 편하게 물어봐 💬'}</div></div></div>`;
@@ -581,11 +581,9 @@ function vCoach() {
 }
 
 /* ===== 연결: 화면 등록 · 기존 화면 보강 · 버튼 ===== */
-const vMe0 = vMe, vSettings0 = vSettings;
+const vMe0 = vMe;
 SUB.coach = vCoach; SUB.report = vReport; SUB.stats = vStats2; SUB.profile = vProfile; SUB.addFriend = vAddFriend; SUB.friends = vFriends2;
 SUB.me = () => vMe0().replace(/<div class="card"><div class="h2" style="font-size:16px">업적<\/div>.*?<\/div><\/div>/, achieveCard());
-SUB.settings = () => vSettings0().replace('<div class="card demo"><div class="h3">🧪 시연 도구</div>',
-  `<div class="card" id="coachNoteCard"><div class="h2" style="font-size:16px">물어보기 안내</div><div class="muted">캐릭터의 말은 운동 습관 참고용이에요. 의학적 조언이 아니에요.</div><button class="btn ghost" data-act="coachReset" style="margin-top:10px">첫 안내 다시 보기</button></div><div class="card demo"><div class="h3">🧪 시연 도구</div>`);
 
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if (!b || b.closest('#evo') || b.disabled) return;

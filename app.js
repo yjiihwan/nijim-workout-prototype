@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.78';
+const VER = 'v1.79';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -484,18 +484,19 @@ function vWorkout() {
     <button class="linkbtn" data-act="sub" data-v="me" id="goMe">내 캐릭터 자세히 ›</button></div></div></div>
   <button class="btn" data-act="start" id="goRecord" style="margin-top:0">${S.session ? '운동 이어서 하기' : '오늘 운동 기록하기'}</button>
   <div class="muted" style="text-align:center;margin:6px 0 12px">${S.session ? `${esc(S.session.place.name)}에서 운동 중 · <span data-clock="sess">${clock(Date.now() - S.session.startedAt)}</span>` : gymQuiet() ? '운동을 시작할 때 눌러 주세요' : `센터에 입장하면 바로 시작돼요 · ${CB_TXT}`}</div>
+  <div class="card coach" id="coachCard"><div class="cbox">${charFit(t, lv, 52, ex)}</div><div class="cmain"><div class="say" id="coachSay"><span>${esc(coachLine())}</span></div><button class="coachbtn" data-act="coach" id="coachBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg><span class="ctxt">코치에게 물어보기</span></button><div class="cquota" id="coachQuota">${coachQuota()}</div></div></div>   
   <div class="card" id="streakCard"><div style="display:flex;justify-content:space-between;align-items:center"><div class="h2" style="margin:0;font-size:16px" id="weekCnt">이번 주 ${wk}회 운동</div><span class="pill ${wk>=1?'tier4':'tier1'}">🔥 ${S.streakWeeks}주 연속</span></div>
     <div class="week">${week}</div>
     <div class="wxp" id="weekXP"><span>이번 주 운동 경험치</span><b>${weekXP().toLocaleString()}/${CFG.WEEK_CAP.toLocaleString()}</b></div><div class="bar thin"><i style="width:${Math.min(100, Math.round(weekXP() / CFG.WEEK_CAP * 100))}%"></i></div>${centerWeek() ? `<div class="wxp itm" id="weekCenterXP"><span>+ 입점센터 보너스</span><b>${centerWeek().toLocaleString()} · 따로 계산</b></div>` : ''}${itemWeek() ? `<div class="wxp itm" id="weekItemXP"><span>+ 아이템 경험치</span><b>${itemWeek().toLocaleString()} · 한도 없음</b></div>` : ''}
     <div class="muted" style="margin-top:8px;font-weight:700;color:var(--ink)">${now.getMonth()+1}월</div><div class="cal">${cal}</div></div>
-  ${gymCard()}<div class="card coach" id="coachCard"><div class="cbox">${charFit(t, lv, 52, ex)}</div><div class="cmain"><div class="say" id="coachSay"><span>${esc(coachLine())}</span></div><button class="coachbtn" data-act="coach" id="coachBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg><span class="ctxt">코치에게 물어보기</span></button><div class="cquota" id="coachQuota">${coachQuota()}</div></div></div>
+  ${gymCard()}
   <div class="card" id="recentCard"><div style="display:flex;justify-content:space-between;align-items:center"><div class="h2" style="margin:0;font-size:16px">최근 기록</div><button class="linkbtn" data-act="sub" data-v="stats" style="margin:0">전체 보기 ›</button></div>
     ${recent.map(r => `<div class="rec tap" data-act="rec" data-id="${r.id}"><div><b>${esc(r.summary)}</b><small>${r.date.slice(5).replace('-', '/')} · ${esc(r.place)} · ${vLabel(r.v)}</small></div>${recXP(r)}</div>`).join('')}</div>
   <div class="entries" id="entries">
     <button class="entry" data-act="sub" data-v="friends">${ico.rank}<b>랭킹</b><small>친구 리그 ${rankMe()}위 · 내 센터 · 전국</small></button>
     <button class="entry" data-act="sub" data-v="shop">${ico.shop}<b>아이템 상점</b><small>${S.points.toLocaleString()}P 보유</small></button>
     <button class="entry" data-act="sub" data-v="stats">${ico.stats}<b>통계</b><small>이번 달 ${S.records.filter(r => r.date.startsWith(TODAY.slice(0,7))).length}회</small></button>
-    <button class="entry" data-act="sub" data-v="settings" id="goSettings">${ico.set}<b>설정</b><small>알림 · 사진 · 소리</small></button></div><div id="lastBlock"></div></div>`;
+    <button class="entry" data-act="sub" data-v="settings" id="goSettings">${ico.set}<b>설정</b><small>알림 · 사진 · 소리</small></button></div><div class="verfoot" id="verFoot">프로토타입 ${VER}</div><div id="lastBlock"></div></div>`;
 }
 const clock = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = s % 60;
   return h ? `${h}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}` : `${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}`; };
@@ -1798,7 +1799,7 @@ setInterval(() => {
 }, 1000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden && ymd(new Date()) !== TODAY && !P) render(); });
 
-document.querySelector('.ver').textContent = `프로토타입 ${VER}`;
+
 /* 시연 도구(🧪 상자·관리자 화면 입구)는 주소에 ?demo=1 을 붙였을 때만 보인다 — 일반 화면엔 내부 말이 안 나오게(QA 중37) */
 const DEMO_UI = /[?&]demo=1\b/.test(location.search);
 document.body.classList.toggle('demoui', DEMO_UI);

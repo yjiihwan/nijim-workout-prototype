@@ -3,9 +3,6 @@
 html,body{margin:0;background:#E9E9EE;font-family:Pretendard,-apple-system,"Apple SD Gothic Neo",sans-serif;color:var(--ink)}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .app{max-width:430px;margin:0 auto;min-height:100vh;background:var(--g1);position:relative;padding-bottom:92px}
-.top{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:#fff;position:sticky;top:0;z-index:5}
-.logo{font-weight:900;font-style:italic;font-size:24px;color:var(--rose);letter-spacing:-1px}
-.ver{font-size:11px;color:var(--g5);background:var(--g1);padding:3px 8px;border-radius:99px}
 .tabbar{position:fixed;left:0;right:0;bottom:calc(8px + env(safe-area-inset-bottom));margin:0 auto;width:calc(100% - 28px);max-width:402px;height:62px;box-sizing:border-box;padding:0 2px;border-radius:31px;background:rgba(255,255,255,.9);-webkit-backdrop-filter:blur(20px) saturate(1.6);backdrop-filter:blur(20px) saturate(1.6);border:.6px solid #DCDCE0;box-shadow:0 3px 12px rgba(0,0,0,.10);display:flex;align-items:center;z-index:10}
 .tabbar button{flex:1 1 0;min-width:0;height:54px;border-radius:27px;margin:0 1px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#101010;padding:0}
 .tabbar button svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -468,7 +465,7 @@ select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--g2)
 .fitem .fbtn{display:grid;grid-template-columns:1fr 1fr;gap:4px}.fitem .fbtn .btn{margin-top:6px}
 .ftag{position:absolute;top:6px;right:6px;font-size:10px;font-weight:800;padding:2px 6px;border-radius:8px;background:#fff;z-index:1}
 .ftag.use{background:var(--rose);color:#fff}.ftag.own{background:var(--ink);color:#fff}
-.eatcard{scroll-margin-top:64px}
+.eatcard{scroll-margin-top:calc(12px + env(safe-area-inset-top))}
 
 /* v1.16 결정 35 — 솔직 기록 안내·5회 미만 표시(회색·작게, 경고색 없음) */
 .honest{color:var(--g5);font-size:12px;line-height:1.45;margin:0 2px 10px;word-break:keep-all}
@@ -560,7 +557,6 @@ select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--g2)
 
 /* v1.25 운동기록 탭 안내 글씨 — 형 지적(작고 연해 잘못 읽음): 크기·굵기·색만. :where 로 낮춰서 기존 개별 규칙(.camb .muted 등)은 그대로 이김 */
 body.wk{--g5:#5E5E69}
-body.wk .ver{color:#8A8A95}
 body.wk .honest{display:flex;gap:9px;align-items:flex-start;background:#EAF6FF;color:#1F2A37;font-size:15px;font-weight:600;line-height:1.5;padding:11px 14px;border-radius:14px;margin:0 0 12px}
 body.wk .honest svg{flex:none;width:18px;height:18px;margin-top:2px;fill:none;stroke:#1E90E0;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 body.wk .honest.end{display:block;background:none;padding:0;color:#3F3F48;font-weight:500;margin:16px 2px 0;text-align:center}
@@ -713,7 +709,7 @@ body:not(.demoui) .card.demo,body:not(.demoui) .demochip,body:not(.demoui) .demo
 .tile .tsub{display:block;margin-top:2px;font-size:11px;color:#B07D1F;white-space:nowrap}
 .fitem em.fmax{color:#C2333A;white-space:nowrap}
 #lastBlock{height:4px}
-.notice.savefail{position:sticky;top:54px;z-index:4;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.notice.savefail{position:sticky;top:calc(8px + env(safe-area-inset-top));z-index:4;box-shadow:0 2px 8px rgba(0,0,0,.08)}
 .rec .xp.hold{color:#B07D1F;font-size:12px;white-space:nowrap}
 .sh .grid2 .btn{white-space:nowrap}
 #myCode .grid2 .btn{white-space:nowrap;padding-left:6px;padding-right:6px}
@@ -1152,3 +1148,8 @@ body.deep .csavebar{margin-bottom:calc(-24px - env(safe-area-inset-bottom));padd
 #coachSay{min-height:calc(13px*1.4*2 + 18px);display:flex;align-items:center;word-break:keep-all;overflow-wrap:anywhere}
 #coachSay>span{display:block;transition:opacity .18s ease}
 #coachSay.swap>span{opacity:0}
+
+/* v1.79: 위 로고 줄 삭제 — 화면은 상태바 안전영역 바로 아래부터, 판 번호는 첫 화면 맨 아래 작은 글씨 */
+.app{padding-top:env(safe-area-inset-top)}
+.wseg{margin-top:10px}
+.verfoot{margin-top:14px;text-align:center;font-size:11px;color:#B4B4BD}

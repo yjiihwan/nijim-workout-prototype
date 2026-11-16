@@ -1,5 +1,5 @@
 'use strict';
-/* 결정 40 — C15 랭킹 탭 3개 «친구리그 / 내 센터 / 전국» · 내 센터 여러 개 · «센터 랭킹에 안 보이기» 1개로 통합.
+/* 결정 40 — C15 랭킹 탭 3개 «친구 리그 / 내 센터 / 전국» · 내 센터 여러 개 · «센터 랭킹에 안 보이기» 1개로 통합.
    순위 계산은 center_rank.js(CenterRank) — DID 랭킹판과 같은 파일. 여기는 가짜 데이터 + 화면만. */
 
 /* 입점센터(전국) — «직접 추가» 검색 대상. 이름 긴 센터는 칩 잘림 시험용 */
@@ -15,7 +15,7 @@ const RK_CENTERS = [
 const rkCenter = id => RK_CENTERS.find(c => c.id === id);
 const rkCenterIdOf = place => { const c = RK_CENTERS.find(c => place && place.startsWith(c.name)); return c ? c.id : null; };
 
-/* 가짜 회원 — sessions [센터 id | null(레슨 V3), 그 센터에서 이번 주에 번 경험치 합, 방문한 날 수(없으면 1)]. 친구 5명은 친구리그 주간 XP 와 합이 같게 */
+/* 가짜 회원 — sessions [센터 id | null(레슨 V3), 그 센터에서 이번 주에 번 경험치 합, 방문한 날 수(없으면 1)]. 친구 5명은 친구 리그 주간 XP 와 합이 같게 */
 const RK_MEMBERS = [
   ['운동하는곰', 'koa', 27, [['sillim', 900, 2], ['bongcheon', 840, 3], [null, 400]]],                // 2곳 · 방문은 봉천 3 > 신림 2(경험치는 신림이 많음)
   ['새벽러너', 'saetbyeol', 41, [['sillim', 300, 2], ['bongcheon', 380, 2], ['snu', 300]]],           // 3곳 · 방문 동률(신림 2·봉천 2) → 경험치 많은 봉천
@@ -128,7 +128,7 @@ function vNationTab(W) {
   <div class="muted" style="margin-top:8px">닉네임·캐릭터만 보여요(실명 없음) · 옆에 적힌 센터는 그 회원이 가장 많이 다닌 곳이에요 · 센터 TV 전국 순위와 같아요</div>`;
 }
 const rkTabs = () => { const none = !rkHomeList().length;
-  return `<div class="rktabs" id="rkTabs">${[['friend', '친구리그'], ['center', none ? '근처 입점센터' : '내 센터'], ['nation', '전국']].map(([k, l]) => `<button class="${S.rkTab === k ? 'on' : ''}" data-act="rkTab" data-v="${k}">${l}</button>`).join('')}</div>`; };
+  return `<div class="rktabs" id="rkTabs">${[['friend', '친구 리그'], ['center', none ? '근처 입점센터' : '내 센터'], ['nation', '전국']].map(([k, l]) => `<button class="${S.rkTab === k ? 'on' : ''}" data-act="rkTab" data-v="${k}">${l}</button>`).join('')}</div>`; };
 const rkDemo = () => `${demoCard('내 센터', 'rkHome', S.rkHome, [['multi', '2곳 다님'], ['many', '많음·긴 이름'], ['none', '입점 이용 없음']])}
   <div class="card demo" style="margin-top:-4px"><div class="row"><span>이번 주 내 센터 기록 시연(신림 2회·봉천 1회)</span><button class="sw ${S.rkMeDemo ? 'on' : ''}" data-act="rkMeDemo"></button></div>
   <div class="row"><span>센터 회원 많음(신림점 60명+)</span><button class="sw ${S.rkCrowd ? 'on' : ''}" data-act="rkCrowd" id="rkCrowdDemo"></button></div>
@@ -157,11 +157,11 @@ function rkManageSheet() {
 /* 설정(C13) — «센터 랭킹에 안 보이기» 1개(종전 «센터 화면에 안 보이기» 통합) + 내 센터 관리 */
 const vSettingsRk0 = SUB.settings;
 SUB.settings = () => { ensureRk(); return vSettingsRk0().replace('<div class="card" id="locCard">', `<div class="card" id="rankSetCard"><div class="h2" style="font-size:16px">센터 랭킹</div>
-  <div class="row"><div><span>센터 랭킹에 안 보이기</span><div class="muted">켜면 모든 센터의 TV 랭킹 화면과 앱 «내 센터»·«전국» 랭킹에서 내 닉네임·캐릭터가 빠져요 · 친구리그는 그대로</div></div><button class="sw ${S.hideRank ? 'on' : ''}" data-act="hideRank" id="hideRankSw"></button></div>
+  <div class="row"><div><span>센터 랭킹에 안 보이기</span><div class="muted">켜면 모든 센터의 TV 랭킹 화면과 앱 «내 센터»·«전국» 랭킹에서 내 닉네임·캐릭터가 빠져요 · 친구 리그는 그대로</div></div><button class="sw ${S.hideRank ? 'on' : ''}" data-act="hideRank" id="hideRankSw"></button></div>
   <div class="row"><div><span>내 센터 관리</span><div class="muted">${rkHomeList().length}곳 · 자동 등록·직접 추가</div></div><button class="btn sm ghost" data-act="rkManage">관리</button></div></div>
   <div class="card" id="locCard">`); };
 SUB.friends = vRanking;
-/* 시연 기록을 켜면 친구리그의 «나» 주간 XP 도 같은 값(전국 xp_week)으로 — 탭마다 내 점수가 달라 보이지 않게 */
+/* 시연 기록을 켜면 친구 리그의 «나» 주간 XP 도 같은 값(전국 xp_week)으로 — 탭마다 내 점수가 달라 보이지 않게 */
 const rankList0 = rankList;
 rankList = function () {
   ensureRk(); const l = rankList0(); if (!S.rkMeDemo || S.rkHome === 'none') return l;
@@ -170,11 +170,11 @@ rankList = function () {
   return l;
 };
 
-/* ===== v1.67 친구리그에 자가 기록 포함(형 11-15 결정 ① — 결정 38 «리그는 V1·V3만» 가운데 친구리그만 바뀜) =====
+/* ===== v1.67 친구 리그에 자가 기록 포함(형 11-15 결정 ① — 결정 38 «리그는 V1·V3만» 가운데 친구 리그만 바뀜) =====
    센터·전국 랭킹(rkMySessions → CenterRank, DID 랭킹판)은 그대로 입장·레슨 기록만. 경험치 계산·배율·하루 한도(engine.js)는 손대지 않는다.
-   여기서는 «친구리그에 얼마를 세느냐»만 정한다. 부정 기록 대책(친구리그 집계에만 적용, 받은 경험치는 그대로):
+   여기서는 «친구 리그에 얼마를 세느냐»만 정한다. 부정 기록 대책(친구 리그 집계에만 적용, 받은 경험치는 그대로):
    ① 운동을 시작해 끝낼 때까지 FR_SELF.minDur분 이상 걸린 기록만 ② 한꺼번에 적은 기록(batch)·24시간 보류 중인 기록 제외
-   ③ 자가 기록은 하루 FR_SELF.dayMax XP까지만 친구리그에 ④ 프로필에 «입장 확인된 운동 / 직접 적은 운동» 몫을 친구에게 공개 */
+   ③ 자가 기록은 하루 FR_SELF.dayMax XP까지만 친구 리그에 ④ 프로필에 «입장 확인된 운동 / 직접 적은 운동» 몫을 친구에게 공개 */
 const FR_SELF = { minDur: 10, dayMax: 200 };
 const FR_SELF_DEMO = { 새벽러너: 160, 필라테스러: 240, 헬린이9일차: 480, 오늘도출근: 120, 퇴근후스쿼트: 200 };   // 가짜 친구의 이번 주 자가 기록 몫(센터·전국 표에는 안 들어감)
 const frSelfOk = r => !r.batch && !r.held && (r.dur == null || r.dur >= FR_SELF.minDur);
@@ -204,24 +204,24 @@ rankList = function () {
 };
 function frFootHTML() {
   const m = frSelfWeek();
-  return `<div class="muted" style="margin-top:8px" id="frFoot">친구리그는 집이든 야외든 어디서 운동해도 순위에 들어가요 · 이름을 누르면 프로필이 보여요</div>${m.skipped ? `<div class="muted" id="frSkip" style="margin-top:4px;word-break:keep-all">${m.skBatch === m.skipped ? `이번 주 기록 ${m.skipped}건은 운동을 마치고 한꺼번에 적어서 친구리그 순위에서 빠졌어요 · 경험치는 그대로 받았어요`
-    : m.skBatch ? `이번 주 기록 ${m.skipped}건은 친구리그 순위에서 빠졌어요 · 한꺼번에 적은 기록과 ${FR_SELF.minDur}분이 안 된 기록은 순위에 안 들어가요 · 경험치는 그대로 받았어요`
-    : `이번 주 기록 ${m.skipped}건은 친구리그 순위에서 빠졌어요 · 시작하고 ${FR_SELF.minDur}분 이상 운동한 기록만 순위에 들어가요`}</div>` : ''}`;
+  return `<div class="muted" style="margin-top:8px" id="frFoot">친구 리그는 집이든 야외든 어디서 운동해도 순위에 들어가요 · 이름을 누르면 프로필이 보여요</div>${m.skipped ? `<div class="muted" id="frSkip" style="margin-top:4px;word-break:keep-all">${m.skBatch === m.skipped ? `이번 주 기록 ${m.skipped}건은 운동을 마치고 한꺼번에 적어서 친구 리그 순위에서 빠졌어요 · 경험치는 그대로 받았어요`
+    : m.skBatch ? `이번 주 기록 ${m.skipped}건은 친구 리그 순위에서 빠졌어요 · 한꺼번에 적은 기록과 ${FR_SELF.minDur}분이 안 된 기록은 순위에 안 들어가요 · 경험치는 그대로 받았어요`
+    : `이번 주 기록 ${m.skipped}건은 친구 리그 순위에서 빠졌어요 · 시작하고 ${FR_SELF.minDur}분 이상 운동한 기록만 순위에 들어가요`}</div>` : ''}`;
 }
-/* 결과 화면 — 친구리그에서 빠지는 자가 기록에만 한 줄(보류 기록은 보류 안내가 따로 있어 안 띄움) */
+/* 결과 화면 — 친구 리그에서 빠지는 자가 기록에만 한 줄(보류 기록은 보류 안내가 따로 있어 안 띄움) */
 function frResultNote(rec) {
   const inv = invResultNote(rec);
   if (!rec || rec.v !== 'self' || rec.demo || rec.held || frSelfOk(rec) || !friendsAll().length) return inv;
-  return `${inv}<div class="muted capline" id="frSkipNote">${rec.batch ? '운동을 마치고 한꺼번에 적은 기록은 친구리그 순위에 안 들어가요' : `시작한 지 ${FR_SELF.minDur}분이 안 돼 끝낸 기록이라 친구리그 순위에는 안 들어가요`} · 경험치는 그대로 받았어요</div>`;
+  return `${inv}<div class="muted capline" id="frSkipNote">${rec.batch ? '운동을 마치고 한꺼번에 적은 기록은 친구 리그 순위에 안 들어가요' : `시작한 지 ${FR_SELF.minDur}분이 안 돼 끝낸 기록이라 친구 리그 순위에는 안 들어가요`} · 경험치는 그대로 받았어요</div>`;
 }
-/* 프로필 — 이번 주 친구리그 경험치와 그 몫(친구·나만) */
+/* 프로필 — 이번 주 친구 리그 경험치와 그 몫(친구·나만) */
 const vProfile1 = SUB.profile;
 SUB.profile = () => {
   const html = vProfile1(), key = S.prof || 'me', prev = S.fTab; S.fTab = 'week';
   const f = rankList().find(x => (key === 'me' ? x.me : x.n === key)); S.fTab = prev;
   if (!f) return html;
   /* 카드를 따로 두면 «응원» 버튼이 첫 화면 밖으로 밀려서, 캐릭터 카드 맨 아래 두 줄로 넣는다 */
-  return html.replace(/<\/div>(\s*)<div class="card" id="profRatio">/, `<div id="profWeek" class="profwk"><b>이번 주 친구리그 ${fmt(f.week)} XP</b><span>입장하고 한 운동 ${fmt(f.entered)} XP · 그 밖의 운동 ${fmt(f.self)} XP${!rkPure() && f.paidWeek > 0 ? ` · 포인트로 받은 경험치 ${fmt(f.paidWeek)} XP` : ''}</span></div></div>$1<div class="card" id="profRatio">`);
+  return html.replace(/<\/div>(\s*)<div class="card" id="profRatio">/, `<div id="profWeek" class="profwk"><b>이번 주 친구 리그 ${fmt(f.week)} XP</b><span>입장하고 한 운동 ${fmt(f.entered)} XP · 그 밖의 운동 ${fmt(f.self)} XP${!rkPure() && f.paidWeek > 0 ? ` · 포인트로 받은 경험치 ${fmt(f.paidWeek)} XP` : ''}</span></div></div>$1<div class="card" id="profRatio">`);
 };
 
 /* ===== v1.67 친구 초대 보상(형 11-15 결정 ⑥) — 초대한 사람·받은 사람 모두 꾸미기 아이템 1개 =====

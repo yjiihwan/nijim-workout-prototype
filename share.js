@@ -662,7 +662,7 @@ function saveProof(recId, file) {
     if (out.res && out.res.level > out.res.from) PROOF_RES = out.res;
     save();
     if (ST && ST.recId === recId) { paintSheet(); const im = $('shrImg'); if (im && ST.url) im.src = ST.url; }
-    shrToast(out.got ? `인증 사진 저장 · 경험치 +${fmt(out.got)}` : out.swap ? '인증 사진 바꿈 · 보너스는 그대로' : '인증 사진 저장');
+    shrToast(out.got ? `오운완 셀카를 저장했어요 · 경험치 +${fmt(out.got)}` : out.swap ? '오운완 셀카를 바꿨어요 · 보너스는 그대로예요' : '오운완 셀카를 저장했어요');
   };
   img.onerror = () => URL.revokeObjectURL(src);
   img.src = src;

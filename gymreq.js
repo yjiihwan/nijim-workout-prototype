@@ -516,8 +516,8 @@ function gymResultCard(rec) {
   }
   if (!m || first || !(rec.centerIf > 0)) return '';
   const num = fmt(rec.centerIf);
-  if (msAns(rec.place)) return `<div class="cbif" id="cbIf" data-ms="${msAns(rec.place)}"><span>회원권이 있으면 '입장하기'로 경험치를 더 받아요 · 오늘이었다면 경험치 <b>${num}</b>${gjo(num, '을', '를')} 더 받았어요</span></div>`;
-  return `<div class="cbif" id="cbIf"><span>다음엔 '입장하기'를 누르고 운동해 보세요 · 오늘이었다면 경험치 <b>${num}</b>${gjo(num, '을', '를')} 더 받았어요</span></div>`;
+  if (msAns(rec.place)) return `<div class="cbif" id="cbIf" data-ms="${msAns(rec.place)}"><span>회원권이 있으면 '입장하기'로 경험치를 더 받아요 · 오늘 눌렀다면 경험치 <b>${num}</b>${gjo(num, '을', '를')} 더 받았을 거예요</span></div>`;
+  return `<div class="cbif" id="cbIf"><span>다음엔 '입장하기'를 누르고 운동해 보세요 · 오늘 눌렀다면 경험치 <b>${num}</b>${gjo(num, '을', '를')} 더 받았을 거예요</span></div>`;
 }
 /* 설정 › 센터 확인 카드 안 «주로 운동하는 곳» 줄 */
 function msSetDesc(g) {
@@ -605,7 +605,7 @@ function eqListHTML(center) {
   const list = info.machines.filter(m => (!EQV.type || m.type === EQV.type) && (!EQV.body || machineBody(m).includes(EQV.body)));
   const chip = (k, v, l) => `<button class="chip ${EQV[k] === v ? 'on' : ''}" data-act="eqF" data-k="${k}" data-v="${esc(v)}" data-c="${esc(center)}">${l}</button>`;
   return `<div class="h2 gyname" id="eqListT">${esc(center)} 기구 ${info.machines.length}종</div>
-    <div class="muted eqlsub">센터가 등록한 기구예요. 코치는 여기 있는 기구로 할 수 있는 운동만 알려드려요.</div>
+    <div class="muted eqlsub">센터가 등록한 기구예요. 코치는 여기 있는 기구로 할 수 있는 운동만 알려 드려요.</div>
     <div class="eqfl"><small>종류</small><div class="hscroll">${chip('type', '', '전체')}${types.map(t => chip('type', t, t)).join('')}</div></div>
     <div class="eqfl"><small>부위</small><div class="hscroll">${chip('body', '', '전체')}${bodies.map(b => chip('body', b, b)).join('')}</div></div>
     <div class="eqlist" id="eqList">${list.length ? list.map(m => { const n = +info.counts[m.id] || 1;
@@ -619,11 +619,11 @@ const eqOthers = c => Math.max(0, S.gymSim.eqWait[c] ?? EQ_WAIT_BASE[c] ?? 0);
 const eqWaitN = c => eqOthers(c) + (S.eqReq[c] ? 1 : 0);
 function eqCoachCard() {
   const c = eqCtx();
-  if (c.mode === 'equip') return `<div class="eqline" id="eqLine"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7.5"/></svg><span><b>${esc(c.center)}</b> 기구 기준으로 알려드려요</span><button class="eqmore" data-act="eqList" data-v="${esc(c.center)}" id="eqListBtn">기구 ${c.info.machines.length}종 보기</button></div>`;
+  if (c.mode === 'equip') return `<div class="eqline" id="eqLine"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7.5"/></svg><span><b>${esc(c.center)}</b> 기구 기준으로 알려 드려요</span><button class="eqmore" data-act="eqList" data-v="${esc(c.center)}" id="eqListBtn">기구 ${c.info.machines.length}종 보기</button></div>`;
   if (c.mode !== 'noequip') return '';
   const did = !!S.eqReq[c.center];
   return `<div class="card gycard eqcard" id="eqCard" data-st="${did ? 1 : 0}"><div class="gyh"><div><small>지금 운동하는 센터</small><b>${esc(c.center)}</b></div></div>
-    <div class="muted">이 센터는 아직 기구 정보가 등록되지 않아 기구에 맞춘 코칭은 못 해요. 지금은 내 운동 기록을 보고 알려드려요.</div>
+    <div class="muted">이 센터는 아직 기구 정보가 등록되지 않아 기구에 맞춘 코칭은 못 해요. 지금은 내 운동 기록을 보고 알려 드려요.</div>
     ${did ? `<div class="gymsg" id="eqMsg">요청을 남겼어요 · 지금 ${eqWaitN(c.center)}명이 요청했어요</div><div class="muted">센터가 기구 정보를 올리면 바로 알려 드릴게요</div>` : `<button class="btn" data-act="eqReq" data-v="${esc(c.center)}" id="eqReqBtn">기구 정보 요청하기</button>`}</div>`;
 }
 /* 대체 운동 답(규칙이 고른다 — 말투만 캐릭터) */
@@ -642,7 +642,7 @@ function gymNoteSheet() {
   const ok = `<button class="btn" data-act="shClose" id="gyNoteOk" style="margin-top:14px">확인</button>`, push = `<div class="muted demoonly" style="margin-top:8px">실제 앱에서는 푸시 알림으로도 가요</div>`;
   if (n.t === 'join') sheet(`<div class="gydone" id="gyJoinNote">${n.item ? `<div class="gybadge">${gymItemImg('lg')}</div>` : `<div class="gychk"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7.5"/></svg></div>`}<div class="h2 gyname">${esc(n.name)}${gjo(n.name, '이', '가')} 입점했어요!</div><div class="muted gysub">오늘부터 경험치 1.5배예요.${n.item ? `<br>입점을 요청해 주셔서 한정 꾸미기 아이템 «${GYM_ITEM}»를 드렸어요.` : ''}</div></div>${ok}${push}`);
   else if (n.t === 'five') sheet(`<div class="gydone" id="gyFiveNote"><div class="h2 gyname">${esc(n.name)} 입점 요청, ${GYM_NEED}명이&nbsp;모였어요!</div><div class="muted gysub" id="gyFiveSub">${gymHold(gymById(n.id)) ? gymHoldLine(gymById(n.id)) : '이제 사장님께 안내문을 보낼게요'}</div></div>${ok}${push}`);
-  else if (n.t === 'eq') sheet(`<div class="gydone" id="gyEqNote"><div class="gychk"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7.5"/></svg></div><div class="h2 gyname">${esc(n.name)}${gjo(n.name, '이', '가')} 기구 정보를 올렸어요</div><div class="muted gysub">이제 코치가 이 센터에 있는 기구에 맞춰 알려드려요.</div></div>${ok}${push}`);
+  else if (n.t === 'eq') sheet(`<div class="gydone" id="gyEqNote"><div class="gychk"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7.5"/></svg></div><div class="h2 gyname">${esc(n.name)}${gjo(n.name, '이', '가')} 기구 정보를 올렸어요</div><div class="muted gysub">이제 코치가 이 센터에 있는 기구에 맞춰 알려 드려요.</div></div>${ok}${push}`);
 }
 function gymBoot() { try { ensureGym(); if (S.gymNotes.length && S.chosen && S.onboarded && !/^#admin/.test(location.hash)) setTimeout(gymNoteSheet, 500); } catch (e) { console.error('[gymBoot]', e); } }
 

@@ -31,8 +31,8 @@ const incPair = (p = me()) => { if (!p.sex && !p.w) return null; const big = p.s
 /* 기구 최소 단위보다 작으면 «횟수 먼저» */
 function nextStepLine(exId, lastW, p = me()) {
   const inc = incOf(exId, p), e = EX[exId], st = e.step || 2.5; if (inc == null) return null;
-  if (inc < st) return `${jo(e.name, '은', '는')} ${kg(st)}씩 올라가니까, 지난번 ${kg(lastW)} 그대로 2회 더 한 다음 ${kg(lastW + st)}로 올리자.`;
-  return `${e.name} 지난번 ${kg(lastW)}이면 다음엔 ${kg(lastW + roundTo(inc, st))}로 8회부터 해 보자.`;
+  if (inc < st) return `${jo(e.name, '은', '는')} ${kg(st)}씩 올라가니까, 지난번 ${kg(lastW)} 그대로 2회 더 한 다음 ${kg(lastW + st)}으로 올리자.`;
+  return `${e.name} 지난번 ${kg(lastW)}이면 다음엔 ${kg(lastW + roundTo(inc, st))}으로 8회부터 해 보자.`;
 }
 
 /* ⑧ 몸무게 대비 — 최근 30일 최고 / 그 전 30일 최고. 성장 방향으로만 말한다 */
@@ -43,7 +43,7 @@ function bwRatioLine(rs, exId, p = me()) {
   const f = v => `${+(v / p.w).toFixed(2)}배`, nm = EX[exId].name;
   if (prev && now > prev) return `몸무게 대비 ${nm} ${f(now)} — 지난달 ${f(prev)}에서 늘었어!`;
   if (prev && now === prev) return `몸무게 대비 ${nm} ${f(now)} — 지난달 수준 잘 지키고 있어.`;
-  return `지금 ${nm}는 몸무게 대비 ${f(now)}야. 이 숫자 같이 키워 보자!`;
+  return `${nm}, 지금 몸무게의 ${f(now)}야. 이 숫자 같이 키워 보자!`;
 }
 
 /* ⑨ 같은 부위 쉬는 시간 — 나이 모르면 null */
@@ -65,7 +65,7 @@ function kcalOf(it, p = me()) {
 }
 
 /* ③ «알려 주면 더 정확히» 안내 — 항목마다 대화 1번만(대화 지우기 전까지) */
-const HINT = { w: '몸무게 알려 주면 더 정확히 말해 줄게 · 위 «내 정보»에 적어 줘', age: '나이 알려 주면 쉬는 시간을 더 정확히 말해 줄게 · 위 «내 정보»에 적어 줘', sex: '성별 알려 주면 처음 무게를 더 정확히 잡아 줄게 · 위 «내 정보»' };
+const HINT = { w: '몸무게 알려 주면 더 정확히 말해 줄게 · 위 «내 정보»에 적어 줘', age: '나이 알려 주면 쉬는 시간을 더 정확히 말해 줄게 · 위 «내 정보»에 적어 줘', sex: '성별 알려 주면 처음 무게를 더 정확히 잡아 줄게 · 위 «내 정보»에서 골라 줘' };
 function hintOnce(key) { const c = S.coach; c.hinted = c.hinted || {}; if (c.hinted[key]) return null; c.hinted[key] = 1; return HINT[key]; }
 
 /* ===== 첫 대화(coachAgree 바로 뒤) ===== */
@@ -91,7 +91,7 @@ function checkVal(k, raw) {
   if (!t) return { msg: `${nm}를 적어 줄래? 아니면 «나중에 할게»를 눌러도 돼.` };
   if (k === 'age' ? !/^\d{1,3}$/.test(t) : !/^\d{1,3}(\.\d)?$/.test(t)) return { msg: k === 'age' ? '나이는 숫자로만 적어 줄래? (예: 32)' : `숫자로 적어 줄래? 소수점은 한 자리까지 돼 (예: ${k === 'height' ? '168.5' : '62.5'})` };
   const v = +t;
-  if (v < lo || v > hi) return { msg: `음, ${nm} ${v}${u}는 조금 이상한데? 🙂 한 번만 다시 알려 줄래? (${lo}~${hi}${u})` };
+  if (v < lo || v > hi) return { msg: `음, ${nm}가 ${v}${u}? 조금 이상한데 🙂 한 번만 다시 알려 줄래? (${lo}~${hi}${u})` };
   return { v };
 }
 const setVal = (k, v) => { ensureMe(); if (k === 'weight') S.bodyweight = v; else S.me[k] = v; };
@@ -130,7 +130,7 @@ function vMyInfo() {
   <div class="muted" style="margin-bottom:6px">처음 무게·올리는 폭·쉬는 시간·유산소 칼로리 계산에만 써요 · 다른 회원에겐 안 보여요 · 비워 둔 건 계산에 안 써요</div>
   <div class="row mirow" id="mi_sex"><span>성별</span><div class="chips">${[['m', '남'], ['f', '여'], ['n', '선택 안 함']].map(([v, l]) => `<button class="chip ${p.sex === v ? 'on' : ''}" data-act="meSex" data-v="${v}">${l}</button>`).join('')}</div></div>
   ${field('age', '나이', p.age, '살', 'numeric', '비어 있음')}${field('height', '키', p.height, 'cm', 'decimal', '비어 있음')}${field('weight', '몸무게', p.w, 'kg', 'decimal', '비어 있음')}
-  <div class="muted" style="margin-top:8px">몸무게는 적은 무게가 너무 무거울 때 «정말 맞아요?» 하고 묻는 데도 써요 · 비우면 70kg으로 봐요</div></div>
+  <div class="muted" style="margin-top:8px">몸무게는 기록한 무게가 너무 무거울 때 «정말 맞아요?» 하고 묻는 데도 써요 · 비우면 70kg으로 봐요</div></div>
   <button class="btn ghost" data-act="coach" id="miToCoach">코치에게 물어보기</button></div>`;
 }
 SUB.myinfo = vMyInfo;
@@ -169,7 +169,7 @@ document.addEventListener('change', e => {
   const el = e.target; if (!el.classList || !el.classList.contains('pin')) return;
   const k = el.dataset.k;
   if (!el.value.trim()) { setVal(k, null); toast('지웠어요 · 이건 이제 계산에 안 써요'); }
-  else { const r = checkVal(k, el.value); if (r.msg) toast(r.msg.replace(/ ?🙂/, '').replace('줄래?', '주세요')); else { setVal(k, r.v); toast('저장했어요 · 코치가 이제 이걸 보고 답해요'); } }
+  else { const r = checkVal(k, el.value); if (r.msg) toast(r.msg.replace(/ ?🙂/, '').replace('줄래? 소수점', '주세요 · 소수점').replace('줄래?', '주세요').replace('한 자리까지 돼 (', '한 자리까지 돼요 (').replace(/^음, (\S+)가 (\S+)\? 조금 이상한데 한 번만 다시 알려 주세요/, '$1 $2? 조금 이상해요. 한 번만 다시 적어 주세요').replace('눌러도 돼.', '눌러도 돼요.')); else { setVal(k, r.v); toast('저장했어요 · 코치가 이제 이걸 보고 답해요'); } }
   save();
   const redraw = () => { if (!document.activeElement || !document.activeElement.classList.contains('pin')) render(); };
   if (typeof ptrDown !== 'undefined' && ptrDown) setTimeout(redraw, 160); else redraw();

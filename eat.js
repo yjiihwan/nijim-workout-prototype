@@ -325,7 +325,7 @@ function vEatTab() {
   const left = E ? S.inv[E.id] || 0 : 0;
   return (E ? `<div class="eatcard rest" aria-hidden="true">${head}<div class="eatstage"></div><div class="eatbar"><span>&nbsp;</span><div class="trk"></div></div></div>
     <div class="eatov" role="dialog" aria-label="${esc(E.f.name)} 먹는 중"><div class="eatov-bg"></div><div class="eatcard ov">${head}<div class="eatstage" id="eatStage"></div>${bar}
-      <div class="eatmore">${EAT.q.length ? `<span>대기 ${EAT.q.length}개</span>` : '<span>화면 탭하면 건너뛰기</span>'}<button class="btn ghost" data-act="eatUse" data-id="${E.id}" ${left ? '' : 'disabled'}>${esc(E.f.name)} 하나 더 (${left}개)</button></div></div></div>`
+      <div class="eatmore">${EAT.q.length ? `<span>대기 ${EAT.q.length}개</span>` : '<span>화면을 탭하면 건너뛰기</span>'}<button class="btn ghost" data-act="eatUse" data-id="${E.id}" ${left ? '' : 'disabled'}>${esc(E.f.name)} 하나 더 (${left}개)</button></div></div></div>`
     : `<div class="eatcard">${head}<div class="eatstage" id="eatStage"></div>${bar}</div>`) + `
   <div class="chips">${[['all', '전체'], ['food', '먹는 거'], ['drink', '마시는 거']].map(([k, l]) => `<button class="${cat === k ? 'on' : ''}" data-act="eatCat" data-v="${k}">${l}</button>`).join('')}</div>
   <div class="fhead"><b>먹고 마시는 아이템</b><span>쓰면 바로 효과</span></div>

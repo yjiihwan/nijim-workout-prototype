@@ -309,7 +309,7 @@ const badge = a => `<div class="bdg ${a.done ? 'on' : ''}">${/^\d+$/.test(a.icon
 function achieveCard() {
   const L = achieveList(), done = L.filter(a => a.done).length;
   return `<div class="card" id="achCard"><div style="display:flex;justify-content:space-between;align-items:baseline"><div class="h2" style="font-size:16px;margin:0">업적</div><span class="muted"><b style="color:var(--ink)">${done}</b>/${L.length} 달성</span></div>
-  <div class="muted" style="margin:4px 0 10px">업적 보상은 꾸미기 아이템 · 상점에서 못 사요</div>
+  <div class="muted" style="margin:4px 0 10px">업적 보상은 상점에서 못 사는 꾸미기 아이템이에요</div>
   <div class="achs">${L.map((a, i) => `<button class="ach tap" data-act="ach" data-v="${i}">${badge(a)}<small>${a.name}</small>${a.done ? '' : `<em>${a.cur}/${a.goal}</em>`}</button>`).join('')}</div></div>
   <button class="card replink tap" data-act="prof" data-v="me" id="goMyProfile"><div><b>남이 보는 내 프로필</b><small>레벨·칭호·운동으로 쌓은 경험치 비율이 공개돼요</small></div><span class="muted">›</span></button>`;
 }
@@ -388,7 +388,7 @@ function vFriends2() {
   if (!friendsAll().length) return `${subHead('랭킹 · 친구')}<div class="sec">${req}
     <div class="card zero-card" id="zeroCard" style="text-align:center"><div class="cbox" style="height:110px">${charFit(S.type, S.level, 100)}</div>
       <div class="h2" style="margin:10px 0 4px">친구를 초대해 보세요</div><div class="muted">친구끼리만 보는 주간 리그예요. 무게가 아니라 <b>그 주에 얻은 경험치</b>로 겨뤄요.</div>
-      <button class="btn" data-act="sub" data-v="addFriend" id="goAddFriend">친구 추가하기</button><div class="muted" style="margin-top:8px">초대 링크·내 코드로만 · 연락처는 보지 않아요</div></div>
+      <button class="btn" data-act="sub" data-v="addFriend" id="goAddFriend">친구 추가하기</button><div class="muted" style="margin-top:8px">초대 링크나 내 코드로만 추가해요 · 연락처는 보지 않아요</div></div>
     ${lastVsThis()}${zeroDemo}</div>`;
   const list = rankList();
   return `${subHead('랭킹 · 친구')}<div class="sec">${req}<div class="seg"><button class="${S.fTab === 'week' ? 'on' : ''}" data-act="ftab" data-v="week">이번 주</button><button class="${S.fTab === 'level' ? 'on' : ''}" data-act="ftab" data-v="level">레벨</button></div>
@@ -448,7 +448,7 @@ function plateauReply(rs, ex) {
   if (!sess.length) return [`${jo(nm, '은', '는')} 아직 기록이 없어서 정체기인지 알 수 없어.`, '2번 이상 기록하면 무게가 늘고 있는지 같이 봐 줄게!'];
   const topOf = r => Math.max(...r.items.filter(it => it.ex === ex).flatMap(it => doneSets(it).map(x => x.w || 0)));
   const best = Math.max(...sess.map(topOf)), first = sess.find(r => topOf(r) === best), wks = Math.floor((dOf(TODAY) - dOf(first.date)) / (7 * DAY));
-  if (sess.length < 2) return [`${jo(nm, '은', '는')} ${md(first.date)} ${kg(best)} 1번 기록했어.`, '아직 1번이라 정체기인지는 아직 몰라. 2~3번 더 쌓아 보자!'];
+  if (sess.length < 2) return [`${jo(nm, '은', '는')} ${md(first.date)} ${kg(best)} 1번 기록했어.`, '1번뿐이라 정체기인지는 아직 몰라. 2~3번 더 쌓아 보자!'];
   const ratio = bwRatioLine(rs, ex), ns = nextStepLine(ex, best);   // v1.24: 내 정보(성별·몸무게)가 있을 때만
   if (wks >= PLATEAU_WEEKS) return [`${nm} ${kg(best)}에서 ${wks}주째야.`, ns || `다음엔 ${kg(e.step && e.step < 2.5 ? e.step : 2.5)}만 올려서 8회부터 해 볼까?`, '안 되면 지금 무게로 1세트 더 해도 좋아.', ratio].filter(Boolean);
   return [`${nm} 최고 무게는 ${kg(best)}, ${md(first.date)}에 찍었어.`, `${wks ? `${wks}주` : '1주도 안'} 됐으니 아직 정체기는 아니야. 지금처럼 꾸준히 가자!`, ratio].filter(Boolean);
@@ -503,12 +503,12 @@ function coachReply(kind, q = '') {
     const ex = exHit(q) || 'bench', e = EX[ex], lw = lastTop(ex);
     if (eqOn && !exAvail(ex, EQ)) { const a = eqAlt(ex, EQ), r0 = a.length ? startRange(a[0], P) : null;   // 그 센터에 없는 기구 → 같은 부위·있는 기구로
       return [`${EQ.center}엔 ${jo(e.name, '을', '를')} 할 기구가 없어.`, a.length ? `같은 ${e.part} 운동으로 ${a.map(id => EX[id].name).join('·')} 어때?` : '센터 선생님에게 비슷한 운동을 물어봐 줘.',
-        eqMachineLine(a, EQ), r0 ? `${EX[a[0]].name} 처음이면 ${rangeTxt(r0)}부터 10회씩 3세트 해 보자.` : a.length ? '처음이면 15회는 거뜬한 편한 무게로 시작하자.' : null, warm]; }
-    if (lw) return [`${jo(e.name, '은', '는')} 이미 기록이 있어 — 지난번 ${kg(lw)}.`, nextStepLine(ex, lw, P) || '지난번 무게에서 천천히 올려 가자.'];
+        eqMachineLine(a, EQ), r0 ? `${EX[a[0]].name} 처음이면 ${rangeTxt(r0)}부터 10회씩 3세트 해 보자.` : a.length ? '처음이면 15회는 거뜬히 할 수 있는 무게로 시작하자.' : null, warm]; }
+    if (lw) return [`${jo(e.name, '은', '는')} 지난번에 ${kg(lw)} 했어.`, nextStepLine(ex, lw, P) || '지난번 무게에서 천천히 올려 가자.'];
     const r = startRange(ex, P);
     if (r) return [`${e.name} 처음이면 ${rangeTxt(r)}부터 10회씩 3세트 해 보자.`, barNote([[ex, r]]), warm, !P.sex ? H('sex') : null];
-    if (!P.w) return [`${e.name} 처음이면 15회는 거뜬한 편한 무게로 시작하자.`, '자세 먼저 익히고 조금씩 올리면 돼.', H('w')];
-    return [`${jo(e.name, '은', '는')} 내가 아는 기준 무게가 아직 없어서 kg으로 말하긴 어려워.`, '15회는 거뜬한 편한 무게로 시작하자.'];
+    if (!P.w) return [`${e.name} 처음이면 15회는 거뜬히 할 수 있는 무게로 시작하자.`, '자세 먼저 익히고 조금씩 올리면 돼.', H('w')];
+    return [`${jo(e.name, '은', '는')} 내가 아는 기준 무게가 아직 없어서 kg으로 말하긴 어려워.`, '15회는 거뜬히 할 수 있는 무게로 시작하자.'];
   };
   const burnAns = () => {
     const r = [...rs].reverse().find(x => cardioOf(x).length); if (!r) return ['아직 유산소 기록이 없어.', '트레드밀·자전거 같은 유산소를 기록하면 대략 쓴 칼로리를 알려 줄게.'];
@@ -527,7 +527,7 @@ function coachReply(kind, q = '') {
     week: !lastWeek.sessions ? ['지난주엔 운동 기록이 없어.', '이번 주에 1번만 기록해도 주간 리포트에 정리해 줄게 📋'] : [`지난주 ${lastWeek.sessions}번 운동했어.`, lastWeek.missing.length ? `${jo(lastWeek.missing.join('·'), '은', '는')} 비어 있었어.` : '큰 부위 4곳 다 챙겼어.', '자세한 건 주간 리포트에 정리해 뒀어 📋'],
     plateau: plateauReply(rs, plateauEx(q)),
     balance: !bigSum ? ['최근 4주 근력 기록이 없어서 밸런스를 아직 볼 수 없어.', '2~3번 기록하면 부위별로 정리해 줄게!'] : [`4주 동안 ${jo(hi, '이', '가')} ${p4[hi]}세트로 제일 많았어.`, p4[lo] ? `${jo(lo, '은', '는')} ${p4[lo]}세트뿐이라 이번 주 1번 넣어 보자.` : `${jo(lo, '은', '는')} 한 번도 없어서 이번 주 1번 넣어 보자.`],
-    lesson: lesson ? [`${md(lesson.date)} PT 확인됐어!`, `선생님 확인이라 경험치 2배, ${fmt(lesson.xp)} XP 들어왔어 ⭐`] : ['아직 확인된 레슨이 없어. 수업 끝나면 선생님 확인 1번이면 돼.'],
+    lesson: lesson ? [`${md(lesson.date)} PT 확인됐어!`, `선생님 확인이라 경험치 2배, ${fmt(lesson.xp)} XP 들어왔어 ⭐`] : ['아직 확인된 레슨이 없어. 수업 끝나고 선생님이 한 번 확인해 주면 돼.'],
   }[kind] || [])))().filter(x => x != null);
 }
 function classify(q) {
@@ -573,7 +573,7 @@ function vCoach() {
   ${full ? `<div class="notice limit" id="coachFull"><span>이번 달 질문 ${COACH_MAX}번을 다 썼어요. <b>다음 달 1일</b>에 다시 ${COACH_MAX}번 생겨요.<br>아프거나 불편하면 운동을 멈추고 센터 선생님에게 말해 주세요.</span></div>` : ''}
   <div class="h3" style="margin-top:4px">이렇게 물어봐요</div>${chips}
   <div class="cin" id="coachIn"><input id="coachQ" placeholder="${full ? '다음 달에 다시 물어볼 수 있어요' : '코치에게 물어보기'}" maxlength="80" autocomplete="off" ${full ? 'disabled' : ''}><button class="btn sm" data-act="coachSend" ${full ? 'disabled' : ''}>보내기</button></div>
-  <div class="muted" style="margin-top:8px">의학적 조언이 아니에요 · 아프거나 병에 관한 질문에는 미리 정해 둔 안내만 드려요</div>
+  <div class="muted" style="margin-top:8px">의학적 조언이 아니에요 · 통증이나 병에 관한 질문에는 미리 정해 둔 안내만 드려요</div>
   <button class="card replink tap" data-act="report" data-v="coach" style="margin-top:12px"><div><b>주간 리포트 보기</b><small>지난주 부위·PR·다음 주 제안</small></div><span class="muted">›</span></button>
   ${demoCard('남은 횟수', 'coachUsed', String(c.used), [['3', '17번 남음'], ['19', '1번 남음'], ['20', '20번 도달']])}
   <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:-4px"><button class="btn sm ghost demochip" data-act="coachClear" style="margin:0">🧪 대화 지우기</button><button class="btn sm ghost demochip" data-act="coachReset" style="margin:0">🧪 첫 진입 고지 다시</button><button class="btn sm ghost demochip" data-act="coachNewUser" id="coachNewUser" style="margin:0">🧪 새 사용자(기록 0)</button></div>
@@ -614,14 +614,14 @@ document.addEventListener('click', e => {
     frCancel: () => { S.fr.sent = S.fr.sent.filter(x => x !== v); toast('요청을 취소했어요'); },
     frRequest: () => { if (!S.fr.sent.includes(v)) S.fr.sent.push(v); toast('요청 보냈어요 · 상대가 수락하면 친구가 돼요'); },
     frDemoAccept: () => { const n = S.fr.sent.shift(); if (n) { S.fr.added.push(n); S.friendZero = false; toast(`${n}님이 수락했어요 · 이제 친구예요`); } },
-    copyCode: () => { const c = myCode(); NJ_copyText(c).then(ok => toast(ok ? `내 코드 ${c}를 복사했어요` : `복사하지 못했어요 · 코드 ${c}를 직접 적어 보내 주세요`)); return true; },
+    copyCode: () => { const c = myCode(); NJ_copyText(c).then(ok => toast(ok ? `내 코드(${c})를 복사했어요` : `복사하지 못했어요 · 코드(${c})를 직접 적어 보내 주세요`)); return true; },
     shareLink: () => { const data = { title: '니짐내짐', text: `니짐내짐에서 같이 운동해요! 내 코드 ${myCode()}`, url: NJ_inviteLink() };
       if (navigator.share) navigator.share(data).catch(() => {}); else NJ_copyText(NJ_inviteLink()).then(ok => toast(ok ? '공유 창이 안 열려서 초대 링크를 복사했어요' : '링크를 복사하지 못했어요 · 내 코드를 직접 알려 주세요')); return true; },
     frCode: () => { const el = $('frCode'), q = (el ? el.value : '').trim().toUpperCase(); S.frCodeQ = q; S.frErr = '';
       const p = STRANGERS.find(x => x.code === q);
       if (!/^NJ-[A-Z0-9]{4,6}$/.test(q)) S.frErr = '코드를 다시 확인해 주세요 (예: NJ-CAPY2)';
       else if (q === myCode()) S.frErr = '내 코드예요 · 친구 코드를 넣어 주세요';
-      else if (!p) S.frErr = '그 코드를 쓰는 회원이 없어요';
+      else if (!p) S.frErr = '그 코드를 쓰는 회원이 없어요 · 코드를 다시 확인해 주세요';
       else if (friendsAll().some(f => f.n === p.n)) S.frErr = `${p.n}님은 이미 친구예요`;
       else if (S.fr.recv.includes(p.n)) S.frErr = `${p.n}님이 이미 요청을 보냈어요 · 받은 요청에서 수락해 주세요`;
       else if (friendsAll().length >= 50) S.frErr = '친구는 50명까지예요';

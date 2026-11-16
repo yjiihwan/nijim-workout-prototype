@@ -60,13 +60,13 @@ function charmUse() {   // 운동 못 간 주가 생겼을 때 서버가 부를 
   if (!charmOn() || charmLeft() <= 0) return false;
   const m = gearToday().slice(0, 7); S.charmUsed = { m, n: (S.charmUsed.m === m ? S.charmUsed.n : 0) + 1 }; return true;
 }
-const charmRow = () => S.owned.amulet ? `<div class="row" id="charmRow"><div><b>행운 부적 목걸이 · 이번 달 ${charmOn() ? charmLeft() : 0}번 남음</b><div class="muted">${charmOn() ? `차고 있는 동안 한 달에 ${GEAR_CFG.charmPerMonth}번, 운동 못 간 주를 저절로 지켜 줘요 · 티켓보다 먼저 써요` : '지금은 벗고 있어서 지켜 주지 않아요 · 내 아이템에서 차면 다시 지켜 줘요'} · ${gearLeft('amulet')}일 남음</div></div></div>` : '';
+const charmRow = () => S.owned.amulet ? `<div class="row" id="charmRow"><div><b>행운 부적 목걸이 · 이번 달 ${charmOn() ? charmLeft() : 0}번 남음</b><div class="muted">${charmOn() ? `착용하는 동안 한 달에 ${GEAR_CFG.charmPerMonth}번, 운동 못 간 주에도 연속 기록을 저절로 지켜 줘요 · 티켓보다 먼저 쓰여요` : '지금은 벗고 있어서 지켜 주지 않아요 · 내 아이템에서 착용하면 다시 지켜 줘요'} · ${gearLeft('amulet')}일 남음</div></div></div>` : '';
 
 /* ----- 알림(실제 앱에서는 푸시) — 끝나기 3일 전 1번 · 사라진 날 1번 · 달성 보상 ----- */
 function gearNoteSheet() {
   ensureGear(); const ns = S.gearNotes.splice(0); if (!ns.length) return; save();
   const row = n => { const g = GEAR_BY[n.id]; if (!g) return '';
-    const [h, sub] = n.t === 'end' ? [`${g.name}${gjo(g.name, '이', '가')} 다 해졌어요`, '유효기간이 끝나서 내 아이템에서 빠졌어요. 다시 쓰려면 상점에서 새로 사 주세요.']
+    const [h, sub] = n.t === 'end' ? [`${g.name} 유효기간이 끝났어요`, '내 아이템에서 빠졌어요. 다시 쓰려면 상점에서 새로 사 주세요.']
       : n.t === 'soon' ? [`${g.name} 유효기간이 ${n.left}일 남았어요`, `${gearDate(gearAddDays(n.until, -1))}까지 쓸 수 있어요. 더 쓰려면 상점에서 기간을 늘려 주세요.`]
       : [`${gearAchText(g)} 달성! ${g.name}${gjo(g.name, '을', '를')} 받았어요`, `내 캐릭터 › 내 아이템에서 바로 쓸 수 있어요${g.fx ? ` · ${gearFxText(g)}` : ''}`];
     return `<div class="gnote gn-${n.t}" data-id="${g.id}"><span class="gnico">${n.t === 'end' ? `<span class="gone">${gearIcon(g.id)}</span>` : gearIcon(g.id)}</span><div><b>${h}</b><small>${sub}</small></div></div>`; };
@@ -84,29 +84,29 @@ function gearShopHTML() {
   const card = i => { const g = i.gear, own = !!S.owned[g.id], eq = !!S.equipped[g.id], blk = own ? null : gearBlock(g), P = `${i.price.toLocaleString()}P`;
     const l2 = g.ach ? (own ? `${gearAchText(g)} 달성 보상` : `${gearAchText(g)} 달성하면 받아요 · ${Math.min(gearAchCur(g), g.ach.n)}/${g.ach.n}`)
       : g.days ? (own ? gearLeftText(g.id) : `산 날부터 ${g.days}일 동안`) : g.season ? `${GEAR_CFG.season[g.season].label} 한정` : '기간 없이 계속 써요';
-    const btn = own ? (g.days ? `<div class="grid2 ib"><button class="btn ${eq ? 'ghost' : ''}" data-act="wear" data-id="${g.id}">${eq ? '벗기' : '차기'}</button><button class="btn ghost gmore" data-act="buy" data-id="${g.id}" aria-label="${g.name} ${g.days}일 늘리기 ${P}">+${g.days}일<i>${P}</i></button></div>` : `<button class="btn ${eq ? 'ghost' : ''}" data-act="wear" data-id="${g.id}">${eq ? '벗기' : '차기'}</button>`)
+    const btn = own ? (g.days ? `<div class="grid2 ib"><button class="btn ${eq ? 'ghost' : ''}" data-act="wear" data-id="${g.id}">${eq ? '벗기' : '착용'}</button><button class="btn ghost gmore" data-act="buy" data-id="${g.id}" aria-label="${g.name} ${g.days}일 늘리기 ${P}">+${g.days}일<i>${P}</i></button></div>` : `<button class="btn ${eq ? 'ghost' : ''}" data-act="wear" data-id="${g.id}">${eq ? '벗기' : '착용'}</button>`)
       : blk ? `<button class="btn ghost glock" data-act="gearLock" data-id="${g.id}">${g.ach ? '못 사요 · 달성 보상' : '겨울에 팔아요'}</button>` : `<button class="btn" data-act="buy" data-id="${g.id}">${P}</button>`;
     return `<div class="item gitem g-${g.grade}" data-id="${g.id}">${eq ? '<span class="tag">착용 중</span>' : own ? '<span class="tag">보유</span>' : ''}<span class="ggrade g-${g.grade}">${GEAR_GRADE[g.grade]}</span>${itemImg(i)}<b>${i.name}</b><small><span class="gfx ${g.fx || g.protect ? 'on' : ''}">${gearFxText(g)}</span><span class="gterm">${l2}</span></small>${btn}</div>`; };
-  return `${chips}<div class="muted gshopnote" id="gShopNote">같은 자리에는 1개만 찰 수 있어요 · 효과는 차고 있는 동안, 그 운동을 기록한 만큼만 붙어요(한 운동에 합쳐서 최대 +${GEAR_CFG.capPct}%)</div>
+  return `${chips}<div class="muted gshopnote" id="gShopNote">같은 자리에는 1개만 착용할 수 있어요 · 효과는 착용하는 동안, 그 운동을 기록한 만큼만 붙어요(한 운동에 합쳐서 최대 +${GEAR_CFG.capPct}%)</div>
   <div class="grid2" id="gearGrid">${list.map(card).join('')}</div>
-  <div class="muted" style="margin-top:10px">니짐 포인트로 사요 · 가격·효과·유효기간은 예시예요 · 유효기간이 있는 용품은 기간이 끝나면 사라져요 · 효과로 더 받은 경험치는 캐릭터 레벨과 랭킹 «종합 순위»에 들어가요 · «순수 운동량 순위»와 운동 레벨에는 안 들어가요</div>${gearDemoCard()}`;
+  <div class="muted" style="margin-top:10px">니짐 포인트로 사요 · 가격·효과·유효기간은 예시예요 · 유효기간이 있는 아이템은 기간이 끝나면 사라져요 · 효과로 더 받은 경험치는 캐릭터 레벨과 랭킹 «종합 순위»에 들어가요 · «순수 운동량 순위»와 운동 레벨에는 안 들어가요</div>${gearDemoCard()}`;
 }
 function myItemsHTML(t) {
   ensureGear();
   const own = GEAR.filter(g => S.owned[g.id]), g0 = wearGeo(t, cutOf(S.level)), sl = wearSlots();
   const hid = g0 ? [!g0.wr && sl.wrist, (!g0.B.ft) && sl.leg, (!g0.B.ws) && sl.body && sl.body !== 'cape' ? sl.body : (!g0.B.ft && sl.body === 'cape' ? 'cape' : null)].filter(Boolean).map(id => GEAR_BY[id].name) : [];
   const cell = g => { const on = !!S.equipped[g.id], left = g.days ? gearLeftText(g.id) : '';
-    return `<button class="mi ${on ? 'on' : ''}" data-act="wear" data-id="${g.id}" aria-pressed="${on}" aria-label="${g.name} ${on ? '벗기' : '차기'}">${gearIcon(g.id)}<b>${g.name}</b><small>${on ? '착용 중 · 벗기' : '차기'}</small>${g.fx || g.protect ? `<span class="mifx">${g.fx ? `${g.fx.label} +${g.fx.pct}%` : '연속 기록 보호'}</span>` : ''}${left ? `<span class="mileft">${left}</span>` : ''}</button>`; };
+    return `<button class="mi ${on ? 'on' : ''}" data-act="wear" data-id="${g.id}" aria-pressed="${on}" aria-label="${g.name} ${on ? '벗기' : '착용'}">${gearIcon(g.id)}<b>${g.name}</b><small>${on ? '착용 중 · 벗기' : '착용'}</small>${g.fx || g.protect ? `<span class="mifx">${g.fx ? `${g.fx.label} +${g.fx.pct}%` : '연속 기록 보호'}</span>` : ''}${left ? `<span class="mileft">${left}</span>` : ''}</button>`; };
   const groups = GEAR_SLOTS.map(([k, l]) => [l, own.filter(g => g.slot === k)]).filter(x => x[1].length);
-  return `<div class="myitems" id="myItems"><div class="mihd"><b>내 아이템 <span class="micnt">${own.length}</span></b><span>${own.length ? '눌러서 차고 벗어요 · 자리마다 1개' : ''}</span></div>
+  return `<div class="myitems" id="myItems"><div class="mihd"><b>내 아이템 <span class="micnt">${own.length}</span></b><span>${own.length ? '눌러서 착용하고 벗어요 · 자리마다 1개' : ''}</span></div>
   ${own.length ? groups.map(([l, gs]) => `<div class="mislot">${l}</div><div class="migrid">${gs.map(cell).join('')}</div>`).join('') : '<div class="miempty">아직 가진 아이템이 없어요 · 아래 상점에서 구할 수 있어요</div>'}
   ${hid.length ? `<div class="minote">지금 단계는 팔다리가 없어서 ${hid.join('·')}${gjo(hid[hid.length - 1], '이', '가')} 그림에 안 보여요 · Lv.10부터 보여요(효과는 그대로 받아요)</div>` : ''}</div>`;
 }
 /* 운동기록 첫 화면 알약: 3개까지는 이름, 넘으면 한 줄로 */
 function gearPills() {
   const on = GEAR.filter(g => S.equipped[g.id] && S.owned[g.id]);
-  if (on.length > 3) return `<button class="pill eqpill" data-act="myItems" aria-label="장착 아이템 ${on.length}개 · 내 아이템에서 차고 벗기">장착 ${on.length}개<i>›</i></button>`;
-  return on.map(g => `<button class="pill eqpill" data-act="myItems" data-id="${g.id}" aria-label="${g.name} · 내 아이템에서 차고 벗기">${g.name}<i>›</i></button>`).join('');
+  if (on.length > 3) return `<button class="pill eqpill" data-act="myItems" aria-label="장착 아이템 ${on.length}개 · 내 아이템에서 착용하고 벗기">장착 ${on.length}개<i>›</i></button>`;
+  return on.map(g => `<button class="pill eqpill" data-act="myItems" data-id="${g.id}" aria-label="${g.name} · 내 아이템에서 착용하고 벗기">${g.name}<i>›</i></button>`).join('');
 }
 /* 🧪 시연 도구(주소에 ?demo=1 일 때만) — 날짜 앞당기기·달성 조건 흉내 */
 function gearDemoCard() {
@@ -122,7 +122,7 @@ function gearAct(a, v, id) {
   if (a === 'gearDay') { ensureGear(); S.gearShift = +v ? S.gearShift + +v : 0; gearTick(); return true; }
   if (a === 'gearDemo') { ensureGear();
     if (v === 'cnt') S.gearDemo.cnt += 100; else if (v === 'streak') S.gearDemo.streak = gearStreak() + 4; else if (v === 'pt') S.points += 5000; else if (v === 'reset') S.gearDemo = { cnt: 0, streak: null };
-    else if (v === 'miss') { const ok = charmUse(); save(); render(); toast(ok ? `행운 부적 목걸이가 연속 기록을 지켜 줬어요 · 이번 달 ${charmLeft()}번 남음` : charmOn() ? '이번 달 자동 보호는 이미 썼어요 · 다음은 쉬어가기 티켓 → 보호권 순서예요' : '행운 부적 목걸이를 차고 있지 않아요 · 쉬어가기 티켓 → 보호권 순서로 써요'); return 'done'; }
+    else if (v === 'miss') { const ok = charmUse(); save(); render(); toast(ok ? `행운 부적 목걸이가 연속 기록을 지켜 줬어요 · 이번 달 ${charmLeft()}번 남음` : charmOn() ? '이번 달 자동 보호는 이미 썼어요 · 다음은 쉬어가기 티켓 → 보호권 순서예요' : '행운 부적 목걸이를 착용하고 있지 않아요 · 쉬어가기 티켓 → 보호권 순서로 써요'); return 'done'; }
     gearTick(); return true; }
   return false;
 }

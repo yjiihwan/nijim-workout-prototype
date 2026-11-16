@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.74';
+const VER = 'v1.75';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -388,6 +388,7 @@ const vMembership = () => vDummy('멤버십', ['실제 앱 «멤버십» 화면 
 const vAll = () => vDummy('전체', ['실제 앱 «전체» 메뉴 자리 (마이페이지 · 설정 · 고객센터 …)', '실제 앱 «전체» 콘텐츠 자리']);
 
 /* ===== 공통 조각 ===== */
+const obHead = to => `<div class="subhead"><button data-act="obBack" data-v="${to}" id="backBtn"><i>‹</i>이전</button></div>`;   // v1.75: 처음 설정 2·3단계도 위 뒤로가기로 나간다
 function subHead(title, to = '', label = '운동기록') { return `<div class="subhead"><button data-act="back" data-v="${to}" id="backBtn"><i>‹</i>${label}</button><div class="h2">${title}</div></div>`; }
 const vBadge = k => (k = vk(k)) === 'self' ? '<span class="vb v0">자가 기록</span>' : `<span class="vb ${k}">${VERIFY_LABEL[K2V[k]]}</span>`;
 const sfBadge = on => on ? '<span class="vb selfie">📸 오운완</span>' : '';
@@ -439,7 +440,7 @@ function vChoose() {
 /* 2/2 알림 허용 + 사진은 나만 봄 (v1.44: 위치 허용 줄 삭제 — 위치는 어디서도 안 씀) */
 function vOnbPerm() {
   const row = (ico, title, desc, k) => `<div class="prow">${ico}<div><b>${title}</b><small>${desc}</small></div><button class="btn sm ${S.perm[k] ? 'ghost' : ''}" data-act="perm" data-v="${k}">${S.perm[k] ? '허용됨' : '허용'}</button></div>`;
-  return `<div class="sec">${obProg(3)}<div class="h2">거의 다 됐어요</div><div class="muted" style="margin-bottom:12px">마지막으로 알림만 정하면 돼요.</div>
+  return `${obHead(mships().length ? 'choose' : 'gym')}<div class="sec">${obProg(3)}<div class="h2">거의 다 됐어요</div><div class="muted" style="margin-bottom:12px">마지막으로 알림만 정하면 돼요.</div>
   ${msOnbNote()}
   <div class="card">${row(BELL, '알림', '센터에 들어가면 «입장 확인! 캐릭터가 기다려요» 하고 한 번 알려요. 설정에서 언제든 끌 수 있어요', 'noti')}</div>
   <div class="card privacy" id="photoNote">${LOCK}<div><b>사진은 나만 봐요</b><small>오운완 셀카는 나한테만 보여요. 친구나 다른 회원은 볼 수 없고, 언제든 지울 수 있어요. 안 찍어도 기록은 그대로 남아요.</small></div></div>
@@ -1097,6 +1098,8 @@ function render() {
     + (FLASH ? `<div class="notice flashn ${FLASH.cls}" id="flashNote"><span>${FLASH.cls === 'ok' ? '✓ ' : ''}${esc(FLASH.msg)}</span></div>` : '') + html;
   if (FLASH) FLASH.fresh = false;
   document.body.classList.toggle('wk', S.tab === 'workout');
+  /* v1.75: 운동기록 첫 화면에서 한 번이라도 들어간 화면은 하단 메뉴바를 숨기고 아래 끝까지 쓴다 — 나가는 길은 위 뒤로가기 */
+  document.body.classList.toggle('deep', !!((S.tab === 'workout' && S.sub && (S.chosen || S.sub.startsWith('onb')) && SUB[S.sub]) || (S.tab === 'all' && S.allSub)));
   document.body.classList.toggle('hasbar', !!$('endBar'));
   eatMount(); animMount(); gearNoteDue();
   document.querySelectorAll('.tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
@@ -1648,6 +1651,9 @@ document.addEventListener('click', e => {
     if (!S.onboarded) { ensureGym(); S.gym.step = 'ask'; return go('workout', mships().length ? 'onbPerm' : 'onbGym'); }
     S.sub = null; toast(`${CH[S.type].name}${wa(S.type)} 운동 시작!`); }
   else if (a === 'perm') { S.perm[v] = !S.perm[v]; }
+  else if (a === 'obBack') { if (v === 'gym') { ensureGym(); S.gym.step = 'ask'; return go('workout', 'onbGym'); }
+    if (S.sub === 'onbGym' && ensureGym().step !== 'ask') { S.gym.step = 'ask'; save(); render(); return window.scrollTo(0, 0); }
+    S.chosen = false; return go('workout'); }
   else if (a === 'obDone') { S.onboarded = true; S.joinAt = Date.now(); toast(`${CH[S.type].name}${wa(S.type)} 운동 시작!`); return go('workout'); }
   else if (a === 'rechoose') { if (S.level >= 10) return toast('Lv.10부터는 캐릭터 변경권이 있어야 바꿀 수 있어요'); S.chosen = false; S.sub = null; }
   else if (a === 'saveWorkout') return endAsk();

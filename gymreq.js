@@ -421,7 +421,7 @@ function gymFindMore() {
 }
 function vGymFlow() {
   const g = ensureGym(), onb = !S.onboarded, top = onb ? obProg(2) : '';
-  const wrap = body => `${onb ? '' : subHead('내 헬스장', g.flow === 'settings' ? 'settings' : '')}<div class="sec gyflow">${top}${body}</div>`;
+  const wrap = body => `${onb ? obHead('choose') : subHead('내 헬스장', g.flow === 'settings' ? 'settings' : '')}<div class="sec gyflow">${top}${body}</div>`;
   if (g.step === 'ask') return wrap(`<div class="h2">주로 어디서 운동하세요?</div><div class="muted" style="margin-bottom:12px">나중에 설정에서 바꿀 수 있어요.</div>
     <div class="grid2 placekind" id="gyAsk"><button class="pk" data-act="gyKind" data-v="gym" id="gyKindGym">${GY_ICO.gym}<b>헬스장</b><small>헬스·PT·필라테스</small></button>
     <button class="pk" data-act="gyKind" data-v="home" id="gyKindHome">${GY_ICO.home}<b>집·야외</b><small>홈트·걷기·달리기</small></button></div>`);

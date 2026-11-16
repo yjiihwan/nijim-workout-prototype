@@ -1074,3 +1074,15 @@ body:has(#cSaveBar) .toast{bottom:156px}
 
 /* v1.74 — 알통 자랑 칸이 하나뿐일 때 가운데 한 칸 */
 .flexrow.one .flexcell{flex:none;width:140px;max-width:100%}
+
+/* ===== v1.75: 2뎁스부터 하단 메뉴바 없음 — 내용·고정 버튼 줄을 화면 맨 아래(홈 인디케이터 바로 위)까지 ===== */
+body.deep .tabbar{display:none}
+body.deep .app{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+body.deep.hasbar .app{padding-bottom:calc(104px + env(safe-area-inset-bottom))}
+body.deep .endzone{height:calc(96px + env(safe-area-inset-bottom))}
+body.deep .endbar{bottom:calc(10px + env(safe-area-inset-bottom))}
+body.deep .toast{bottom:calc(28px + env(safe-area-inset-bottom))}
+body.deep.hasbar .toast{bottom:calc(96px + env(safe-area-inset-bottom))}
+body.deep:has(#cSaveBar) .toast{bottom:calc(88px + env(safe-area-inset-bottom))}
+body.deep .rkme{bottom:calc(12px + env(safe-area-inset-bottom))}
+body.deep .csavebar{margin-bottom:calc(-24px - env(safe-area-inset-bottom));padding-bottom:calc(14px + env(safe-area-inset-bottom))}

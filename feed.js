@@ -207,3 +207,6 @@ document.addEventListener('click', e => {
   if (a === 'fdDel') return rec && sheet(`<div class="h2">이 게시물을 지울까요?</div><div class="muted" style="line-height:1.6;word-break:keep-all">사진이 지워지고 피드에서도 사라져요.<br>지운 사진은 되돌릴 수 없어요.<br>운동 기록과 경험치는 그대로 남아요.</div><div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="shClose">취소</button><button class="btn danger" data-act="fdDelOk" data-id="${id}" id="fdDelOk">지우기</button></div>`);
   if (a === 'fdDelOk') { if (!rec) return shClose(); rec.photo = null; rec.pub = false; rec.pubAt = null; shClose(); S.fdNav.pop(); const top = fdTop(); S.sub = top ? (top.k === 'post' ? 'fpost' : 'fuser') : null; if (!top) { S.wseg = 'feed'; S.feedTab = 'mine'; } save(); render(); window.scrollTo(0, 0); return toast('게시물을 지웠어요'); }
 });
+
+/* v1.88: 피드를 보던 채로 새로 고치면 이 파일이 app.js 첫 그리기보다 늦게 읽혀 «기록을 열 수 없어요» 화면이 떴다 — 읽힌 뒤 한 번 다시 그린다 */
+if (S.tab === 'workout' && !S.sub && S.chosen && S.wseg === 'feed') render();

@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.87';
+const VER = 'v1.88';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -466,7 +466,7 @@ function vWorkout() {
   const pend = S.pending ? `<div class="notice"><span>⏳ 못 본 레벨업 장면이 있어요</span><button class="btn sm" data-act="playPending">보기</button></div>` : '';
   const eqNames = gearPills() + ITEMS.filter(i => i.kind !== 'look' && S.equipped[i.id]).map(i => `<span class="pill">${i.name}</span>`).join('') + gymPill();   // v1.68: 알약을 누르면 내 캐릭터 «내 아이템» 칸으로 · v1.70: 4개부터는 한 줄로
   const seg = `<div class="seg wseg"><button class="${S.wseg==='mine'?'on':''}" data-act="wseg" data-v="mine">내 운동</button><button class="${S.wseg==='feed'?'on':''}" data-act="wseg" data-v="feed">오운완 피드</button></div>`;
-  if (S.wseg === 'feed') return seg + vFeed();   // v1.76 feed.js
+  if (S.wseg === 'feed' && typeof vFeed === 'function') return seg + vFeed();   // v1.76 feed.js · v1.88: feed.js가 뒤에 읽히므로 그 전 첫 그리기는 «내 운동»으로 두고 feed.js 끝에서 다시 그린다
   const wd = weekDays(), wk = weekCount();
   const labels = ['월','화','수','목','금','토','일'];
   const week = wd.map((d, i) => `<div>${labels[i]}<div class="dot ${S.records.some(r => r.date === d) ? 'on' : ''} ${d === TODAY ? 'today' : ''}">${S.records.some(r => r.date === d) ? '✓' : ''}</div></div>`).join('');
@@ -1098,7 +1098,8 @@ function render() {
   if (FLASH) FLASH.fresh = false;
   document.body.classList.toggle('wk', S.tab === 'workout');
   /* v1.75: 운동기록 첫 화면에서 한 번이라도 들어간 화면은 하단 메뉴바를 숨기고 아래 끝까지 쓴다 — 나가는 길은 위 뒤로가기 */
-  document.body.classList.toggle('deep', !!((S.tab === 'workout' && S.sub && (S.chosen || S.sub.startsWith('onb')) && SUB[S.sub]) || (S.tab === 'all' && S.allSub)));
+  /* v1.88: 오운완 피드(둘러보기·내 피드)도 메뉴바 없이 — 나가는 길은 맨 위 «내 운동» */
+  document.body.classList.toggle('deep', !!((S.tab === 'workout' && S.sub && (S.chosen || S.sub.startsWith('onb')) && SUB[S.sub]) || (S.tab === 'workout' && !S.sub && S.wseg === 'feed' && !!document.querySelector('#view .wseg')) || (S.tab === 'all' && S.allSub)));
   document.body.classList.toggle('hasbar', !!$('endBar'));
   eatMount(); animMount(); missDue(); gearNoteDue();
   if (typeof aiFits === 'function' && $('coachSay') && !aiFits($('coachSay').textContent)) $('coachSay').firstElementChild.textContent = coachLineBase();   // v1.78: 좁은 화면에서 AI 문구가 두 줄을 넘으면 기존 문구

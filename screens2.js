@@ -200,9 +200,9 @@ function vStats2() {
   const repBtn = `<button class="card replink tap" data-act="report" id="goReport"><div><b>주간 리포트</b><small>지난주 돌아보기 · 부위·PR·다음 주 제안</small></div><span class="muted">›</span></button>`;
   const body = S.stTab === 'ex' ? statsEx(rs) : statsPeriod(rs);
   const photos = rs.filter(r => r.photo);
-  const photoCard = `<div class="card" id="stPhotos"><div class="h3">내 사진 모아보기 <span class="muted" style="font-weight:500">${LOCK.replace('class="ico"', 'class="ico sm"')} 나만 봐요</span></div>
-    ${photos.length ? `<div class="pgrid">${photos.slice(-9).reverse().map((r, i) => `<div class="pcell"><img src="${r.photo === 'demo' ? PHOTO_SIM(i) : r.photo}" alt=""><small>${md(r.date)}</small></div>`).join('')}</div><div class="muted" style="margin-top:8px">친구·프로필·리포트엔 보이지 않아요 · 지우기는 기록 상세나 설정에서</div>`
-      : '<div class="muted">아직 사진이 없어요 · 운동 끝나고 [오운완 셀카]를 찍으면 여기 모여요(나만 봐요)</div>'}</div>`;
+  const photoCard = `<div class="card" id="stPhotos"><div class="h3">내 사진 모아보기 <span class="muted" style="font-weight:500">${photos.length}장</span></div>
+    ${photos.length ? `<div class="pgrid">${photos.slice(-9).reverse().map((r, i) => `<div class="pcell"><img src="${r.photo === 'demo' ? PHOTO_SIM(i) : r.photo}" alt=""><small>${md(r.date)}</small></div>`).join('')}</div><div class="muted" style="margin-top:8px">«피드에 공개»를 켠 사진만 오운완 피드에 보여요 · 지우기는 기록 상세나 설정에서</div>`
+      : '<div class="muted">아직 사진이 없어요 · 운동 끝나고 [오운완 셀카]를 찍으면 여기 모여요</div>'}</div>`;
   const list = `<div class="card" id="stList"><div class="h2" style="font-size:16px">전체 기록 <span class="muted" style="font-weight:500">${all.length}건</span></div>${all.length ? all.slice(0, S.stMore ? 60 : 10).map(r => `<div class="rec ${r.ro ? '' : 'tap'}" ${r.ro ? '' : `data-act="rec" data-id="${r.id}"`}><div><b>${esc(r.summary)}</b><small>${r.date} · ${esc(r.place)}</small></div>${recXP(r)}</div>`).join('') + (all.length > (S.stMore ? 60 : 10) ? (S.stMore ? `<div class="muted" style="padding-top:8px">외 ${all.length - 60}건</div>` : `<button class="btn ghost" data-act="stMore" style="margin-top:10px">${all.length - 10}건 더 보기</button>`) : '') : '<div class="muted">기록이 없어요</div>'}</div>`;
   return `${subHead('통계')}<div class="sec">${seg}${body}${repBtn}${photoCard}${list}${dataDemoCard()}</div>`;
 }
@@ -349,7 +349,7 @@ function vProfile() {
   const p = profileData(S.prof || 'me'); if (!p) return vFriends2();
   const back = S.profFrom || 'friends', backLabel = { friends: '랭킹', me: '내 캐릭터', addFriend: '친구 추가' }[back] || '운동기록';
   const pureLv = p.me ? S.exLv : (p.pure ?? p.lv);
-  const actions = p.me ? '<div class="muted" style="text-align:center;margin-top:12px">다른 사람에게는 이렇게 보여요 · 표정·사진·자세한 기록은 나만 봐요</div>'
+  const actions = p.me ? '<div class="muted" style="text-align:center;margin-top:12px">다른 사람에게는 이렇게 보여요 · 표정·자세한 기록은 나만 봐요 · 사진은 피드에 공개한 것만 보여요</div>'
     : p.friend ? `<button class="btn" data-act="cheer" data-v="${esc(p.n)}" id="cheerBtn" ${S.fr.cheered[p.n] === TODAY ? 'disabled' : ''}>${S.fr.cheered[p.n] === TODAY ? '오늘 응원했어요 👏' : '응원 👏'}</button><div class="muted" style="text-align:center;margin-top:8px">친구 · 하루 1번 응원할 수 있어요</div>`
     : `${S.fr.sent.includes(p.n) ? '<button class="btn" disabled>요청 보냄 · 수락 기다리는 중</button>' : S.fr.recv.includes(p.n) ? `<button class="btn" data-act="frAccept" data-v="${esc(p.n)}">친구 요청 수락</button>` : `<button class="btn" data-act="frRequest" data-v="${esc(p.n)}" id="frReqBtn">친구 요청 보내기</button>`}<div class="muted" style="text-align:center;margin-top:8px">친구가 아니어도 레벨·칭호·운동으로 쌓은 경험치 비율은 누구나 볼 수 있어요<br>친구가 되면 이번 주 리그에서 같이 겨뤄요</div>`;
   return `${subHead(p.me ? '내 프로필 미리보기' : '프로필', back, backLabel)}<div class="sec">

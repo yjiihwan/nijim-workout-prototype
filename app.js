@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.75';
+const VER = 'v1.76';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -443,7 +443,7 @@ function vOnbPerm() {
   return `${obHead(mships().length ? 'choose' : 'gym')}<div class="sec">${obProg(3)}<div class="h2">거의 다 됐어요</div><div class="muted" style="margin-bottom:12px">마지막으로 알림만 정하면 돼요.</div>
   ${msOnbNote()}
   <div class="card">${row(BELL, '알림', '센터에 들어가면 «입장 확인! 캐릭터가 기다려요» 하고 한 번 알려요. 설정에서 언제든 끌 수 있어요', 'noti')}</div>
-  <div class="card privacy" id="photoNote">${LOCK}<div><b>사진은 나만 봐요</b><small>오운완 셀카는 나한테만 보여요. 친구나 다른 회원은 볼 수 없고, 언제든 지울 수 있어요. 안 찍어도 기록은 그대로 남아요.</small></div></div>
+  <div class="card privacy" id="photoNote">${LOCK}<div><b>사진 공개는 내가 정해요</b><small>오운완 셀카는 «피드에 공개»를 켠 것만 다른 회원에게 보여요. 꺼 두면 나만 보고, 언제든 바꾸거나 지울 수 있어요. 안 찍어도 기록은 그대로 남아요.</small></div></div>
   <button class="btn" data-act="obDone" id="obDone">${esc(CH[S.type].name)}${wa(S.type)} 시작하기</button>
   <div class="muted demoonly" style="text-align:center;margin-top:8px">시연용: 실제 권한 요청 창은 띄우지 않아요</div></div>`;
 }
@@ -457,7 +457,7 @@ function vWorkout() {
   const pend = S.pending ? `<div class="notice"><span>⏳ 못 본 레벨업 장면이 있어요</span><button class="btn sm" data-act="playPending">보기</button></div>` : '';
   const eqNames = gearPills() + ITEMS.filter(i => i.kind !== 'look' && S.equipped[i.id]).map(i => `<span class="pill">${i.name}</span>`).join('') + gymPill();   // v1.68: 알약을 누르면 내 캐릭터 «내 아이템» 칸으로 · v1.70: 4개부터는 한 줄로
   const seg = `<div class="seg wseg"><button class="${S.wseg==='mine'?'on':''}" data-act="wseg" data-v="mine">내 운동</button><button class="${S.wseg==='feed'?'on':''}" data-act="wseg" data-v="feed">오운완 피드</button></div>`;
-  if (S.wseg === 'feed') return `${seg}<div class="sec"><div class="ph tall">오운완 피드는 준비 중이에요<br>곧 친구들의 오운완을 여기서 볼 수 있어요</div></div>`;
+  if (S.wseg === 'feed') return seg + vFeed();   // v1.76 feed.js
   const wd = weekDays(), wk = weekCount();
   const labels = ['월','화','수','목','금','토','일'];
   const week = wd.map((d, i) => `<div>${labels[i]}<div class="dot ${S.records.some(r => r.date === d) ? 'on' : ''} ${d === TODAY ? 'today' : ''}">${S.records.some(r => r.date === d) ? '✓' : ''}</div></div>`).join('');
@@ -541,7 +541,7 @@ function vSession() {
       return `<button class="prow tap" data-act="openEx" data-v="${it.ex}"><div><b>${e.name}${ds.some(x => x.pr) ? ' <span class="prtag">PR</span>' : ''}</b><small>${esc(sub)}</small></div><span class="cnt">${e.mode === 'cardio' || e.mode === 'lesson' ? (it.min ? '✓' : '') : `${ds.length}세트`}</span></button>`; }).join('')}</div>`;
   const sfPct = CFG.SELFIE_BONUS.pct, selfieBtn = s.selfie ? sfCard('sfSess', s.photo, '오운완 셀카 찍음', `저장하면 경험치 +${sfPct}%${r.selfieXP ? ` (+${fmt(r.selfieXP)})` : ''}가 들어가요`, 'session')
     : selfieClaims() ? `<div class="muted sfnote" id="sfSess">오늘 보너스 받음 ✓ · 오운완 보너스는 하루 1번이에요</div>`
-    : `<button class="btn ghost camb" data-act="selfie" data-v="session" id="sfSessBtn">${CAM}오운완 셀카 <span class="muted">찍으면 경험치 +${sfPct}% · 하루 1번 · 나만 봐요</span></button>`;
+    : `<button class="btn ghost camb" data-act="selfie" data-v="session" id="sfSessBtn">${CAM}오운완 셀카 <span class="muted">찍으면 경험치 +${sfPct}% · 하루 1번 · 공개는 내가 정해요</span></button>`;
   const demos = [['none','실제 기록대로'],['next','다음 레벨까지 (짧은 연출)'],['boundary','10레벨 경계 넘기 (큰 연출)'],['multi','+5레벨 한꺼번에 (묶음)']];
   return `${subHead('오늘 운동')}<div class="sec"><div class="honest" id="honestTop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg><span>한 만큼만 솔직하게 기록해 주세요. 기록이 정확해야 AI 코칭이 내 몸에 맞게 나와요.</span></div>${head}${empty}
   ${selfieBtn}
@@ -783,8 +783,8 @@ function vResult() {
     <div class="muted" style="margin-top:6px" id="resultNote">${note}</div>
     ${m && m.ratio != null && S.moodDemo === 'auto' ? `<div class="muted" style="margin-top:4px">평소의 ${Math.round(m.ratio * 100)}%만큼 했어요 · 오늘 한 운동끼리만 지난 10번 기록과 비교했어요</div>` : ''}</div>
   ${rec && !rec.demo ? `<button class="btn sharebtn" data-act="share" data-id="${rec.id}" id="shareBtn">${NJ_SHARE_ICON_SVG()}자랑하기</button><div class="muted sharecap">오늘 한 운동을 카드로 만들어 자랑해요</div>` : ''}
-  ${canSelfie ? selfieCta(rec) : sfDone ? sfCard('sfDone', rec.photo, `오운완 인증 완료 · +${fmt(rec.selfieIn ?? rec.selfieXP)} XP`, rec.photo ? '오늘 보너스 받음 · 사진은 나만 봐요' : '사진은 지웠어요 · 받은 보너스는 그대로예요', 'result')
-    : rec && !rec.demo && rec.photo ? sfCard('sfDone', rec.photo, '오운완 사진 저장됨', `${proofHint(rec).t || '이번엔 보너스 경험치가 붙지 않았어요'} · 사진은 나만 봐요`, 'result') : ''}
+  ${canSelfie ? selfieCta(rec) : sfDone ? sfCard('sfDone', rec.photo, `오운완 인증 완료 · +${fmt(rec.selfieIn ?? rec.selfieXP)} XP`, rec.photo ? `오늘 보너스 받음 · 사진은 ${photoWho(rec)}` : '사진은 지웠어요 · 받은 보너스는 그대로예요', 'result')
+    : rec && !rec.demo && rec.photo ? sfCard('sfDone', rec.photo, '오운완 사진 저장됨', `${proofHint(rec).t || '이번엔 보너스 경험치가 붙지 않았어요'} · 사진은 ${photoWho(rec)}`, 'result') : ''}
   ${rec && rec.br ? `<div class="card" id="xpCard"><div class="h3">경험치 내역</div>${xpRows(rec)}<div class="xrow total"><span>다 더하면</span><b>+${fmt(rec.xp)} XP</b></div></div>` : ''}
   <div class="card demo"><div class="h3">🧪 시연 — 다른 결과로 보기</div><div class="chips">${[['low','아쉬운'],['normal','평소대로'],['high','신남']].map(([k, l]) => `<button class="chip ${v===k?'on':''}" data-act="mset" data-v="${k}">${l}</button>`).join('')}</div>
   <div class="muted" style="margin-top:8px">표정은 얼굴(눈·입·볼)만 바뀌어요 · 레벨·경험치와는 상관없어요</div></div>
@@ -802,7 +802,7 @@ function selfieCalc(rec) {
 const selfieGain = rec => { const c = selfieCalc(rec); return c ? c.g : 0; };
 function selfieCta(rec) {
   const h = proofHint(rec);
-  return `<button class="card selfiecta" data-act="selfie" data-v="result" id="selfieCta">${CAM}<div><b>오운완 셀카 찍기</b><small><span class="pfhint ${h.k}" id="proofHint">${h.t || '사진은 나만 보는 기록으로 남아요'}</span><br>앨범 사진도 돼요 · 사진은 나만 봐요</small></div><span class="rgo">›</span></button>`;
+  return `<button class="card selfiecta" data-act="selfie" data-v="result" id="selfieCta">${CAM}<div><b>오운완 셀카 찍기</b><small><span class="pfhint ${h.k}" id="proofHint">${h.t || '피드에 올릴지는 찍고 나서 정해요'}</span><br>앨범 사진도 돼요 · 사진은 나만 봐요</small></div><span class="rgo">›</span></button>`;
 }
 /* 오운완 인증 사진 보너스 상태 — 결과 화면 셀카 칸·자랑하기 셀카 칸이 같은 판단·같은 문구를 쓴다(v1.50).
    past = 오늘·방금 끝낸 기록이 아님(하루 1번 셈이 «오늘» 기준이라 지난 기록엔 보너스 없음) · held = 경험치 대기 중 기록 */
@@ -851,12 +851,12 @@ function vSelfie() {
   const st = S.selfieStep === 'guide' || S.selfieStep === 'done' ? S.selfieStep : 'cam';   // 옛 저장본의 judge·reject → 카메라로
   const back = subHead('오운완 셀카', S.selfieFor === 'session' ? 'session' : 'result', S.selfieFor === 'session' ? '오늘 운동' : '요약');
   if (st === 'guide') return `${back}<div class="sec"><div class="card selfieguide" id="selfieGuide">${CAM}<div class="h2" style="margin:8px 0 4px">촬영 가이드</div>
-    <div class="gl"><b>1</b><span>얼굴 셀카나 거울 셀카로 찍어 주세요</span></div><div class="gl"><b>2</b><span>다른 회원이 나오지 않게 찍어 주세요</span></div><div class="gl"><b>3</b><span>사진은 나한테만 보여요</span></div></div>
+    <div class="gl"><b>1</b><span>얼굴 셀카나 거울 셀카로 찍어 주세요</span></div><div class="gl"><b>2</b><span>다른 회원이 나오지 않게 찍어 주세요</span></div><div class="gl"><b>3</b><span>피드에 올릴지는 찍고 나서 정해요</span></div></div>
     <button class="btn" data-act="selfieGo" id="selfieGo">찍으러 가기</button></div>`;
   if (st === 'cam') return `${back}<div class="sec"><div class="cam" id="camBox"><video id="camV" autoplay playsinline muted></video><div class="camoff" id="camOff" hidden>${CAM}<b>카메라를 열 수 없어요</b><span>아래 앨범에서 골라 주세요<br>«카메라 앱»으로 찍어도 돼요</span></div></div>
     <div class="shutterrow"><label class="albumb" id="albumBtn"><i>${ALBUM}</i>앨범<input type="file" accept="image/*" id="camFile" hidden></label><button class="shutter" data-act="shoot" id="shutter" aria-label="촬영" disabled></button><label class="albumb" id="camAppBtn"><i>${CAM}</i>카메라 앱<input type="file" accept="image/*" capture="user" id="camApp" hidden></label></div>
     <div class="muted" style="text-align:center" id="camState">카메라를 여는 중…</div></div>`;
-  return `${back}<div class="sec"><div class="shot"><img src="${S.shot || ''}" alt="찍은 사진"></div><div class="card donec" id="selfieDone">${LOCK}<div><b>오운완! 나한테만 보여요</b><small>${S.selfieFor === 'session' ? `운동을 끝내고 저장하면 경험치 +${CFG.SELFIE_BONUS.pct}%가 들어가요` : S.selfieGot ? `오운완 보너스 +${fmt(S.selfieGot)} XP` : S.selfieSwap ? '사진만 바꿨어요 · 오운완 보너스는 그대로예요' : '사진은 기록에 저장했어요 · 이번엔 보너스 경험치가 붙지 않아요'}</small></div></div>
+  return `${back}<div class="sec"><div class="shot"><img src="${S.shot || ''}" alt="찍은 사진"></div><div class="card donec" id="selfieDone">${feedShotIcon()}<div><b id="selfieDoneT">${feedShotTitle()}</b><small>${S.selfieFor === 'session' ? `운동을 끝내고 저장하면 경험치 +${CFG.SELFIE_BONUS.pct}%가 들어가요` : S.selfieGot ? `오운완 보너스 +${fmt(S.selfieGot)} XP` : S.selfieSwap ? '사진만 바꿨어요 · 오운완 보너스는 그대로예요' : '사진은 기록에 저장했어요 · 이번엔 보너스 경험치가 붙지 않아요'}</small></div></div>${feedShotRow()}
     <div class="sfdonebtns"><button class="btn ghost" data-act="reshoot" data-v="${S.selfieFor}" id="selfieRetake">다시 찍기</button><button class="btn" data-act="selfieOk" id="selfieOk">확인</button></div></div>`;
 }
 
@@ -934,7 +934,7 @@ function vSettings() {
     ${gymSettingsRow()}
     <div class="row"><span>센터 확인 안내 그만 보기</span>${sw('hideTips', S.hideTips)}</div>
     <div class="row"><div><span>체중 <span class="muted">(선택)</span></span><div class="muted">무게 오타 확인에만 써요 · 비우면 70kg으로 봐요</div></div><div class="step"><button data-act="bw" data-d="-1">−</button><span>${S.bodyweight ? S.bodyweight + 'kg' : '—'}</span><button data-act="bw" data-d="1">+</button></div></div></div>
-  <div class="card" id="photoCard"><div class="h2" style="font-size:16px">내 사진</div><div class="muted" style="margin-bottom:8px">${LOCK.replace('class="ico"', 'class="ico sm"')} 나한테만 보여요 · ${photos.length}장</div>
+  <div class="card" id="photoCard"><div class="h2" style="font-size:16px">내 사진</div><div class="muted" style="margin-bottom:8px">${photos.length}장 · 피드에 공개 ${fdPubCount()}장 <span id="photoPubNote">· «피드에 공개»를 켠 사진만 다른 회원에게 보여요</span></div>
     ${photos.length ? `<div class="thumbs">${photos.map(r => `<button data-act="rec" data-id="${r.id}"><img src="${r.photo}" alt=""><small>${r.date.slice(5).replace('-', '/')}</small></button>`).join('')}</div>` : '<div class="muted">아직 찍은 오운완 셀카가 없어요</div>'}
     <button class="btn ghost" data-act="delAllPhotos" id="delAll" ${photos.length ? '' : 'disabled'}>내 사진 전체 삭제</button></div>
   <div class="card"><div class="h2" style="font-size:16px">레벨업 장면</div>
@@ -1029,7 +1029,7 @@ function vRec() {
   ${!E && !r.demo ? `<button class="btn sharebtn" data-act="share" data-id="${r.id}" id="recShare">${NJ_SHARE_ICON_SVG()}자랑하기</button>` : ''}
   ${E ? '' : lesson ? `<div class="muted">레슨 기록은 선생님이 확정한 기록이라 고치거나 지울 수 없어요</div>` : `<button class="btn ghost" data-act="editStart" id="editStart">기록 수정</button>${isSelf ? '' : `<div class="muted edithint" id="editHint">${keepNow ? `${keepUntil(r)}까지는 고쳐도 자가 기록으로 바뀌지 않아요` : '저장한 지 24시간이 지나서, 고치면 자가 기록으로 다시 계산돼요'}</div>`}`}
   ${!E && r.br ? `<div class="card" style="margin-top:12px"><div class="h3">경험치 내역</div>${xpRows(r)}<div class="xrow total"><span>다 더하면</span><b>+${fmt(r.xp)} XP</b></div></div>` : ''}
-  ${!E && r.photo ? `<div class="card" id="recPhoto"><div class="h3">오운완 셀카 <span class="muted" style="font-weight:500">${LOCK.replace('class="ico"', 'class="ico sm"')} 나만 봐요</span></div><img class="recphoto" src="${r.photo}" alt=""><button class="btn ghost" data-act="delPhoto" data-id="${r.id}" id="delPhoto">사진 삭제</button></div>` : ''}
+  ${!E && r.photo ? `<div class="card" id="recPhoto"><div class="h3">오운완 셀카 <span class="muted" style="font-weight:500" id="recPhotoWho">${r.pub === true ? '' : LOCK.replace('class="ico"', 'class="ico sm"') + ' '}${photoWho(r)}</span></div><img class="recphoto" src="${r.photo}" alt=""><button class="btn ghost" data-act="delPhoto" data-id="${r.id}" id="delPhoto">사진 삭제</button></div>` : ''}
   ${!E && !lesson ? `<button class="btn ghost delrec" data-act="delRec" id="delRec">이 기록 지우기</button>` : ''}</div>`;
 }
 /* v1.41(형 11-11 승인): 저장하고 24시간 안에 고치면 원래 등급 그대로(입점 보너스·셀카 보너스도 다시 계산해 유지), 24시간이 지나서 고치면
@@ -1270,6 +1270,7 @@ function endSession0(s, auto) {
   const items = s.items.filter(it => (it.sets || []).some(x => x.done) || it.min > 0).map(({ draft, run, plan, dirty, ...it }) => ({ ...it, sets: it.sets ? it.sets.filter(x => x.done).map(({ at, ...x }) => x) : undefined }));
   const rec = { id: Date.now(), date: TODAY, place: s.place.name, placeKind: s.place.kind, summary: summaryOf(items), items, xp: gained + cb, xpCenter: cb, cbCut: cbr.cut, centerBase: r.baseXP, centerIf: isDemo || batch ? null : centerIf(s, ctx, r), raw: r.raw, held, cut: isDemo ? 0 : cap.cut, cutReason: cap.reason,
     heldCb: held ? centerBonus(r, L, false).cb : 0, xpBoost: isDemo ? 0 : cap.boostGained, selfieXP: isDemo || held ? 0 : r.selfieXP, selfieIn: isDemo || held ? 0 : cap.selfieGained, boosted, v: V2K[r.v], light: s.light, prCount: batch ? 0 : s.prCount, photo: s.photo, ctx, br: isDemo ? { demoXP: gained } : r, demo: isDemo, auto: auto || undefined, batch: batch || undefined };
+  if (s.photo && s.pub === true && !isDemo) { rec.pub = true; rec.pubAt = Date.now(); }   // v1.76 «피드에 공개»를 켜고 찍은 사진
   rec.dur = Math.max(1, Math.round((s.lastAt - s.startedAt) / 60000));   // 공유 카드 «운동 시간»(v2 SPEC §2)
   if (res.level > res.from) rec.lvUp = { from: res.from, to: res.level };
   S.records.push(rec);
@@ -1396,7 +1397,7 @@ function shoot() {
   saveShot(c.toDataURL('image/jpeg', .72));
 }
 function saveShot(url) {
-  S.shot = url; S.selfieStep = 'done'; camStop(); tone(1400, 0, .06, 'square', .05); applySelfie(); save(); render();
+  S.shot = url; S.selfieStep = 'done'; camStop(); tone(1400, 0, .06, 'square', .05); applySelfie(); feedAfterShot(); save(); render();
 }
 function applySelfie() {
   S.selfieSwap = false;
@@ -1645,7 +1646,7 @@ document.addEventListener('click', e => {
   else if (a === 'release') { const r = S.records.find(x => x.id === +id); if (!r || !r.held) return; const { res, g } = releaseHeld(r);
     return afterGain(res, { toast: `기다리던 ${fmt(g)} XP가 들어왔어요` }); }
   else if (a === 'mset') { const mm = MOOD[v]; S.mood = { verdict: v, ratio: null, date: TODAY, line: mm.lines[0] }; }
-  else if (a === 'wseg') S.wseg = v;
+  else if (a === 'wseg') { S.wseg = v; if (v === 'feed') S.feedTab = 'browse'; }   // v1.76: 피드는 늘 «둘러보기»부터
   else if (a === 'pick') S.pick = v;
   else if (a === 'choose') { S.type = S.pick || S.type; S.chosen = true; S.pick = null;
     if (!S.onboarded) { ensureGym(); S.gym.step = 'ask'; return go('workout', mships().length ? 'onbPerm' : 'onbGym'); }

@@ -1159,3 +1159,13 @@ body.deep .csavebar{margin-bottom:calc(-24px - env(safe-area-inset-bottom));padd
 .plast .plrow b{display:block;font-size:16px;font-weight:700;line-height:1.35;word-break:keep-all;overflow-wrap:anywhere}
 .plast .btn{margin-top:0}
 #myCtName{word-break:keep-all;overflow-wrap:anywhere}
+
+/* ===== v1.89 오운완 피드 떠 있는 뒤로가기(형 11-17) — 위 전환 버튼이 화면 밖으로 나가면 왼쪽 위에 동그란 유리 버튼. 44px, 상태바 안전 여백 아래, 넓은 화면에선 내용 칸 왼쪽 위 ===== */
+.fdfab{position:fixed;z-index:15;top:calc(10px + env(safe-area-inset-top));left:max(12px,calc(50% - 203px));width:44px;height:44px;padding:0;border-radius:50%;display:grid;place-items:center;color:var(--ink);
+  background:rgba(255,255,255,.62);-webkit-backdrop-filter:blur(14px) saturate(1.7);backdrop-filter:blur(14px) saturate(1.7);border:1px solid rgba(255,255,255,.72);
+  box-shadow:0 0 0 .5px rgba(22,22,28,.1),0 4px 16px rgba(22,22,28,.16),inset 0 1px 0 rgba(255,255,255,.65);
+  opacity:0;visibility:hidden;pointer-events:none;transform:translateY(-6px) scale(.94);transition:opacity .22s ease,transform .22s ease,visibility 0s .22s}
+.fdfab.on{opacity:1;visibility:visible;pointer-events:auto;transform:none;transition:opacity .22s ease,transform .22s ease}
+.fdfab.on:active{transform:scale(.93)}
+.fdfab svg{width:22px;height:22px;margin-left:-2px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+@media (prefers-reduced-motion:reduce){.fdfab,.fdfab.on{transition:none;transform:none}}

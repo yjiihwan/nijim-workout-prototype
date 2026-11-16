@@ -188,6 +188,7 @@ document.addEventListener('click', e => {
   if (a === 'fdTab') { S.feedTab = v === 'mine' ? 'mine' : 'browse'; save(); render(); return; }
   if (a === 'fdScope') { S.feedScope = v === 'all' ? 'all' : 'center'; save(); render(); return; }
   if (a === 'fdBack') return fdBack();
+  if (a === 'fdHome') { S.fdNav = []; S.wseg = 'mine'; return go('workout'); }   // v1.89 떠 있는 뒤로가기 → 운동기록 첫 화면(맨 위)
   if (a === 'fdAsOther') return fdOpen({ k: 'user', id: 'me', as: 1 });
   if (a === 'fdUser') {
     const top = fdTop(), prev = S.fdNav[S.fdNav.length - 2];
@@ -208,5 +209,25 @@ document.addEventListener('click', e => {
   if (a === 'fdDelOk') { if (!rec) return shClose(); rec.photo = null; rec.pub = false; rec.pubAt = null; shClose(); S.fdNav.pop(); const top = fdTop(); S.sub = top ? (top.k === 'post' ? 'fpost' : 'fuser') : null; if (!top) { S.wseg = 'feed'; S.feedTab = 'mine'; } save(); render(); window.scrollTo(0, 0); return toast('게시물을 지웠어요'); }
 });
 
+
+
+/* v1.89(형 11-17): 피드를 내려 위 «내 운동 / 오운완 피드» 전환 버튼이 화면 밖으로 나가면 왼쪽 위에 동그란 유리 뒤로가기를 띄운다 — 누르면 운동기록 첫 화면.
+   둘러보기·내 피드 = 전환 버튼 기준, 다른 회원 피드 = 위 «‹ 피드» 줄 기준. 게시물 상세는 띄우지 않는다(위에 한 단계 뒤로가기가 있고 화면이 짧아 둘이 헷갈림). */
+const fdFab = (() => {
+  const b = document.createElement('button'); b.id = 'fdFab'; b.className = 'fdfab'; b.type = 'button'; b.dataset.act = 'fdHome'; b.setAttribute('aria-label', '운동기록 첫 화면으로'); b.tabIndex = -1;
+  b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
+  $('app').appendChild(b); return b;
+})();
+const fdFabAnchor = () => S.tab !== 'workout' || !S.chosen ? null : !S.sub && S.wseg === 'feed' ? document.querySelector('#view .wseg') : S.sub === 'fuser' ? document.querySelector('#view .subhead') : null;
+function fdFabSync() {
+  const a = fdFabAnchor(), safe = (parseFloat(getComputedStyle(fdFab).top) || 10) - 10;   // 상태바 안전 여백 — 그 밑으로 들어가면 가려진 것으로 본다
+  const on = !!a && a.getBoundingClientRect().bottom <= safe;
+  if (on !== fdFab.classList.contains('on')) { fdFab.classList.toggle('on', on); fdFab.tabIndex = on ? 0 : -1; }
+}
+{ let q = 0; const later = () => { if (!q) q = requestAnimationFrame(() => { q = 0; fdFabSync(); }); };
+  window.addEventListener('scroll', later, { passive: true }); window.addEventListener('resize', later);
+  new MutationObserver(fdFabSync).observe($('view'), { childList: true }); }
+
 /* v1.88: 피드를 보던 채로 새로 고치면 이 파일이 app.js 첫 그리기보다 늦게 읽혀 «기록을 열 수 없어요» 화면이 떴다 — 읽힌 뒤 한 번 다시 그린다 */
 if (S.tab === 'workout' && !S.sub && S.chosen && S.wseg === 'feed') render();
+fdFabSync();

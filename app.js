@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.84';
+const VER = 'v1.85';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -430,7 +430,7 @@ function parseW(raw) {
   return { ok: true, w, snapped: Math.abs(w - v) > 1e-9 };
 }
 const sw = (act, on, id = '') => `<button class="sw ${on ? 'on' : ''}" data-act="${act}" ${id ? `id="${id}"` : ''}></button>`;
-const obProg = n0 => { ensureGym(); const ms = mships().length > 0, tot = ms ? 2 : 3, n = ms && n0 === 3 ? 2 : n0;   // v1.55: 멤버십이 있으면 «주로 어디서 운동하세요?»(2/3)를 건너뛴다 → 2단계
+const obProg = n0 => { const tot = 2, n = Math.min(n0, tot);   // v1.85: «주로 어디서 운동하세요?» 질문 없앰 → 누구나 2단계
   return `<div class="obprog" aria-label="${tot}단계 중 ${n}단계">${Array.from({ length: tot }, (_, i) => `<i class="${i + 1 <= n ? 'on' : ''}"></i>`).join('')}<span>${n}/${tot}</span></div>`; };
 const LOCK = '<svg class="ico" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>';
 const BELL = '<svg class="ico" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>';
@@ -449,7 +449,7 @@ function vChoose() {
 /* 2/2 알림 허용 + 사진은 나만 봄 (v1.44: 위치 허용 줄 삭제 — 위치는 어디서도 안 씀) */
 function vOnbPerm() {
   const row = (ico, title, desc, k) => `<div class="prow">${ico}<div><b>${title}</b><small>${desc}</small></div><button class="btn sm ${S.perm[k] ? 'ghost' : ''}" data-act="perm" data-v="${k}">${S.perm[k] ? '허용됨' : '허용'}</button></div>`;
-  return `${obHead(mships().length ? 'choose' : 'gym')}<div class="sec">${obProg(3)}<div class="h2">거의 다 됐어요</div><div class="muted" style="margin-bottom:12px">마지막으로 알림만 정하면 돼요.</div>
+  return `${obHead('choose')}<div class="sec">${obProg(2)}<div class="h2">거의 다 됐어요</div><div class="muted" style="margin-bottom:12px">마지막으로 알림만 정하면 돼요.</div>
   ${msOnbNote()}
   <div class="card">${row(BELL, '알림', '센터에 들어가면 «입장 확인! 캐릭터가 기다려요» 하고 한 번 알려요. 설정에서 언제든 끌 수 있어요', 'noti')}</div>
   <div class="card privacy" id="photoNote">${LOCK}<div><b>사진 공개는 내가 정해요</b><small>오운완 셀카는 «피드에 공개»를 켠 것만 다른 회원에게 보여요. 꺼 두면 나만 보고, 언제든 바꾸거나 지울 수 있어요. 안 찍어도 기록은 그대로 남아요.</small></div></div>
@@ -512,11 +512,14 @@ const clock = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.flo
 /* ===== C3b 장소 선택 (입장 기록 없을 때만) ===== */
 function vPlace() {
   const msTop = msPlaceTop(); if (msTop) return msTop;   // v1.55: 멤버십이 여러 장이면 내 멤버십 센터만 먼저
-  const recent = [...new Set([...S.records].sort((a, b) => b.date.localeCompare(a.date)).map(r => placeBase(r.place)))].filter(p => p !== '집' && p !== '야외').slice(0, 4);
+  const last = lastPlace();   // v1.85: 지난번에 고른 곳이 기본 선택 — 설정이 아니라 이 화면의 기본값으로만 기억한다
+  const recent = [...new Set([...S.records].sort((a, b) => b.date.localeCompare(a.date)).map(r => placeBase(r.place)))].filter(p => p !== '집' && p !== '야외' && p !== last).slice(0, 4);
   const list = placeFind(S.placeQ);
   return `${subHead('어디서 운동해요?')}<div class="sec">
   <div class="muted" style="margin-bottom:10px">${S.entryDemo ? '오늘 운동할 곳을 골라 주세요.' : '오늘은 센터 입장 기록이 없어요. 장소만 골라 주세요.'}</div>
-  <div class="h3">최근 장소</div><div class="chips white" id="recentPlaces">${recent.map(p => `<button class="chip" data-act="place" data-v="${esc(p)}">${esc(p)}</button>`).join('')}</div>
+  ${last ? `<div class="card plast" id="placeLast"><div class="plrow"><i aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7.5"/></svg></i><div><small>지난번에 고른 곳</small><b id="placeLastName">${esc(last)}</b></div></div>
+    <button class="btn" data-act="place" data-v="${esc(last)}" id="placeLastGo">여기서 운동 시작</button></div><div class="h3 plother">다른 곳에서 운동해요</div>` : ''}
+  ${recent.length ? `${last ? '' : '<div class="h3">최근 장소</div>'}<div class="chips white" id="recentPlaces">${recent.map(p => `<button class="chip" data-act="place" data-v="${esc(p)}">${esc(p)}</button>`).join('')}</div>` : ''}
   <div class="grid2 placekind"><button class="pk" data-act="place" data-v="집" id="pkHome"><svg viewBox="0 0 24 24"><path d="M3.5 11 12 4l8.5 7"/><path d="M6 9.5V20h12V9.5"/></svg><b>집</b><small>홈트·맨몸 운동</small></button>
   <button class="pk" data-act="place" data-v="야외" id="pkOut"><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="3"/><path d="M5 20c1.5-4 4-6 7-6s5.5 2 7 6"/></svg><b>야외</b><small>걷기·달리기·자전거</small></button></div>
   <div class="card" style="margin-top:12px"><div class="search">${'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>'}<input id="placeQ" placeholder="헬스장 이름이나 동네 검색" value="${esc(S.placeQ)}" autocomplete="off"></div>
@@ -935,7 +938,6 @@ function vSettings() {
     <div class="muted demoonly">시연용 스위치 — 실제 알림은 보내지 않아요</div></div>
   <div class="card" id="locCard"><div class="h2" style="font-size:16px">센터 확인</div>
     <div class="muted">센터 확인은 «입장하기» 기록으로만 해요${gymQuiet() ? '' : ` · 입점 헬스장에서 '입장하기'를 누르고 운동하면 경험치를 더 받아요`}</div>
-    ${gymSettingsRow()}
     <div class="row"><span>센터 확인 안내 그만 보기</span>${sw('hideTips', S.hideTips)}</div>
     <div class="row"><div><span>체중 <span class="muted">(선택)</span></span><div class="muted">무게 오타 확인에만 써요 · 비우면 70kg으로 봐요</div></div><div class="step"><button data-act="bw" data-d="-1">−</button><span>${S.bodyweight ? S.bodyweight + 'kg' : '—'}</span><button data-act="bw" data-d="1">+</button></div></div></div>
   <div class="card" id="photoCard"><div class="h2" style="font-size:16px">내 사진</div><div class="muted" style="margin-bottom:8px">${photos.length}장 · 피드에 공개 ${fdPubCount()}장 <span id="photoPubNote">· «피드에 공개»를 켠 사진만 다른 회원에게 보여요</span></div>
@@ -1070,7 +1072,7 @@ function editNoteHTML(r, ed, items) {
 
 const MAIN = { home:vHome, nearby:vNearby, membership:vMembership, workout:vWorkout, all:vAll };
 const SUB = { session:vSession, place:vPlace, pick:vPick, set:vSet, cardio:vCardio, result:vResult, selfie:vSelfie, rec:vRec, calc:vCalc,
-  onbPerm:vOnbPerm, onbGym:vGymFlow, gym:vGymFlow, friends:vFriends, me:vMe, shop:vShop, stats:vStats, settings:vSettings };
+  onbPerm:vOnbPerm, friends:vFriends, me:vMe, shop:vShop, stats:vStats, settings:vSettings };
 /* v1.40 안전망(QA 치6·치8): 화면 그리기가 실패해도 빈 화면으로 두지 않는다 — ① 운동기록 첫 화면으로 ② 그것도 안 되면 «처음 상태로 시작» 화면 */
 const SESS_SUBS = ['session', 'set', 'cardio', 'pick'];
 function viewHTML() {
@@ -1127,7 +1129,14 @@ function openSession(place, verify, extra) {
   S.demo = 'none'; S.holdDemo = false; S.q = ''; S.part = 'all';
   go('workout', 'session');
 }
+/* v1.85 지난번에 고른 곳 — 장소 화면에서 직접 고른 값(S.lastPlace). 없으면 가장 최근에 직접 적은 기록의 장소. 옛 «주로 운동하는 곳» 저장값은 안 읽는다 */
+function lastPlace() {
+  if (typeof S.lastPlace === 'string' && S.lastPlace) return S.lastPlace;
+  const r = realRecs().filter(x => x.v !== 'auto' && x.place).sort((a, b) => recAt(b) - recAt(a))[0];
+  return r ? placeBase(r.place) : '';
+}
 function pickPlace(name) {
+  S.lastPlace = name;
   if (name === '집' || name === '야외') return openSession({ name, kind: name === '집' ? 'home' : 'out' }, 'V0');
   openSession({ name, kind: 'center' }, 'V0');   // 결정 37 ②: 입점 안 된 헬스장·입장 기록 없는 입점센터 = 집·야외와 같은 V0
 }
@@ -1275,7 +1284,7 @@ function endSession0(s, auto) {
   rec.dur = Math.max(1, Math.round((s.lastAt - s.startedAt) / 60000));   // 공유 카드 «운동 시간»(v2 SPEC §2)
   if (res.level > res.from) rec.lvUp = { from: res.from, to: res.level };
   S.records.push(rec);
-  if (!isDemo) gymAuto();   // v1.54: 내 헬스장 = 최근 자주 기록한 곳(gymreq.js)
+  if (!isDemo) gymAuto();   // v1.54: 자주 가는 헬스장 = 최근 자주 기록한 곳(gymreq.js)
   /* 결정 21: 표정만 바뀜 — 위 레벨·경험치 계산에 관여하지 않음 */
   const j = judgeIntensity(items, { hist: histVol(), today: TODAY, light: s.light, comeback: ctx.lastDays >= CFG.COMEBACK_DAYS, lowRun: S.lowRun });
   const verdict = S.moodDemo !== 'auto' ? S.moodDemo : j.verdict;
@@ -1693,11 +1702,10 @@ document.addEventListener('click', e => {
   else if (a === 'wseg') { S.wseg = v; if (v === 'feed') S.feedTab = 'browse'; }   // v1.76: 피드는 늘 «둘러보기»부터
   else if (a === 'pick') S.pick = v;
   else if (a === 'choose') { S.type = S.pick || S.type; S.chosen = true; S.pick = null;
-    if (!S.onboarded) { ensureGym(); S.gym.step = 'ask'; return go('workout', mships().length ? 'onbPerm' : 'onbGym'); }
+    if (!S.onboarded) { ensureGym(); return go('workout', 'onbPerm'); }
     S.sub = null; toast(`${CH[S.type].name}${wa(S.type)} 운동 시작!`); }
   else if (a === 'perm') { S.perm[v] = !S.perm[v]; }
-  else if (a === 'obBack') { if (v === 'gym') { ensureGym(); S.gym.step = 'ask'; return go('workout', 'onbGym'); }
-    if (S.sub === 'onbGym' && ensureGym().step !== 'ask') { S.gym.step = 'ask'; save(); render(); return window.scrollTo(0, 0); }
+  else if (a === 'obBack') {
     S.chosen = false; return go('workout'); }
   else if (a === 'obDone') { S.onboarded = true; S.joinAt = Date.now(); toast(`${CH[S.type].name}${wa(S.type)} 운동 시작!`); return go('workout'); }
   else if (a === 'rechoose') { if (S.level >= 10) return toast('Lv.10부터는 캐릭터 변경권이 있어야 바꿀 수 있어요'); S.chosen = false; S.sub = null; }

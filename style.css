@@ -1166,3 +1166,14 @@ body.deep .csavebar{margin-bottom:calc(-24px - env(safe-area-inset-bottom));padd
 .missbody{font-size:15px;line-height:1.6;word-break:keep-all;color:var(--ink)}
 .misshave{display:flex;align-items:center;gap:10px;background:var(--g1);border-radius:12px;padding:10px 12px;margin-top:12px;font-size:13px;color:var(--g5);word-break:keep-all;line-height:1.45}
 .misshave b{color:var(--ink)}.misshave img,.misshave .itemsvg{height:36px;width:36px;object-fit:contain;flex:none;margin:0}
+
+/* ===== v1.85 장소 화면 «지난번에 고른 곳» 기본 선택 ===== */
+.plast{border:1.5px solid var(--rose);margin-bottom:14px}
+.plast .plrow{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.plast .plrow i{flex:none;width:28px;height:28px;border-radius:50%;background:var(--rose);display:grid;place-items:center}
+.plast .plrow i svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.plast .plrow div{min-width:0}
+.plast .plrow small{display:block;font-size:12px;color:var(--g5);font-weight:600}
+.plast .plrow b{display:block;font-size:16px;font-weight:700;line-height:1.35;word-break:keep-all;overflow-wrap:anywhere}
+.plast .btn{margin-top:0}
+#myCtName{word-break:keep-all;overflow-wrap:anywhere}

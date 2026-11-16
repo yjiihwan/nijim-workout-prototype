@@ -1,8 +1,8 @@
 'use strict';
-/* 결정 40 — C15 랭킹 탭 3개 «친구 리그 / 내 센터 / 전국» · 내 센터 여러 개 · 랭킹은 누구나 항상 보인다(v1.83: «센터 랭킹에 안 보이기» 없앰).
+/* 결정 40 — C15 랭킹 탭 3개 «친구 리그 / 내 센터 / 전국» · 내 센터 여러 개(v1.85: 멤버십·입장·운동 기록으로 자동, 손으로 넣고 빼는 길 없음) · 랭킹은 누구나 항상 보인다(v1.83: «센터 랭킹에 안 보이기» 없앰).
    순위 계산은 center_rank.js(CenterRank) — DID 랭킹판과 같은 파일. 여기는 가짜 데이터 + 화면만. */
 
-/* 입점센터(전국) — «직접 추가» 검색 대상. 이름 긴 센터는 칩 잘림 시험용 */
+/* 입점센터(전국). 이름 긴 센터는 칩 잘림 시험용 */
 const RK_CENTERS = [
   { id: 'sillim', name: '니짐 신림점', dist: '0.2km' },
   { id: 'bongcheon', name: '니짐 봉천점', dist: '1.8km' },
@@ -48,7 +48,7 @@ const rkMembers = () => (S.rkCrowd ? RK_MEMBERS.concat(RK_CROWD) : RK_MEMBERS);
 
 const ensureRk = () => {
   S.rkTab = S.rkTab || 'friend';
-  S.homeManual = S.homeManual || []; S.homeRemoved = S.homeRemoved || [];
+  delete S.homeManual; delete S.homeRemoved;   // v1.85: 손으로 넣고 뺀 센터 값은 안 쓴다
   S.rkHome = S.rkHome || 'multi'; S.rkMeDemo = S.rkMeDemo ?? true;
   delete S.hideRank; S.rkCrowd = !!S.rkCrowd;   // v1.83: 옛 숨김 저장값은 버린다 — 랭킹은 항상 보인다
 };
@@ -71,17 +71,33 @@ function rkWorld() {
   const me = { member_id: 'me', nickname: '나', t: S.type, lv: S.level, me: true };
   return { ws, sessions, members: [...rkMembers(), me], me };
 }
-/* 내 센터 = CenterRank.homeCenters(입장 기록·직접 추가·직접 뺀 센터) */
-function rkHomes() {
-  if (S.rkHome === 'none') return [];
-  const entries = S.records.filter(r => r.v === 'auto' && rkCenterIdOf(r.place)).map(r => ({ center_id: rkCenterIdOf(r.place), date: r.date }))
-    .concat(RK_ME_EXTRA.map(e => ({ center_id: e.center_id, date: daysAgo(e.ago) })));
-  const manual = S.rkHome === 'many' ? [...new Set([...S.homeManual, ...RK_MANY.filter(x => !S.homeRemoved.includes(x))])] : S.homeManual;
-  return { list: CenterRank.homeCenters(entries, TODAY, manual, S.homeRemoved), entries };
+/* v1.85(형 11-16) 내 센터 = 전부 자동. ① 멤버십이 있는 입점센터 ② 최근 30일에 입장한 입점센터 ③ 최근 30일에 운동을 기록한 입점센터.
+   순서(=처음 고르는 센터): 멤버십 센터 먼저 → 그다음 입장·기록이 많은 곳. 손으로 넣고 빼는 길 없음. center_rank.js(DID 와 같은 파일)는 그대로 쓴다 */
+const rkIn30 = d => { const age = (new Date(TODAY + 'T00:00:00') - new Date(d + 'T00:00:00')) / 864e5; return age >= 0 && age < CenterRank.HOME_WINDOW_DAYS; };
+function rkHomeList() {
+  const none = S.rkHome === 'none';   // 시연 «입점 이용 없음» = 입장·기록이 없는 사람(멤버십은 그대로 센다)
+  const entries = none ? [] : S.records.filter(r => r.v === 'auto' && rkCenterIdOf(r.place)).map(r => ({ center_id: rkCenterIdOf(r.place), date: r.date }))
+    .concat(RK_ME_EXTRA.map(e => ({ center_id: e.center_id, date: daysAgo(e.ago) })))
+    .concat(S.rkHome === 'many' ? RK_MANY.map((id, i) => ({ center_id: id, date: daysAgo(i + 2) })) : []);
+  const recs = {};
+  if (!none) realRecs().forEach(r => { const id = r.v !== 'auto' && r.place && rkCenterIdOf(placeBase(r.place)); if (id && rkIn30(r.date)) recs[id] = (recs[id] || 0) + 1; });
+  const ms = (ensureGym(), mships()).map(n => rkCenterIdOf(n)).filter(Boolean);
+  const list = CenterRank.homeCenters(entries, TODAY, [...new Set([...ms, ...Object.keys(recs)])], []);
+  list.forEach(x => { x.ms = ms.includes(x.center_id); x.recs_30d = recs[x.center_id] || 0; x.n = x.entries_30d + x.recs_30d; });
+  return list.map((x, i) => [x, i]).sort((a, b) => (b[0].ms - a[0].ms) || (b[0].n - a[0].n) || a[1] - b[1]).map(x => x[0]);
 }
-const rkHomeList = () => { const h = rkHomes(); return Array.isArray(h) ? h : h.list; };
-const rkSel = homes => (homes.some(h => h.center_id === S.rkSel) ? S.rkSel : CenterRank.defaultCenter(homes));
-
+const rkSel = homes => (homes.some(h => h.center_id === S.rkSel) ? S.rkSel : homes.length ? homes[0].center_id : null);
+/* 설정 «내 센터» 줄·목록 — 랭킹의 내 센터(입점센터) + 최근 30일에 운동을 기록한 입점 전 헬스장(지도 검색으로 고른 곳·직접 적은 곳 포함). 집·야외는 센터가 아니라 안 넣는다 */
+function myCenters() {
+  const homes = rkHomeList().map(x => ({ name: rkCenter(x.center_id).name, ms: x.ms, joined: true,
+    sub: [x.ms ? '멤버십' : '', x.entries_30d ? `최근 30일 입장 ${x.entries_30d}회` : '', x.recs_30d ? `운동 기록 ${x.recs_30d}회` : ''].filter(Boolean).join(' · ') }));
+  const by = {};
+  realRecs().forEach(r => { if (r.v === 'auto' || !r.place || !isGymRec(r) || !rkIn30(r.date)) return; const nm = placeBase(r.place);
+    if (rkCenterIdOf(nm) || isMs(nm)) return; const o = by[gnorm(nm)] || (by[gnorm(nm)] = { name: nm, n: 0, last: '' }); o.n++; if (r.date > o.last) o.last = r.date; });
+  const others = Object.values(by).sort((a, b) => b.n - a.n || b.last.localeCompare(a.last)).map(o => { const g = gymByName(o.name), j = !!g && gymJoined(g);
+    return { name: o.name, ms: false, joined: j, sub: `운동 기록 ${o.n}회 · ${j ? '니짐 입점' : '아직 입점 전'}` }; });
+  return [...homes, ...others];
+}
 const rkRow = (m, val, sub) => `<div class="rank ${m.me ? 'me' : ''}" data-mid="${m.member_id}"><div class="no">${m.rank}</div><div class="av">${S.placeholder ? `<img src="${placeholderSrc(m.lv)}" alt="">` : charAvatar(m.t, m.lv, 40, m.me)}</div>
   <div class="rkn"><b>${esc(m.nickname)}</b><div class="muted">${sub}</div></div><div class="val">${fmt(val)}<small>XP</small></div></div>`;
 function rkMeBar(board, label) {
@@ -95,15 +111,14 @@ function vCenterTab(W) {
   if (!homes.length) {
     const near = RK_CENTERS.slice(0, 4);
     return `<div class="card" id="rkNear"><div class="h2" style="font-size:16px;margin:0 0 4px">근처 입점센터 보기</div>
-      <div class="muted">입점센터에 입장하면 그 센터가 «내 센터»가 되고, 센터 회원끼리 이번 주 순위를 겨뤄요 · <b style="color:var(--rose)">경험치 1.5배</b></div>
+      <div class="muted">멤버십이 있거나 입점센터에서 운동하면 그 센터가 자동으로 «내 센터»가 되고, 센터 회원끼리 이번 주 순위를 겨뤄요 · <b style="color:var(--rose)">경험치 1.5배</b></div>
       ${near.map(c => `<div class="row"><div><b>${esc(c.name)}</b><div class="muted">${c.dist} · 니짐 입점</div></div><span class="rkbadge">1.5배</span></div>`).join('')}
-      <button class="btn" data-act="findCenter" id="rkFind">내주변 입점센터 보기</button>
-      <button class="btn ghost" data-act="rkManage" id="rkAddFirst">다니는 센터 직접 추가</button></div>`;
+      <button class="btn" data-act="findCenter" id="rkFind">내주변 입점센터 보기</button></div>`;
   }
   const sel = rkSel(homes), c = rkCenter(sel), board = CenterRank.centerBoard(W.sessions, W.members, sel, W.ws);
   const nat = CenterRank.nationalWeeklyXP(W.sessions, W.ws);
   const chips = homes.map(h => `<button class="chip rkchip ${h.center_id === sel ? 'on' : ''}" data-act="rkCenter" data-v="${h.center_id}">${esc(rkCenter(h.center_id).name)}</button>`).join('');
-  return `<div class="chips rkchips" id="rkChips">${chips}<button class="chip rkchip add" data-act="rkManage" id="rkManage">＋ 관리</button></div>
+  return `<div class="chips rkchips" id="rkChips">${chips}</div>
   <div class="card" id="rkBoard"><div class="rkhd"><b>${esc(c.name)}</b><small>이번 주에 이 센터에 입장해서 모은 경험치 순위예요 · 월요일 0시에 새로 시작</small></div>
   ${board.length ? board.slice(0, 100).map(m => rkRow(m, m.weekly_xp, m.me ? `${esc(CH[m.t].name)} · 이번 주 전체 ${fmt(nat.me || 0)} XP` : `${esc(CH[m.t].name)} · Lv.${m.lv}`)).join('') : '<div class="muted" style="padding:14px 0">이번 주 이 센터 기록이 아직 없어요</div>'}</div>
   ${rkMeBar(board, '이번 주 이 센터 기록이 아직 없어요')}
@@ -137,24 +152,20 @@ function vRanking() {
   return `${subHead('랭킹')}<div class="sec">${rkTabs()}${S.rkTab === 'center' ? vCenterTab(W) : vNationTab(W)}${rkDemo()}</div>`;
 }
 
-/* 내 센터 관리 시트 — 자동(최근 30일 입장)·직접 추가 표시, 빼기/추가, 30일 넘어 빠진 센터 안내 */
+/* v1.85 «내 센터» 목록(보기만) — 넣기·빼기 없음 */
 function rkManageSheet() {
-  const h = rkHomes(), homes = Array.isArray(h) ? h : h.list, have = new Set(homes.map(x => x.center_id));
-  const dropped = Array.isArray(h) ? [] : [...new Set(h.entries.map(e => e.center_id))].filter(id => !have.has(id) && !S.homeRemoved.includes(id));
-  const src = x => x.source === 'manual' ? '직접 추가' : `자동 · 최근 30일 ${x.entries_30d}회 입장`;
-  sheet(`<div class="h2" style="margin:0 0 4px">내 센터 관리</div><div class="muted">최근 30일에 입장한 입점센터는 자동으로 들어와요 · 30일 동안 입장이 없으면 자동 등록 센터만 빠지고, 직접 추가한 센터는 남아요</div>
-  <div class="h3" style="margin-top:12px">내 센터 ${homes.length}곳</div>
-  ${homes.map(x => `<div class="row rkmrow"><div><b>${esc(rkCenter(x.center_id).name)}</b><div class="muted">${src(x)}</div></div><button class="btn sm ghost" data-act="rkRemove" data-v="${x.center_id}">빼기</button></div>`).join('') || '<div class="muted">아직 없어요</div>'}
-  ${dropped.map(id => `<div class="muted" style="margin-top:6px">${esc(rkCenter(id).name)} — 30일 넘게 입장이 없어 자동 등록에서 빠졌어요</div>`).join('')}
-  <div class="h3" style="margin-top:14px">입점센터 추가</div>
-  ${RK_CENTERS.filter(c => !have.has(c.id)).map(c => `<div class="row rkmrow"><div><b>${esc(c.name)}</b><div class="muted">${c.dist}${S.homeRemoved.includes(c.id) ? ' · 내가 뺀 센터(다시 입장해도 자동으로 안 들어와요)' : ''}</div></div><button class="btn sm" data-act="rkAdd" data-v="${c.id}">추가</button></div>`).join('')}
-  <button class="btn ghost" data-act="shClose" style="margin-top:14px">닫기</button>`);
+  const list = myCenters();
+  sheet(`<div class="h2" style="margin:0 0 4px" id="myCtT">내 센터</div><div class="muted" id="myCtSub">멤버십이 있는 센터와, 최근 30일에 입장했거나 운동을 기록한 곳이 자동으로 잡혀요. 따로 넣거나 뺄 필요가 없어요.</div>
+  <div id="myCtList" style="margin-top:6px">${list.map(x => `<div class="row rkmrow"><div><b>${esc(x.name)}</b><div class="muted">${x.sub}</div></div>${x.ms ? '<span class="rkbadge">멤버십</span>' : x.joined ? '<span class="rkbadge">1.5배</span>' : ''}</div>`).join('') || '<div class="muted" style="padding:10px 0">아직 없어요 · 운동을 기록하면 자동으로 잡혀요</div>'}</div>
+  <div class="muted" style="margin-top:10px">센터 랭킹은 니짐 입점센터끼리만 겨뤄요.</div>
+  <button class="btn ghost" data-act="shClose" style="margin-top:14px" id="myCtClose">닫기</button>`);
 }
 
-/* 설정(C13) — 내 센터 관리(v1.83: 숨김 스위치 없앰) */
+/* 설정(C13) — «내 센터» 한 줄(v1.85: «주로 운동하는 곳»·«내 센터 관리» 두 줄을 하나로, 자동으로 잡힌 센터를 보여 주기만 한다) */
 const vSettingsRk0 = SUB.settings;
-SUB.settings = () => { ensureRk(); return vSettingsRk0().replace('<div class="card" id="locCard">', `<div class="card" id="rankSetCard"><div class="h2" style="font-size:16px">센터 랭킹</div>
-  <div class="row"><div><span>내 센터 관리</span><div class="muted">${rkHomeList().length}곳 · 자동 등록·직접 추가</div></div><button class="btn sm ghost" data-act="rkManage">관리</button></div></div>
+SUB.settings = () => { ensureRk(); const l = myCenters(), n = l.length;
+  return vSettingsRk0().replace('<div class="card" id="locCard">', `<div class="card" id="rankSetCard"><div class="h2" style="font-size:16px">내 센터</div>
+  <div class="row" id="myCtRow"><div><span id="myCtName">${n ? `${esc(l[0].name)}${n > 1 ? ` 외 ${n - 1}곳` : ''}` : '아직 없어요'}</span><div class="muted" id="myCtDesc">${n ? '멤버십·입장·운동 기록으로 자동으로 잡혀요' : '운동을 기록하면 자동으로 잡혀요'}</div></div>${n ? '<button class="btn sm ghost" data-act="rkManage" id="myCtBtn">보기</button>' : ''}</div></div>
   <div class="card" id="locCard">`); };
 SUB.friends = vRanking;
 /* 시연 기록을 켜면 친구 리그의 «나» 주간 XP 도 같은 값(전국 xp_week)으로 — 탭마다 내 점수가 달라 보이지 않게 */
@@ -296,15 +307,12 @@ document.addEventListener('click', e => {
     rkMeDemo: () => { S.rkMeDemo = !S.rkMeDemo; },
     rkCrowd: () => { S.rkCrowd = !S.rkCrowd; },
     rkManage: () => { rkManageSheet(); return true; },
-    rkRemove: () => { if (S.homeManual.includes(v)) S.homeManual = S.homeManual.filter(x => x !== v); else if (!S.homeRemoved.includes(v)) S.homeRemoved.push(v); },
-    rkAdd: () => { S.homeRemoved = S.homeRemoved.filter(x => x !== v); if (!S.homeManual.includes(v)) S.homeManual.push(v); },
   };
   if (!H[a]) return;
   e.stopImmediatePropagation(); ensureRk();
   const ch = $('rkChips'); rkScrollX = ch ? ch.scrollLeft : 0;
   if (H[a]() !== undefined) return;
   save(); render();
-  if (a === 'rkRemove' || a === 'rkAdd') rkManageSheet();
   const ch2 = $('rkChips'); if (ch2) { ch2.scrollLeft = rkScrollX; const on = ch2.querySelector('.chip.on');
     if (on && (on.offsetLeft < ch2.scrollLeft || on.offsetLeft + on.offsetWidth > ch2.scrollLeft + ch2.clientWidth)) ch2.scrollLeft = on.offsetLeft - 16; }
 }, true);

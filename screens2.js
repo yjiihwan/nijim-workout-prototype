@@ -311,7 +311,7 @@ function achieveCard() {
   return `<div class="card" id="achCard"><div style="display:flex;justify-content:space-between;align-items:baseline"><div class="h2" style="font-size:16px;margin:0">업적</div><span class="muted"><b style="color:var(--ink)">${done}</b>/${L.length} 달성</span></div>
   <div class="muted" style="margin:4px 0 10px">업적 보상은 상점에서 못 사는 꾸미기 아이템이에요</div>
   <div class="achs">${L.map((a, i) => `<button class="ach tap" data-act="ach" data-v="${i}">${badge(a)}<small>${a.name}</small>${a.done ? '' : `<em>${a.cur}/${a.goal}</em>`}</button>`).join('')}</div></div>
-  <button class="card replink tap" data-act="prof" data-v="me" id="goMyProfile"><div><b>남이 보는 내 프로필</b><small>레벨·칭호·운동으로 쌓은 경험치 비율이 공개돼요</small></div><span class="muted">›</span></button>`;
+  <button class="card replink tap" data-act="prof" data-v="me" id="goMyProfile"><div><b>내 프로필</b><small>레벨·칭호·업적·오운완 셀카 · 오운완 피드 «내 피드»와 같은 화면이에요</small></div><span class="muted">›</span></button>`;
 }
 function achSheet(i) {
   const a = achieveList()[i];

@@ -113,20 +113,57 @@ function fdBrowse() {
     : fdEmpty('아직 올라온 오운완이 없어요', '운동 끝나고 오운완 셀카를 찍을 때<br>«피드에 공개»를 켜면 여기에 올라와요');
   return `${scope}<div id="fdList">${list.length ? list.map(fdCard).join('') + '<div class="muted fdend">여기까지 다 봤어요</div>' : empty}</div>`;
 }
-/* 내 피드·다른 사람 피드 공용 — 위에 캐릭터·레벨·오운완 횟수·받은 응원, 아래 3칸 격자 */
-function fdProfile(u, posts, mineView) {
-  const cheers = posts.reduce((a, p) => a + fdCheerN(p), 0);
-  const grid = posts.length ? `<div class="fdgrid" id="fdGrid">${posts.map(p => `<button class="fdcell" data-act="fdPost" data-id="${p.id}" aria-label="${fdWhen(p.ts)} 게시물 보기"><img src="${p.img}" alt="" loading="lazy">${mineView && !p.pub ? `<span class="fdpriv">${fdLock()}</span>` : ''}</button>`).join('')}</div>`
-    : mineView ? fdEmpty('아직 찍은 오운완 셀카가 없어요', '운동 끝나고 오운완 셀카를 찍으면<br>여기에 차곡차곡 쌓여요')
-    : `<div class="card fdempty" id="fdEmpty"><b>아직 공개한 오운완이 없어요</b><p>${u.me ? '«피드에 공개»를 켠 사진만 다른 회원에게 보여요' : '새 게시물이 올라오면 여기에 보여요'}</p></div>`;
-  const cn = u.center && fdCenterName(u.center);
-  return `<div class="card fdprof" id="fdProf"><div class="fdpchar">${charFit(u.t, u.lv, 84)}</div><div class="fdpinfo"><b class="fdpnick">${esc(u.nick)}</b><small>Lv.${u.lv} · ${esc(cn || CH[u.t].name)}</small>
-    <div class="fdstat"><span><b id="fdStatN">${fmt(posts.length)}</b>오운완</span><span><b id="fdStatC">${fmt(cheers)}</b>받은 응원</span></div></div></div>${grid}`;
+const fdMine = () => pfBody(pfPerson('me'), 'mine');
+
+/* v1.92(형 11-17): 프로필 한 틀 — 내 캐릭터 «내 프로필», 오운완 피드 «내 피드», 다른 회원 프로필(랭킹·피드)을 모두 pfBody 하나로 그린다.
+   랭킹 사람(이름)과 피드 사람(u2…)은 닉네임으로 이어 붙인다. 랭킹에 없는 피드 회원은 연속·업적을 레벨로 만든 시연 값. */
+const fdUidByNick = n => Object.keys(FEED_USERS).find(k => FEED_USERS[k][0] === n) || null;
+function pfPerson(key) {
+  if (key === 'me') { const u = fdMe(); return { ...profileData('me'), n: u.nick, center: u.center, uid: 'me' }; }
+  const uid = FEED_USERS[key] ? key : fdUidByNick(key), nick = uid ? FEED_USERS[uid][0] : key, d = profileData(nick);
+  if (d) return { ...d, uid, center: uid ? FEED_USERS[uid][3] : null, known: true };
+  if (!uid) return null;
+  const [n, t, lv, center] = FEED_USERS[uid];
+  return { n, t, lv, center, uid, ratio: 100, paid: 0, streak: 1 + lv % 9, ach: Math.min(achieveList().length - 1, 2 + Math.floor(lv / 5)), friend: false };
 }
-function fdMine() {
-  const posts = fdPosts().filter(p => p.mine), priv = posts.filter(p => !p.pub).length;
-  return `${fdProfile(fdMe(), posts, true)}${posts.length ? `<div class="muted fdnote">${priv ? `${fdLock()} 자물쇠 표시는 나만 보는 사진이에요 · ` : ''}사진을 누르면 공개 여부를 바꾸거나 지울 수 있어요</div><button class="linkbtn quiet fdasother" data-act="fdAsOther" id="fdAsOther">다른 회원에게 보이는 내 피드 보기 ›</button>` : ''}`;
+function pfWeek(p) {
+  const prev = S.fTab; S.fTab = 'week';
+  try { return rankList().find(x => (p.me ? x.me : x.n === p.n)) || null; } finally { S.fTab = prev; }
 }
+/* view: 'mine' = 내가 보는 나 · 'other' = 남이 보는 화면(내 피드를 남 눈으로 볼 때 포함) — 💰 금액대·💰 안내·나만 보는 사진은 'mine'에서만 */
+function pfBody(p, view) {
+  const own = !!p.me && view === 'mine';
+  const posts = p.uid ? fdPosts().filter(x => x.uid === p.uid && (own || x.pub)) : [];
+  const cheers = posts.reduce((a, x) => a + fdCheerN(x), 0), priv = posts.filter(x => !x.pub).length;
+  const cn = p.center && fdCenterName(p.center), w = pfWeek(p), pureLv = p.me ? S.exLv : (p.pure ?? p.lv);
+  const paid = !p.paid ? '' : own ? `<span class="pill paidpill" id="paidBadge">💰 ${PAID_TIER[p.paid]}</span>` : '<span class="pill paidpill" id="paidBadge">💰</span>';
+  const head = `<div class="card pfcard" id="profCard">${charHTML(p.t, p.lv, 132, true, null, false, 132, { wear: !!p.me })}
+    <div class="pfname"><span class="name">${esc(p.n)}</span>${paid}${!p.me && !p.friend ? '<span class="pill tier1">친구 아님</span>' : ''}</div>
+    <div class="pfpills"><span class="pill lvpill">Lv.${p.lv}</span><span class="pill tier${tierOf(p.lv)}">${TIER_NAME[tierOf(p.lv)]}</span></div>
+    <div class="muted pfsub">${esc(CH[p.t].name)} · 칭호 «${stageName(p.t, p.lv)}»${cn ? ` · ${esc(cn)}` : ''}</div></div>`;
+  const week = w ? `<div id="profWeek" class="profwk"><b>이번 주 친구 리그 ${fmt(w.week)} XP</b><span>입장하고 한 운동 ${fmt(w.entered)} · 그 밖의 운동 ${fmt(w.self)}${own && !rkPure() && w.paidWeek > 0 ? ` · 포인트로 받은 ${fmt(w.paidWeek)}` : ''}</span></div>` : '';
+  const xp = `<div class="card" id="profRatio">${week}<div class="xrow"${week ? '' : ' style="padding-top:0"'}><span>운동으로 쌓은 경험치</span><b style="font-size:20px;color:var(--ink)">${p.ratio}%</b></div>
+    <div class="ratiobar"><i style="width:${p.ratio}%"></i><s style="width:${100 - p.ratio}%"></s></div>
+    <div class="rleg"><span><i class="lgx"></i>운동 ${p.ratio}%</span><span><i class="lgi"></i>아이템 ${100 - p.ratio}%</span></div>
+    ${own ? `<div class="muted pfpaid">${p.paid ? `💰 = 충전한 포인트를 상점에서 쓴 적 있어요(${PAID_TIER[p.paid]})` : '💰 표시 없음 = 충전한 포인트를 상점에서 쓴 적 없어요'} · 금액·결제 내역은 공개 안 해요</div>` : ''}</div>`;
+  const tiles = `<div class="card" id="profTiles"><div class="tiles" style="margin-top:0"><div class="tile"><small>운동 레벨</small><b>Lv.${pureLv}</b></div><div class="tile"><small>연속</small><b>${p.streak}주</b></div><div class="tile"><small>업적</small><b>${p.ach}/${achieveList().length}</b></div></div></div>`;
+  const acts = p.me || !p.known ? '' : p.friend
+    ? `<button class="btn" data-act="cheer" data-v="${esc(p.n)}" id="cheerBtn" ${S.fr.cheered[p.n] === TODAY ? 'disabled' : ''}>${S.fr.cheered[p.n] === TODAY ? '오늘 응원했어요 👏' : '응원 👏'}</button><div class="muted pfnote">친구 · 하루 1번 응원할 수 있어요</div>`
+    : `${S.fr.sent.includes(p.n) ? '<button class="btn" disabled>요청 보냄 · 수락 기다리는 중</button>' : S.fr.recv.includes(p.n) ? `<button class="btn" data-act="frAccept" data-v="${esc(p.n)}">친구 요청 수락</button>` : `<button class="btn" data-act="frRequest" data-v="${esc(p.n)}" id="frReqBtn">친구 요청 보내기</button>`}<div class="muted pfnote">친구가 되면 이번 주 리그에서 같이 겨뤄요</div>`;
+  const stat = `<div class="pfstat fdstat" id="pfStat"><span><b id="fdStatN">${fmt(posts.length)}</b>오운완</span><span><b id="fdStatC">${fmt(cheers)}</b>받은 응원</span></div>`;
+  const grid = posts.length ? `<div class="fdgrid" id="fdGrid">${posts.map(x => `<button class="fdcell" data-act="fdPost" data-id="${x.id}" aria-label="${fdWhen(x.ts)} 게시물 보기"><img src="${x.img}" alt="" loading="lazy">${own && !x.pub ? `<span class="fdpriv">${fdLock()}</span>` : ''}</button>`).join('')}</div>`
+    : own ? fdEmpty('아직 찍은 오운완 셀카가 없어요', '운동 끝나고 오운완 셀카를 찍으면<br>여기에 차곡차곡 쌓여요')
+    : `<div class="card fdempty" id="fdEmpty"><b>아직 공개한 오운완이 없어요</b><p>${p.me ? '«피드에 공개»를 켠 사진만 다른 회원에게 보여요' : '새 게시물이 올라오면 여기에 보여요'}</p></div>`;
+  const foot = own ? `${posts.length ? `<div class="muted fdnote">${priv ? `${fdLock()} 자물쇠 표시는 나만 보는 사진이에요 · ` : ''}사진을 누르면 공개 여부를 바꾸거나 지울 수 있어요</div>` : ''}<div class="muted fdnote">표정·자세한 기록·💰 금액대는 나만 봐요</div><button class="linkbtn quiet fdasother" data-act="fdAsOther" id="fdAsOther">다른 회원에게 보이는 내 프로필 보기 ›</button>` : '';
+  return `<div class="pf" id="pf" data-view="${own ? 'mine' : 'other'}">${head}${xp}${tiles}${acts}${stat}${grid}${foot}</div>`;
+}
+/* 내 캐릭터 «내 프로필»·랭킹에서 누른 프로필 — 내용은 pfBody, 뒤로가기만 들어온 곳에 맞춘다 */
+SUB.profile = () => {
+  ensure2(); ensureFeed();
+  const key = S.prof || 'me', p = pfPerson(key); if (!p) return SUB.friends();
+  const back = S.profFrom || 'friends', label = { friends: '랭킹', me: '내 캐릭터', addFriend: '친구 추가' }[back] || '운동기록';
+  return `${subHead(p.me ? '내 프로필' : '프로필', back, label)}<div class="sec fd">${pfBody(p, 'mine')}</div>`;
+};
 function vFeed() {
   ensureFeed();
   return `<div class="sec fd" id="feed"><div class="rktabs fdtabs" id="fdTabs"><button class="${S.feedTab === 'browse' ? 'on' : ''}" data-act="fdTab" data-v="browse">둘러보기</button><button class="${S.feedTab === 'mine' ? 'on' : ''}" data-act="fdTab" data-v="mine">내 피드</button></div>
@@ -134,7 +171,7 @@ function vFeed() {
 }
 /* ----- 안쪽 화면(2뎁스): 하단 메뉴바 없이 위 뒤로가기 ----- */
 const fdTop = () => S.fdNav[S.fdNav.length - 1] || null;
-const fdHead = title => `<div class="subhead"><button data-act="fdBack" id="backBtn"><i>‹</i>${S.fdNav.length > 1 ? '뒤로' : '피드'}</button><div class="h2">${title}</div></div>`;
+const fdHead = title => `<div class="subhead"><button data-act="fdBack" id="backBtn"><i>‹</i>${S.fdNav.length > 1 ? '뒤로' : S.fdRet ? '프로필' : '피드'}</button><div class="h2">${title}</div></div>`;
 const fdItemTxt = it => { const e = EX[it.ex]; if (!e) return null; const sets = (it.sets || []).filter(s => s.done !== false);
   if (it.min) return [e.name, `${it.min}분${it.km ? ` · ${it.km}km` : ''}`];
   if (!sets.length) return null;
@@ -156,8 +193,8 @@ function vFeedPost() {
 function vFeedUser() {
   ensureFeed(); const top = fdTop(), u = top && fdUser(top.id);
   if (!u) return `${fdHead('오운완 피드')}<div class="sec"><div class="card fdempty"><b>찾을 수 없는 회원이에요</b></div></div>`;
-  const posts = fdPosts().filter(p => p.uid === u.id && p.pub);
-  return `${fdHead(u.me ? '다른 회원이 보는 내 피드' : '오운완 피드')}<div class="sec fd" id="fdUser">${u.me ? '<div class="notice fdasnote" id="fdAsNote"><span>공개한 사진만 보여요. 나만 보는 사진은 여기에 안 나와요.</span></div>' : ''}${fdProfile(u, posts, false)}</div>`;
+  ensure2(); const p = pfPerson(u.id);
+  return `${fdHead(u.me ? '다른 회원이 보는 내 프로필' : '프로필')}<div class="sec fd" id="fdUser">${u.me ? '<div class="notice fdasnote" id="fdAsNote"><span>공개한 사진만 보여요. 나만 보는 사진·💰 금액대는 안 나와요.</span></div>' : ''}${pfBody(p, 'other')}</div>`;
 }
 SUB.fpost = vFeedPost; SUB.fuser = vFeedUser;
 
@@ -180,17 +217,20 @@ function feedShotRow() {
 const feedShotTitle = () => { const t = fdTarget(); return t && t.pub === true ? (S.selfieFor === 'session' ? '오운완! 피드에 올릴 사진이에요' : '오운완! 피드에 올렸어요') : '오운완! 나한테만 보여요'; };
 const feedShotIcon = () => { const t = fdTarget(); return t && t.pub === true ? FD_GLOBE.replace('class="ico sm"', 'class="ico"') : LOCK; };
 
-function fdOpen(entry) { const top = fdTop(); if (!top) S.fdY = window.scrollY; else top.y = window.scrollY; S.fdNav.push(entry); S.tab = 'workout'; S.sub = entry.k === 'post' ? 'fpost' : 'fuser'; save(); render(); window.scrollTo(0, 0); }
+function fdOpen(entry) { const top = fdTop(); if (!top) { S.fdY = window.scrollY; S.fdRet = S.sub === 'profile' ? 'profile' : null; } else top.y = window.scrollY; S.fdNav.push(entry); S.tab = 'workout'; S.sub = entry.k === 'post' ? 'fpost' : 'fuser'; save(); render(); window.scrollTo(0, 0); }
 function fdBack() {
   S.fdNav.pop(); const top = fdTop();
   if (top) { S.sub = top.k === 'post' ? 'fpost' : 'fuser'; save(); render(); window.scrollTo(0, top.y || 0); return; }
+  if (S.fdRet) { S.sub = S.fdRet; S.fdRet = null; save(); render(); window.scrollTo(0, S.fdY || 0); return; }
   S.sub = null; S.wseg = 'feed'; save(); render(); window.scrollTo(0, S.fdY || 0);
 }
+/* 게시물을 지운 뒤 돌아갈 곳 — 들어온 곳이 프로필이면 거기로, 아니면 내 피드 */
+function fdAfterDel() { S.fdNav.pop(); const top = fdTop(); S.sub = top ? (top.k === 'post' ? 'fpost' : 'fuser') : S.fdRet || null; if (!top) { if (!S.fdRet) { S.wseg = 'feed'; S.feedTab = 'mine'; } S.fdRet = null; } }
 document.addEventListener('click', e => {
-  const tb = e.target.closest('[data-tab]'); if (tb) { if (Array.isArray(S.fdNav)) S.fdNav = []; return; }
+  const tb = e.target.closest('[data-tab]'); if (tb) { if (Array.isArray(S.fdNav)) S.fdNav = []; S.fdRet = null; return; }
   const b = e.target.closest('[data-act]'); if (!b || b.closest('#evo')) return;
   const a = b.dataset.act, id = b.dataset.id, v = b.dataset.v;
-  if (!/^fd[A-Z]/.test(a)) { if (a === 'back' || a === 'sub') S.fdNav = []; return; }
+  if (!/^fd[A-Z]/.test(a)) { if (a === 'back' || a === 'sub') { S.fdNav = []; S.fdRet = null; } return; }
   ensureFeed();
   if (a === 'fdTab') { S.feedTab = v === 'mine' ? 'mine' : 'browse'; save(); render(); return; }
   if (a === 'fdScope') { S.feedScope = v === 'all' ? 'all' : 'center'; save(); render(); return; }
@@ -212,11 +252,11 @@ document.addEventListener('click', e => {
   if (a === 'fdAsk') { const t = fdTarget(); S.feedPub = v === '1'; fdSetPub(t, S.feedPub); shClose(); save(); render(); return toast(S.feedPub ? '다음에도 피드에 올리는 걸로 맞춰 둘게요' : '다음에도 나만 보는 걸로 맞춰 둘게요'); }
   const demo = id && FEED_POSTS.some(r => r[0] === id && r[1] === 'me');
   if (demo && a === 'fdPub') { const y = window.scrollY, on = fdDemoOf(id).pub === false; S.fdDemo[id] = { pub: on }; save(); render(); window.scrollTo(0, y); return toast(on ? '피드에 공개했어요' : '나만 보는 사진으로 바꿨어요'); }
-  if (demo && a === 'fdDelOk') { S.fdDemo[id] = { del: 1 }; shClose(); S.fdNav.pop(); const top = fdTop(); S.sub = top ? (top.k === 'post' ? 'fpost' : 'fuser') : null; if (!top) { S.wseg = 'feed'; S.feedTab = 'mine'; } save(); render(); window.scrollTo(0, 0); return toast('게시물을 지웠어요'); }
+  if (demo && a === 'fdDelOk') { S.fdDemo[id] = { del: 1 }; shClose(); fdAfterDel(); save(); render(); window.scrollTo(0, 0); return toast('게시물을 지웠어요'); }
   const rec = id && S.records.find(r => 'r' + r.id === id);
   if (a === 'fdPub') { if (!rec) return; const y = window.scrollY; fdSetPub(rec, rec.pub !== true); save(); render(); window.scrollTo(0, y); return toast(rec.pub ? '피드에 공개했어요' : '나만 보는 사진으로 바꿨어요'); }
   if (a === 'fdDel') return (rec || demo) && sheet(`<div class="h2">이 게시물을 지울까요?</div><div class="muted" style="line-height:1.6;word-break:keep-all">사진이 지워지고 피드에서도 사라져요.<br>지운 사진은 되돌릴 수 없어요.<br>운동 기록과 경험치는 그대로 남아요.</div><div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="shClose">취소</button><button class="btn danger" data-act="fdDelOk" data-id="${id}" id="fdDelOk">지우기</button></div>`);
-  if (a === 'fdDelOk') { if (!rec) return shClose(); rec.photo = null; rec.pub = false; rec.pubAt = null; shClose(); S.fdNav.pop(); const top = fdTop(); S.sub = top ? (top.k === 'post' ? 'fpost' : 'fuser') : null; if (!top) { S.wseg = 'feed'; S.feedTab = 'mine'; } save(); render(); window.scrollTo(0, 0); return toast('게시물을 지웠어요'); }
+  if (a === 'fdDelOk') { if (!rec) return shClose(); rec.photo = null; rec.pub = false; rec.pubAt = null; shClose(); fdAfterDel(); save(); render(); window.scrollTo(0, 0); return toast('게시물을 지웠어요'); }
 });
 
 
@@ -228,7 +268,8 @@ const fdFab = (() => {
   b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
   $('app').appendChild(b); return b;
 })();
-const fdFabAnchor = () => S.tab !== 'workout' || !S.chosen ? null : !S.sub && S.wseg === 'feed' ? document.querySelector('#view .wseg') : S.sub === 'fuser' ? document.querySelector('#view .subhead') : null;
+const fdFabAnchor = () => S.tab !== 'workout' || !S.chosen ? null : !S.sub && S.wseg === 'feed' ? document.getElementById('fdTabs') :   /* v1.92: 피드 탭 줄이 다 지나간 뒤에만 — 반쯤 보이는 탭 위에 겹치던 것 */
+   S.sub === 'fuser' ? document.querySelector('#view .subhead') : null;
 /* v1.90: 사진이 좌우 꽉 차면서 버튼이 프로필 줄·응원하기 위에 자주 겹쳐 — 내리는 동안은 숨기고, 조금이라도 올리면 띄운다 */
 let fdLastY = window.scrollY, fdUp = false;
 function fdFabSync() {
@@ -242,5 +283,5 @@ function fdFabSync() {
   new MutationObserver(fdFabSync).observe($('view'), { childList: true }); }
 
 /* v1.88: 피드를 보던 채로 새로 고치면 이 파일이 app.js 첫 그리기보다 늦게 읽혀 «기록을 열 수 없어요» 화면이 떴다 — 읽힌 뒤 한 번 다시 그린다 */
-if (S.tab === 'workout' && !S.sub && S.chosen && S.wseg === 'feed') render();
+if (S.tab === 'workout' && S.chosen && ((!S.sub && S.wseg === 'feed') || ['profile', 'fuser', 'fpost'].includes(S.sub))) render();
 fdFabSync();

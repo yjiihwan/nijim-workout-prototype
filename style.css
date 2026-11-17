@@ -1315,3 +1315,7 @@ body.deep .csavebar{margin-bottom:calc(-24px - env(safe-area-inset-bottom));padd
 .mechar.hop{animation:miHop .42s ease-out}
 @media (prefers-reduced-motion:reduce){.mipop .eqbox,.mipop .bibox,.mipoof .eqbox,.mipoof .bibox,.mihl .eqbox,.mihl .bibox,.mechar.hop{animation:none}.mipop .eqbox::after,.mipop .bibox::after{display:none}}
 @media (max-width:350px){.eqbar{gap:3px;padding:6px 4px 5px}.eqs small{font-size:9px}.bag{gap:8px 6px}.bi b{font-size:10.5px}}
+
+/* v1.98(형 11-17): 무료 질문 문구 삭제 → «물어보기» 버튼 혼자 남아 줄 전체 폭 · 안내문 «1.5배» 안 쪼개짐 */
+.scrow .coachbtn{flex:1 1 auto;width:100%}
+.cbtxt{white-space:nowrap}

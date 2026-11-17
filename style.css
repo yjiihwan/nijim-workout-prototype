@@ -1319,3 +1319,18 @@ body.deep .csavebar{margin-bottom:calc(-24px - env(safe-area-inset-bottom));padd
 /* v1.98(형 11-17): 무료 질문 문구 삭제 → «물어보기» 버튼 혼자 남아 줄 전체 폭 · 안내문 «1.5배» 안 쪼개짐 */
 .scrow .coachbtn{flex:1 1 auto;width:100%}
 .cbtxt{white-space:nowrap}
+/* v2.00 첫 화면 캐릭터 카드(형 11-17 리디자인): 정보(캐릭터·이름·경험치) → 말풍선 → 보조 버튼 2칸(내 캐릭터·물어보기, 같은 무게) → 주 버튼(기록하기)+1.5배 안내를 카드 안 한 덩어리로. 진한 분홍은 «기록하기» 하나만 */
+.hcard{padding:16px 16px 14px}
+.hcard .stage{grid-template-columns:150px 1fr;gap:14px}
+.hcard .stage .cwrap{width:150px}
+.hinfo{min-width:0}
+.hinfo .name{display:block;font-size:20px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hcard .xpb{margin-top:8px}
+.hcard .scoach{margin-top:10px}
+.hacts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.hact{display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:44px;padding:0 10px;border:0;border-radius:12px;background:var(--g1);color:var(--ink);font-family:inherit;font-size:14px;font-weight:700;white-space:nowrap;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.hact:active{background:var(--g2)}
+.hact svg{width:17px;height:17px;flex:none;fill:none;stroke:var(--rose);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hact .ctxt{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.hcard #goRecord{margin-top:14px}
+.hcard .hhint{text-align:center;margin-top:8px;font-size:13px}

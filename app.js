@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.98';
+const VER = 'v1.99';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -440,7 +440,7 @@ const FLASK = '<svg viewBox="0 0 64 64" class="itemsvg"><path d="M25 8h14M27 8v1
 /* ===== C2 온보딩 — 1/2 캐릭터 선택(C2a) · v1.42: «주 몇 회» 질문 화면 삭제로 2단계 ===== */
 function vChoose() {
   const pick = S.pick || S.type;
-  return `<div class="sec">${S.onboarded ? '' : obProg(1)}<div class="h2">같이 운동할 짝꿍을 골라 주세요</div><div class="muted" style="margin-bottom:12px" id="chooseSub"><b style="color:var(--ink)">내가 운동한 만큼 짝꿍도 같이 커요.</b><br>능력치는 모두 같고 생김새·말투만 달라요. Lv.10 전에 1번 바꿀 수 있어요.</div>
+  return `<div class="sec">${S.onboarded ? '' : obProg(1)}<div class="h2">같이 운동할 짝꿍을 골라 주세요</div><div class="muted" style="margin-bottom:12px" id="chooseSub"><b style="color:var(--ink)">내가 운동한 만큼 짝꿍도 같이 커요.</b><br>능력치는 모두 같고 생김새·말투만 달라요.</div>
   <div class="choose" id="chooseGrid">${Object.keys(CH).map(k => `<button class="cc ${pick===k?'on':''}" data-act="pick" data-v="${k}">${charHTML(k, 1, 84, false, null, true)}<b>${CH[k].name}</b></button>`).join('')}</div>
   <div class="card" style="text-align:center"><div class="muted"><b style="color:var(--ink)">${esc(CH[pick].name)}</b> — ${esc(CH[pick].intro)} · 레벨이 오르면 모습이 달라져요</div></div>
   <button class="btn" data-act="choose" id="chooseBtn">${esc(CH[pick].name)}${wa(pick)} 시작하기</button>
@@ -917,7 +917,7 @@ function vMe() {
   ${myItemsHTML(t)}
   <div class="slots">${ITEMS.filter(i => i.kind === 'effect' && S.equipped[i.id]).map(i => `<div class="slot on">${i.name}</div>`).join('')}${S.gym && S.gym.item ? `<button class="slot gyslot ${S.gym.itemOn ? 'on' : ''}" data-act="gyItem" id="gySlot">${GYM_ITEM}${S.gym.itemOn ? '' : ' · 달기'}</button>` : ''}</div>
   <button class="btn" data-act="sub" data-v="shop" id="shopBtn">🛍️ 아이템 상점</button>
-  <button class="btn ghost" data-act="rechoose" style="margin-top:8px">캐릭터 바꾸기 <span class="muted">(Lv.10 전 1회 무료)</span></button></div>
+</div>
   ${centerCard()}
   <div class="card"><div class="h2" style="font-size:16px">업적</div><div class="muted">업적 24개 잠김/달성 목록 자리 (프로토타입 범위 밖)</div></div></div>`;
 }
@@ -1712,7 +1712,6 @@ document.addEventListener('click', e => {
   else if (a === 'obBack') {
     S.chosen = false; return go('workout'); }
   else if (a === 'obDone') { S.onboarded = true; S.joinAt = Date.now(); toast(`${CH[S.type].name}${wa(S.type)} 운동 시작!`); return go('workout'); }
-  else if (a === 'rechoose') { if (S.level >= 10) return toast('Lv.10부터는 캐릭터 변경권이 있어야 바꿀 수 있어요'); S.chosen = false; S.sub = null; }
   else if (a === 'saveWorkout') return endAsk();
   else if (a === 'coach') return toast('코칭 대화(C9)는 프로토타입 범위 밖 · 월 20회');
   else if (a === 'invite') return toast('친구 초대(C15b)는 프로토타입 범위 밖');

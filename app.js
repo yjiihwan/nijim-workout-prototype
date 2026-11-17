@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.95';
+const VER = 'v1.96';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -912,7 +912,7 @@ function vFriends() {
 function vMe() {
   const t = S.type;
   return `${subHead('내 캐릭터')}<div class="sec">
-  <div class="card" style="text-align:center">${charHTML(t, S.level, 170, true, exprNow(), false, 212, { rig: true, wear: true })}<div style="margin-top:14px"><span class="name">${esc(CH[t].name)}</span> <span class="pill lvpill">Lv.${S.level}</span> <span class="pill tier${tierOf(S.level)}">${TIER_NAME[tierOf(S.level)]}</span></div>
+  <div class="card" style="text-align:center"><div class="mechar${typeof miFx === 'function' && miFx() && !miFx().hl ? ' hop' : ''}" id="meChar">${charHTML(t, S.level, 170, true, exprNow(), false, 212, { rig: true, wear: true })}</div><div style="margin-top:14px"><span class="name">${esc(CH[t].name)}</span> <span class="pill lvpill">Lv.${S.level}</span> <span class="pill tier${tierOf(S.level)}">${TIER_NAME[tierOf(S.level)]}</span></div>
   ${typeof bTagOf === 'function' ? `<div class="metag">${bTagOf({ me: true }, 'meTag')}</div>` : ''}<div class="muted" style="margin-top:4px">운동 레벨 Lv.${S.exLv} · 포인트 ${S.points.toLocaleString()}P</div>
   ${myItemsHTML(t)}
   <div class="slots">${ITEMS.filter(i => i.kind === 'effect' && S.equipped[i.id]).map(i => `<div class="slot on">${i.name}</div>`).join('')}${S.gym && S.gym.item ? `<button class="slot gyslot ${S.gym.itemOn ? 'on' : ''}" data-act="gyItem" id="gySlot">${GYM_ITEM}${S.gym.itemOn ? '' : ' · 달기'}</button>` : ''}</div>
@@ -1738,7 +1738,7 @@ document.addEventListener('click', e => {
   else if (a === 'cmpB') S.cmp.booster = v;
   else if (a === 'equip') { if (GEAR_BY[id]) gearToggle(id); else S.equipped[id] = !S.equipped[id]; }
   else if (a === 'wear') { gearToggle(id); }
-  else if (a === 'gslot' || a === 'gearShop' || a === 'gearLock' || a === 'gearDay' || a === 'gearDemo') { if (gearAct(a, v, id) === 'done') return; }
+  else if (a === 'gslot' || a === 'eqSlot' || a === 'gearShop' || a === 'gearLock' || a === 'gearDay' || a === 'gearDemo') { if (gearAct(a, v, id) === 'done') return; }
   else if (a === 'noti') S.noti[v] = !S.noti[v];
   else if (a === 'hideTips') S.hideTips = !S.hideTips;
   else if (a === 'bw') S.bodyweight = S.bodyweight ? (S.bodyweight + dd < 30 ? null : Math.min(200, S.bodyweight + dd)) : 70;

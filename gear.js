@@ -40,9 +40,14 @@ const gearPaid = () => (S.paidLog.length || S.gearPaid) ? 1 : 0;   // 💰 = 충
 /* 쓰고 벗기 — 같은 자리엔 1개만 */
 function gearToggle(id) {
   const g = GEAR_BY[id]; if (!g || !S.owned[id]) return;
-  const on = !S.equipped[id]; if (on) GEAR.forEach(o => { if (o.slot === g.slot) S.equipped[o.id] = false; });
+  const prev = on0(g.slot), on = !S.equipped[id]; if (on) GEAR.forEach(o => { if (o.slot === g.slot) S.equipped[o.id] = false; });
   S.equipped[id] = on;
+  MI_FX = { id, on, slot: g.slot, swap: on && prev && prev !== id ? prev : null, at: Date.now() };
 }
+/* v1.96 착용/해제 직후 한 번만 도는 짧은 반응(튀어오름·반짝임) — 1.2초 지나면 무시 */
+let MI_FX = null;
+const on0 = slot => (GEAR.find(o => o.slot === slot && S.equipped[o.id] && S.owned[o.id]) || {}).id || null;
+const miFx = () => MI_FX && Date.now() - MI_FX.at < 1200 ? MI_FX : null;
 /* 구매(포인트 차감·보유 처리는 기존 buy 그대로) 뒤에 붙는 일: 유효기간 시작·연장, 안내 말 */
 function gearBought(g, had) {
   ensureGear(); if (g.fx || g.protect) S.gearPaid = 1;
@@ -90,15 +95,36 @@ function gearShopHTML() {
   <div class="grid2" id="gearGrid">${list.map(card).join('')}</div>
   <div class="muted" style="margin-top:10px">니짐 포인트로 사요 · 가격·효과·유효기간은 예시예요 · 유효기간이 있는 아이템은 기간이 끝나면 사라져요 · 효과로 더 받은 경험치는 캐릭터 레벨과 랭킹 «종합 순위»에 들어가요 · «순수 운동량 순위»와 운동 레벨에는 안 들어가요</div>${gearDemoCard()}`;
 }
+/* v1.96 «내 아이템» 게임식: 위 장비창(자리 7칸 고정) + 아래 가방(4열 격자). 등급 테두리 = 금액 3단계 */
+const GEAR_TIER = ['', '일반', '고급', '최고급'];
+const gearTier = g => g.ach || (g.price || 0) >= 3000 ? 3 : (g.price || 0) >= 800 ? 2 : 1;   // 달성 보상(못 삼)은 최고급
+const SLOT_SHORT = { head: '머리', face: '얼굴', neck: '목', wrist: '손목', body: '몸·등', leg: '다리', bg: '배경' };
+const SLOT_GLYPH = {   // 빈 칸에 흐리게 그리는 자리 모양(24×24)
+  head: '<path d="M4 15c0-5 3.6-9 8-9s8 4 8 9z"/><path d="M12 15h9"/>',
+  face: '<circle cx="7.5" cy="13" r="3.5"/><circle cx="16.5" cy="13" r="3.5"/><path d="M11 13h2"/>',
+  neck: '<path d="M5 5c0 7 3 10 7 10s7-3 7-10"/><circle cx="12" cy="18" r="2.5"/>',
+  wrist: '<rect x="8" y="8" width="8" height="8" rx="2"/><path d="M9.5 8V4h5v4M9.5 16v4h5v-4"/>',
+  body: '<path d="M8 4 3.5 7.5 6 11l2-1.2V20h8v-10.2L18 11l2.5-3.5L16 4c-.8 1.6-2.2 2.5-4 2.5S8.8 5.6 8 4z"/>',
+  leg: '<path d="M4 17V9h5l2 4 8.5 2c.9.3 1.5 1 1.5 2v0H4z"/>',
+  bg: '<rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="m4.5 17 5-5.5 3.5 3.5 2-2 4.5 4"/><circle cx="16" cy="9" r="1.4"/>',
+};
 function myItemsHTML(t) {
   ensureGear();
-  const own = GEAR.filter(g => S.owned[g.id]), g0 = wearGeo(t, cutOf(S.level)), sl = wearSlots();
+  const own = GEAR.filter(g => S.owned[g.id]), g0 = wearGeo(t, cutOf(S.level)), sl = wearSlots(), fx = miFx();
   const hid = g0 ? [!g0.wr && sl.wrist, (!g0.B.ft) && sl.leg, (!g0.B.ws) && sl.body && sl.body !== 'cape' ? sl.body : (!g0.B.ft && sl.body === 'cape' ? 'cape' : null)].filter(Boolean).map(id => GEAR_BY[id].name) : [];
-  const cell = g => { const on = !!S.equipped[g.id], left = g.days ? gearLeftText(g.id) : '';
-    return `<button class="mi ${on ? 'on' : ''}" data-act="wear" data-id="${g.id}" aria-pressed="${on}" aria-label="${g.name} ${on ? '벗기' : '착용'}">${gearIcon(g.id)}<b>${g.name}</b><small>${on ? '착용 중 · 벗기' : '착용'}</small>${g.fx || g.protect ? `<span class="mifx">${g.fx ? `${g.fx.label} +${g.fx.pct}%` : g.id === 'amulet' ? `연속 보호 · ${on ? charmLeft() : 0}번 남음` : '연속 기록 보호'}</span>` : ''}${left ? `<span class="mileft">${left}</span>` : ''}</button>`; };
-  const groups = GEAR_SLOTS.map(([k, l]) => [l, own.filter(g => g.slot === k)]).filter(x => x[1].length);
-  return `<div class="myitems" id="myItems"><div class="mihd"><b>내 아이템 <span class="micnt">${own.length}</span></b><span>${own.length ? '눌러서 착용하고 벗어요 · 자리마다 1개' : ''}</span></div>
-  ${own.length ? groups.map(([l, gs]) => `<div class="mislot">${l}</div><div class="migrid">${gs.map(cell).join('')}</div>`).join('') : '<div class="miempty">아직 가진 아이템이 없어요 · 아래 상점에서 구할 수 있어요</div>'}
+  const nOn = Object.keys(sl).length;
+  const slot = ([k]) => { const id = sl[k], g = id && GEAR_BY[id], hit = fx && fx.slot === k ? (fx.hl ? ' mihl' : fx.on ? ' mipop' : ' mipoof') : '';
+    return g ? `<button class="eqs t${gearTier(g)}${hit}" data-act="eqSlot" data-v="${k}" data-id="${id}" aria-label="${SLOT_SHORT[k]} 칸 · ${g.name} 착용 중 · 눌러서 벗기"><span class="eqbox">${gearIcon(id)}</span><small>${SLOT_SHORT[k]}</small></button>`
+      : `<button class="eqs empty${hit}" data-act="eqSlot" data-v="${k}" aria-label="${SLOT_SHORT[k]} 칸 · 비어 있음"><span class="eqbox"><svg viewBox="0 0 24 24" aria-hidden="true">${SLOT_GLYPH[k]}</svg></span><small>${SLOT_SHORT[k]}</small></button>`; };
+  const cell = g => { const on = !!S.equipped[g.id], left = g.days ? gearLeft(g.id) : null, tr = gearTier(g);
+    const hit = fx ? (fx.id === g.id ? (fx.on ? ' mipop' : ' mipoof') : fx.swap === g.id ? ' mipoof' : fx.hl === 1 && fx.slot === g.slot ? ' mihl' : '') : '';
+    const tag = g.fx ? `+${g.fx.pct}%` : g.protect ? '보호' : '';
+    return `<button class="bi t${tr}${on ? ' on' : ''}${hit}" data-act="wear" data-id="${g.id}" aria-pressed="${on}" aria-label="${g.name} · ${GEAR_TIER[tr]} · ${gearSlotName(g.slot)} · ${on ? '착용 중 · 눌러서 벗기' : '눌러서 착용'}"><span class="bibox">${gearIcon(g.id)}${on ? '<i class="bie">E</i>' : ''}${tag ? `<i class="bitag">${tag}</i>` : ''}${left != null ? `<i class="bid${left <= GEAR_CFG.warnDays ? ' soon' : ''}">${left}일</i>` : ''}</span><b>${g.name}</b></button>`; };
+  return `<div class="myitems v196" id="myItems">
+  <div class="mihd"><b>장비 <span class="micnt">${nOn}/${GEAR_SLOTS.length}</span></b><span>${nOn ? '칸을 누르면 벗어요' : '가방에서 골라 착용해요'}</span></div>
+  <div class="eqbar" id="eqBar">${GEAR_SLOTS.map(slot).join('')}</div>
+  <div class="mihd bagh"><b>가방 <span class="micnt">${own.length}</span></b><span class="tierkey">${[1, 2, 3].map(n => `<i class="tk t${n}"></i>${GEAR_TIER[n]}`).join('')}</span></div>
+  ${own.length ? `<div class="bag" id="bagGrid">${own.map(cell).join('')}</div><div class="bagnote">눌러서 착용 · 다시 누르면 벗기 · 자리마다 1개(같은 자리는 바꿔 껴요)</div>` : '<div class="miempty" id="bagEmpty">가방이 비어 있어요 · 아래 상점에서 구해 보세요</div>'}
   ${hid.length ? `<div class="minote">지금 단계는 팔다리가 없어서 ${hid.join('·')}${gjo(hid[hid.length - 1], '이', '가')} 그림에 안 보여요 · Lv.10부터 보여요(효과는 그대로 받아요)</div>` : ''}</div>`;
 }
 /* 운동기록 첫 화면 알약: 3개까지는 이름, 넘으면 한 줄로 */
@@ -116,6 +142,10 @@ function gearDemoCard() {
 /* 버튼 — app.js 의 클릭 처리에서 부른다. 처리했으면 true */
 function gearAct(a, v, id) {
   if (a === 'gslot') { S.gSlot = v; return true; }
+  if (a === 'eqSlot') { ensureGear(); const cur = wearSlots()[v];
+    if (cur) { gearToggle(cur); return true; }
+    const has = GEAR.some(g => g.slot === v && S.owned[g.id]); MI_FX = { slot: v, hl: has ? 1 : 2, at: Date.now() };
+    toast(has ? `가방에서 ${SLOT_SHORT[v]} 아이템을 눌러 착용해요` : `${SLOT_SHORT[v]} 아이템이 아직 없어요 · 아이템 상점에서 구할 수 있어요`); return true; }
   if (a === 'gearShop') { shClose(); S.sTab = 'look'; go('workout', 'shop'); return 'done'; }
   if (a === 'gearLock') { const g = GEAR_BY[id]; toast(gearBlock(g) || ''); return 'done'; }
   if (a === 'gearDay') { ensureGear(); S.gearShift = +v ? S.gearShift + +v : 0; gearTick(); return true; }

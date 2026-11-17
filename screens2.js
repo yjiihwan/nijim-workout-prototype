@@ -311,7 +311,7 @@ function achieveCard() {
   return `<div class="card" id="achCard"><div style="display:flex;justify-content:space-between;align-items:baseline"><div class="h2" style="font-size:16px;margin:0">업적</div><span class="muted"><b style="color:var(--ink)">${done}</b>/${L.length} 달성</span></div>
   <div class="muted" style="margin:4px 0 10px">업적 보상은 상점에서 못 사는 꾸미기 아이템이에요</div>
   <div class="achs">${L.map((a, i) => `<button class="ach tap" data-act="ach" data-v="${i}">${badge(a)}<small>${a.name}</small>${a.done ? '' : `<em>${a.cur}/${a.goal}</em>`}</button>`).join('')}</div></div>
-  <button class="card replink tap" data-act="prof" data-v="me" id="goMyProfile"><div><b>내 프로필</b><small>레벨·칭호·업적·오운완 셀카 · 오운완 피드 «내 피드»와 같은 화면이에요</small></div><span class="muted">›</span></button>`;
+  <button class="card replink tap" data-act="prof" data-v="me" id="goMyProfile"><div><b>내 프로필</b><small>레벨·배지·오운완 셀카 · 오운완 피드 «내 피드»와 같은 화면이에요</small></div><span class="muted">›</span></button>`;
 }
 function achSheet(i) {
   const a = achieveList()[i];
@@ -351,17 +351,17 @@ function vProfile() {
   const pureLv = p.me ? S.exLv : (p.pure ?? p.lv);
   const actions = p.me ? '<div class="muted" style="text-align:center;margin-top:12px">다른 사람에게는 이렇게 보여요 · 표정·자세한 기록은 나만 봐요 · 사진은 피드에 공개한 것만 보여요</div>'
     : p.friend ? `<button class="btn" data-act="cheer" data-v="${esc(p.n)}" id="cheerBtn" ${S.fr.cheered[p.n] === TODAY ? 'disabled' : ''}>${S.fr.cheered[p.n] === TODAY ? '오늘 응원했어요 👏' : '응원 👏'}</button><div class="muted" style="text-align:center;margin-top:8px">친구 · 하루 1번 응원할 수 있어요</div>`
-    : `${S.fr.sent.includes(p.n) ? '<button class="btn" disabled>요청 보냄 · 수락 기다리는 중</button>' : S.fr.recv.includes(p.n) ? `<button class="btn" data-act="frAccept" data-v="${esc(p.n)}">친구 요청 수락</button>` : `<button class="btn" data-act="frRequest" data-v="${esc(p.n)}" id="frReqBtn">친구 요청 보내기</button>`}<div class="muted" style="text-align:center;margin-top:8px">친구가 아니어도 레벨·칭호·운동으로 쌓은 경험치 비율은 누구나 볼 수 있어요<br>친구가 되면 이번 주 리그에서 같이 겨뤄요</div>`;
+    : `${S.fr.sent.includes(p.n) ? '<button class="btn" disabled>요청 보냄 · 수락 기다리는 중</button>' : S.fr.recv.includes(p.n) ? `<button class="btn" data-act="frAccept" data-v="${esc(p.n)}">친구 요청 수락</button>` : `<button class="btn" data-act="frRequest" data-v="${esc(p.n)}" id="frReqBtn">친구 요청 보내기</button>`}<div class="muted" style="text-align:center;margin-top:8px">친구가 아니어도 레벨·배지·운동으로 쌓은 경험치 비율은 누구나 볼 수 있어요<br>친구가 되면 이번 주 리그에서 같이 겨뤄요</div>`;
   return `${subHead(p.me ? '내 프로필 미리보기' : '프로필', back, backLabel)}<div class="sec">
   <div class="card" style="text-align:center" id="profCard">${charHTML(p.t, p.lv, 150, true, null, false, 150, { wear: !!p.me })}
     <div style="margin-top:12px;display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap"><span class="name">${esc(p.n)}</span>${p.paid ? `<span class="pill paidpill" id="paidBadge">💰 ${PAID_TIER[p.paid]}</span>` : ''}${!p.friend ? '<span class="pill tier1">친구 아님</span>' : ''}</div>
     <div style="margin-top:6px;display:flex;gap:6px;justify-content:center"><span class="pill lvpill">Lv.${p.lv}</span><span class="pill tier${tierOf(p.lv)}">${TIER_NAME[tierOf(p.lv)]}</span></div>
-    <div class="muted" style="margin-top:6px">${esc(CH[p.t].name)} · 칭호 «${stageName(p.t, p.lv)}»</div></div>
+    <div class="muted" style="margin-top:6px">${esc(CH[p.t].name)}</div></div>
   <div class="card" id="profRatio"><div class="xrow" style="padding-top:0"><span>운동으로 쌓은 경험치</span><b style="font-size:20px;color:var(--ink)">${p.ratio}%</b></div>
     <div class="ratiobar"><i style="width:${p.ratio}%"></i><s style="width:${100 - p.ratio}%"></s></div>
     <div class="rleg"><span><i class="lgx"></i>운동 ${p.ratio}%</span><span><i class="lgi"></i>아이템 ${100 - p.ratio}%</span></div>
     <div class="muted" style="margin-top:8px">${p.paid ? `💰 = 충전한 포인트를 상점에서 쓴 적 있어요 · 지금까지 ${PAID_TIER[p.paid]} 썼어요` : '💰 표시 없음 = 충전한 포인트를 상점에서 쓴 적 없어요'} · 금액·결제 내역은 공개하지 않아요</div></div>
-  <div class="card"><div class="tiles" style="margin-top:0"><div class="tile"><small>운동 레벨</small><b>Lv.${pureLv}</b></div><div class="tile"><small>연속</small><b>${p.streak}주</b></div><div class="tile"><small>업적</small><b>${p.ach}/${achieveList().length}</b></div></div></div>
+  <div class="card"><div class="tiles" style="margin-top:0"><div class="tile"><small>운동 레벨</small><b>Lv.${pureLv}</b></div><div class="tile"><small>연속</small><b>${p.streak}주</b></div><div class="tile"><small>배지</small><b>${typeof bdOf === 'function' ? `${bdOf(p).length}/${BD_DEF.length}` : ''}</b></div></div></div>
   ${actions}</div>`;
 }
 
@@ -394,7 +394,7 @@ function vFriends2() {
   return `${subHead('랭킹 · 친구')}<div class="sec">${req}<div class="seg"><button class="${S.fTab === 'week' ? 'on' : ''}" data-act="ftab" data-v="week">이번 주</button><button class="${S.fTab === 'level' ? 'on' : ''}" data-act="ftab" data-v="level">레벨</button></div>
   ${rkModeHTML()}
   <div class="card">${list.map((f, i) => `<div class="rank tap ${f.me ? 'me' : ''}" data-act="prof" data-v="${f.me ? 'me' : esc(f.n)}"><div class="no">${i + 1}</div><div class="av">${S.placeholder ? `<img src="${placeholderSrc(f.lv)}" alt="">` : charAvatar(f.t, f.lv, 40, f.me)}</div>
-  <div><b>${esc(f.n)}</b> ${rkPaidMark(f)}<div class="muted">${esc(CH[f.t].name)} · ${stageName(f.t, f.lv)}</div></div>
+  <div class="rkn"><div class="rknm"><b>${esc(f.n)}</b>${rkPaidMark(f)}${typeof bTagOf === 'function' ? bTagOf(f.me ? { me: true } : f) : ''}</div><div class="muted">${esc(CH[f.t].name)} · Lv.${f.lv}</div></div>
   <div class="val">${rkValHTML(f)}</div></div>`).join('')}</div>
   <button class="btn ghost" data-act="sub" data-v="addFriend" id="goAddFriend">친구 추가</button>
   ${frFootHTML()}${zeroDemo}</div>`;

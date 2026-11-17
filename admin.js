@@ -184,7 +184,7 @@ function h2Preview() {   // 바꾼 값(초안)과 지금 값(저장됨)을 같�
     row('low', '표정 «아쉬운» 미만', v => v + '%'), row('high', '표정 «신남» 이상', v => v + '%'),
     row('boost', '부스터 배수', v => '×' + v), row('pot', '물약 1병', v => '+' + v)], 'prev')}<div class="amut" style="margin-top:8px;line-height:1.5">① 벤치·랫풀다운 4세트씩 + 트레드밀 20분 · 센터 입장 확인 · 연속 2주 · 오늘 첫 운동 · PR 1 · 새 부위 3</div></div>`;
 }
-const H2TABS = [['xp', '경험치·한도'], ['mood', '표정'], ['lv', '레벨표 99행'], ['ach', '업적 24'], ['reward', '보상 종류'], ['shop', '상점'], ['item', '부스터·물약']];
+const H2TABS = [['xp', '경험치·한도'], ['mood', '표정'], ['lv', '레벨표 99행'], ['ach', '배지'], ['reward', '보상 종류'], ['shop', '상점'], ['item', '부스터·물약']];
 function vH2() {
   const t = AV.h2;
   const body = {
@@ -203,10 +203,10 @@ function vH2() {
       ${sec('어떻게 쓰이나요', note('세션을 저장할 때 종목별 «평소»와 비교해 그날 얼굴만 바뀌어요. 경험치·포인트·랭킹 계산에는 들어가지 않아요(PLAN §5-2 강도 4열 = 표정 전용).') + note('«가볍게 한 날» 체크 · 복귀 첫 세션 · 평소 기록이 모자란 종목이 절반을 넘으면 판정하지 않아요.'))}</div>`,
     lv: () => vLevels(),
     ach: () => { const L = achieveList(true);
-      return sec('업적 24개 (PLAN §2-5 · 보상 = 업적 전용 꾸미기)', tbl(['사용', '분류', '업적', '조건', '목표', '보상'], L.map(a => { const o = (D.cfg.ACH || {})[a.name] || {};
+      return sec('배지 (v1.94 분야별 · 난이도 5단계)', tbl(['사용', '분야', '배지', '조건', '목표', '보상'], L.map(a => { const o = (D.cfg.ACH || {})[a.name] || {};
         return `<tr class="${o.off ? 'aoff' : ''}"><td><button class="asw ${o.off ? '' : 'on'}" data-aact="achOff" data-v="${esc(a.name)}"></button></td><td>${a.cat}</td><td><b>${a.name}</b>${a.extra ? ' <span class="atag sm gray">보충안</span>' : ''}</td><td>${esc(a.cond)}</td>
-        <td><input class="ain num ${o.goal ? 'chg' : ''}" style="width:70px" type="number" min="1" data-ach="${esc(a.name)}" value="${o.goal || a.goal0}" title="기본 ${a.goal0}"></td><td>${a.item}</td></tr>`; })),
-        '<span class="amut">목표를 바꾸면 회원 앱 업적 진행 막대·달성 여부가 바뀌어요 · 끄면 목록에서 빠져요</span>'); },
+        <td><input class="ain num ${o.goal ? 'chg' : ''}" style="width:70px" type="number" min="1" data-ach="${esc(a.name)}" value="${o.goal || a.goal0}" title="기본 ${a.goal0}"></td><td>${a.item || '—'}</td></tr>`; })),
+        '<span class="amut">목표를 바꾸면 회원 앱 배지 진행 막대·달성 여부가 바뀌어요(프로는 체중 없을 때 kg 기준) · 끄면 배지판에서 빠져요</span>'); },
     reward: () => { const T = [['cosmetic', '꾸미기(외형)', 1, true], ['title', '칭호', 1, true], ['effect', '효과(이펙트)', 1, true], ['point', '니짐 포인트', 1, false], ['coupon_norder', 'N오더 쿠폰', 2, false], ['center_benefit', '센터 혜택', 2, false], ['membership_discount', '멤버십 할인', 2, false], ['external', '외부 제휴', 2, false]];
       return sec('보상 종류 (rewards.type · reward_rules)', tbl(['켜기', '종류', '단계', '설명'], T.map(([k, l, ph, def]) => { const on = D.rewards[k] ?? def;
         return `<tr class="${on ? '' : 'aoff'}"><td><button class="asw ${on ? 'on' : ''}" data-aact="rwOn" data-v="${k}"></button></td><td><b>${l}</b> <span class="amut mono">${k}</span></td><td>${ph}차</td><td>${ph === 1 ? '앱 안에서 끝나는 보상' : '조건(센터·금액·월 상한)이 붙는 보상 — 2차에 켜기'}</td></tr>`; })))

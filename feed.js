@@ -97,7 +97,7 @@ function fdCheerRow(p) {
 function fdCard(p) {
   const u = fdUser(p.uid);
   return `<article class="card fdcard" data-post="${p.id}">
-    <div class="fdhead"><button class="fdwho" data-act="fdUser" data-id="${p.uid}">${fdAvatar(u)}<span class="fdname"><b>${esc(u.nick)}${u.me && u.nick !== '나' ? ' <em>나</em>' : ''}</b><small>Lv.${u.lv}${p.place ? ` · ${esc(p.place)}` : ''}</small></span><i class="fdgo">›</i></button><span class="fdtime">${fdWhen(p.ts)}</span></div>
+    <div class="fdhead"><button class="fdwho" data-act="fdUser" data-id="${p.uid}">${fdAvatar(u)}<span class="fdname"><span class="fdnm"><b>${esc(u.nick)}${u.me && u.nick !== '나' ? ' <em>나</em>' : ''}</b>${bTagOf(u.me ? { me: true } : { n: u.nick, lv: u.lv })}</span><small>Lv.${u.lv}${p.place ? ` · ${esc(p.place)}` : ''}</small></span><i class="fdgo">›</i></button><span class="fdtime">${fdWhen(p.ts)}</span></div>
     <button class="fdphoto" data-act="fdPost" data-id="${p.id}" aria-label="게시물 자세히 보기"><img src="${p.img}" alt="${esc(u.nick)} 님의 오운완 셀카" loading="lazy"></button>
     ${fdSum(p)}${fdCheerRow(p)}</article>`;
 }
@@ -138,15 +138,15 @@ function pfBody(p, view) {
   const cn = p.center && fdCenterName(p.center), w = pfWeek(p), pureLv = p.me ? S.exLv : (p.pure ?? p.lv);
   const paid = !p.paid ? '' : own ? `<span class="pill paidpill" id="paidBadge">💰 ${PAID_TIER[p.paid]}</span>` : '<span class="pill paidpill" id="paidBadge">💰</span>';
   const head = `<div class="card pfcard" id="profCard">${charHTML(p.t, p.lv, 132, true, null, false, 132, { wear: !!p.me })}
-    <div class="pfname"><span class="name">${esc(p.n)}</span>${paid}${!p.me && !p.friend ? '<span class="pill tier1">친구 아님</span>' : ''}</div>
+    <div class="pfname"><span class="name">${esc(p.n)}</span>${bTagOf(p, 'profTag')}${paid}${!p.me && !p.friend ? '<span class="pill tier1">친구 아님</span>' : ''}</div>
     <div class="pfpills"><span class="pill lvpill">Lv.${p.lv}</span><span class="pill tier${tierOf(p.lv)}">${TIER_NAME[tierOf(p.lv)]}</span></div>
-    <div class="muted pfsub">${esc(CH[p.t].name)} · 칭호 «${stageName(p.t, p.lv)}»${cn ? ` · ${esc(cn)}` : ''}</div></div>`;
+    <div class="muted pfsub">${esc(CH[p.t].name)}${cn ? ` · ${esc(cn)}` : ''}</div></div>`;
   const week = w ? `<div id="profWeek" class="profwk"><b>이번 주 친구 리그 ${fmt(w.week)} XP</b><span>입장하고 한 운동 ${fmt(w.entered)} · 그 밖의 운동 ${fmt(w.self)}${own && !rkPure() && w.paidWeek > 0 ? ` · 포인트로 받은 ${fmt(w.paidWeek)}` : ''}</span></div>` : '';
   const xp = `<div class="card" id="profRatio">${week}<div class="xrow"${week ? '' : ' style="padding-top:0"'}><span>운동으로 쌓은 경험치</span><b style="font-size:20px;color:var(--ink)">${p.ratio}%</b></div>
     <div class="ratiobar"><i style="width:${p.ratio}%"></i><s style="width:${100 - p.ratio}%"></s></div>
     <div class="rleg"><span><i class="lgx"></i>운동 ${p.ratio}%</span><span><i class="lgi"></i>아이템 ${100 - p.ratio}%</span></div>
     ${own ? `<div class="muted pfpaid">${p.paid ? `💰 = 충전한 포인트를 상점에서 쓴 적 있어요(${PAID_TIER[p.paid]})` : '💰 표시 없음 = 충전한 포인트를 상점에서 쓴 적 없어요'} · 금액·결제 내역은 공개 안 해요</div>` : ''}</div>`;
-  const tiles = `<div class="card" id="profTiles"><div class="tiles" style="margin-top:0"><div class="tile"><small>운동 레벨</small><b>Lv.${pureLv}</b></div><div class="tile"><small>연속</small><b>${p.streak}주</b></div><div class="tile"><small>업적</small><b>${p.ach}/${achieveList().length}</b></div></div></div>`;
+  const tiles = `<div class="card" id="profTiles"><div class="tiles" style="margin-top:0"><div class="tile"><small>운동 레벨</small><b>Lv.${pureLv}</b></div><div class="tile"><small>연속</small><b>${p.streak}주</b></div><div class="tile"><small>배지</small><b id="profBdN">${bdOf(p).length}/${BD_DEF.length}</b></div></div></div>${bdStrip(p)}`;
   const acts = p.me || !p.known ? '' : p.friend
     ? `<button class="btn" data-act="cheer" data-v="${esc(p.n)}" id="cheerBtn" ${S.fr.cheered[p.n] === TODAY ? 'disabled' : ''}>${S.fr.cheered[p.n] === TODAY ? '오늘 응원했어요 👏' : '응원 👏'}</button><div class="muted pfnote">친구 · 하루 1번 응원할 수 있어요</div>`
     : `${S.fr.sent.includes(p.n) ? '<button class="btn" disabled>요청 보냄 · 수락 기다리는 중</button>' : S.fr.recv.includes(p.n) ? `<button class="btn" data-act="frAccept" data-v="${esc(p.n)}">친구 요청 수락</button>` : `<button class="btn" data-act="frRequest" data-v="${esc(p.n)}" id="frReqBtn">친구 요청 보내기</button>`}<div class="muted pfnote">친구가 되면 이번 주 리그에서 같이 겨뤄요</div>`;
@@ -183,7 +183,7 @@ function vFeedPost() {
   const u = fdUser(p.uid), manage = p.mine && !asOther;
   const rows = p.items.map(fdItemTxt).filter(Boolean).map(([n, t]) => `<div class="fdex"><b>${esc(n)}</b><span>${t}</span></div>`).join('') || '<div class="muted">자세한 기록이 없어요</div>';
   return `${fdHead('오운완')}<div class="sec fd fdpost" id="fdPost">
-    <div class="card fdcard detail"><div class="fdhead"><button class="fdwho" data-act="fdUser" data-id="${p.uid}">${fdAvatar(u)}<span class="fdname"><b>${esc(u.nick)}${u.me && u.nick !== '나' ? ' <em>나</em>' : ''}</b><small>Lv.${u.lv}${p.place ? ` · ${esc(p.place)}` : ''}</small></span><i class="fdgo">›</i></button><span class="fdtime">${fdWhen(p.ts)}</span></div>
+    <div class="card fdcard detail"><div class="fdhead"><button class="fdwho" data-act="fdUser" data-id="${p.uid}">${fdAvatar(u)}<span class="fdname"><span class="fdnm"><b>${esc(u.nick)}${u.me && u.nick !== '나' ? ' <em>나</em>' : ''}</b>${bTagOf(u.me ? { me: true } : { n: u.nick, lv: u.lv })}</span><small>Lv.${u.lv}${p.place ? ` · ${esc(p.place)}` : ''}</small></span><i class="fdgo">›</i></button><span class="fdtime">${fdWhen(p.ts)}</span></div>
       <div class="fdphoto big"><img src="${p.img}" alt="${esc(u.nick)} 님의 오운완 셀카">${manage && !p.pub ? `<span class="fdprivtag" id="fdPrivTag">${fdLock()} 나만 보는 사진</span>` : ''}</div>
       ${fdSum(p)}${fdCheerRow(p)}</div>
     <div class="card" id="fdExList"><div class="h3">이날 한 운동</div>${rows}</div>

@@ -1218,3 +1218,32 @@ body.deep .csavebar{margin-bottom:calc(-24px - env(safe-area-inset-bottom));padd
 .mebtn:active{background:#FFE3EE}
 .mebtn svg{width:17px;height:17px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .mebtn i{font-style:normal;font-weight:700;margin-left:2px}
+/* v1.94 배지(분야별 · 난이도 5단계 금속 색 · 대표배지 이름표) — 그림자·빛 효과 없이 은은한 그라데이션만 */
+.t-bronze{--b1:#F6D6BA;--b2:#D9955F;--b3:#B4703D;--bk:#9C5A2B;--bi:#5E3214;--bt:#FBEBDD}
+.t-silver{--b1:#FDFEFF;--b2:#CBD2DB;--b3:#98A3B0;--bk:#7D8795;--bi:#434B57;--bt:#EEF1F4}
+.t-gold{--b1:#FFF2BF;--b2:#F3C64E;--b3:#D49C14;--bk:#B5850B;--bi:#5F4100;--bt:#FFF4CF}
+.t-plat{--b1:#EAFBFD;--b2:#AEE2EB;--b3:#70C0D0;--bk:#4A9FB1;--bi:#164E5A;--bt:#E1F6F9}
+.t-legend{--b1:#F4E6FF;--b2:#C49BFA;--b3:#8C58E8;--bk:#6E3DCB;--bi:#2E0D6B;--bt:#F0E4FF}
+.bdg.on{background:linear-gradient(150deg,var(--b1) 0%,var(--b2) 55%,var(--b3) 100%);border-color:var(--bk);box-shadow:inset 0 0 0 2px rgba(255,255,255,.5)}
+.bdg.on svg{stroke:var(--bi)}.bdg.on .bnum{color:var(--bi)}
+.bdg .bnum.n3{font-size:13px}
+.bdg.lg{width:52px;height:52px}.bdg.xl{width:76px;height:76px}.bdg.xl svg{width:36px;height:36px}.bdg.xl .bnum{font-size:22px}
+.bdtop{display:flex;justify-content:space-between;align-items:baseline}
+.bdrep{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:var(--g1);border-radius:14px;padding:12px;margin:10px 0 8px}
+.bdrep>div{min-width:0}.bdrep small{display:block;font-size:11px;color:var(--g5)}.bdrep b{display:block;font-size:16px;font-weight:800;margin:1px 0 3px;word-break:keep-all}
+.bdrep em{font-style:normal;font-size:12px;color:var(--g5)}.bdrep.none{padding:14px}
+.btier{display:inline-block;font-size:11px;font-weight:800;padding:1px 8px;border-radius:99px;background:var(--bt);color:var(--bi);border:1px solid var(--bk)}
+.bdleg{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;color:var(--g5);margin:2px 0 4px}
+.bdleg span{display:inline-flex;align-items:center;gap:4px}.bdleg i,.btag i{width:10px;height:10px;border-radius:50%;background:linear-gradient(150deg,var(--b1),var(--b3));border:1px solid var(--bk);flex:none}
+.bdsec{border-top:1px solid var(--g1);padding-top:12px;margin-top:12px}
+.bdh{display:flex;align-items:baseline;gap:6px;margin-bottom:10px}.bdh b{font-size:14px;font-weight:800}.bdh small{flex:1;min-width:0;font-size:11px;color:var(--g5)}.bdh span{font-size:12px;font-weight:700;color:var(--g5)}
+.ach em{white-space:nowrap}.ach.got em{color:var(--g6,#6B6B76)}
+.bdsh{text-align:center;display:flex;flex-direction:column;align-items:center}
+.btag{display:inline-flex;align-items:center;gap:4px;flex:none;max-width:100%;font-size:11px;font-weight:800;line-height:1;padding:3px 8px 3px 4px;border-radius:99px;background:var(--bt);color:var(--bi);white-space:nowrap;vertical-align:middle}
+.fdnm{display:flex;align-items:center;gap:5px;min-width:0}.fdnm b{min-width:0;flex:0 1 auto}
+.rknm{display:flex;flex-wrap:wrap;align-items:center;gap:3px 6px;min-width:0}.rknm b{display:inline}
+.metag{margin-top:6px}
+.bdstrip{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:10px}
+.bdsi{display:flex;flex-direction:column;align-items:center;gap:4px}.bdsi .bdg{width:44px;height:44px}.bdsi .bdg svg{width:22px;height:22px}
+.bdsi small{font-size:10px;font-weight:600;text-align:center;line-height:1.2;word-break:keep-all}
+#profBadges .linkbtn{margin-top:8px}

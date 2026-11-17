@@ -99,7 +99,7 @@ function myCenters() {
   return [...homes, ...others];
 }
 const rkRow = (m, val, sub) => `<div class="rank ${m.me ? 'me' : ''}" data-mid="${m.member_id}"><div class="no">${m.rank}</div><div class="av">${S.placeholder ? `<img src="${placeholderSrc(m.lv)}" alt="">` : charAvatar(m.t, m.lv, 40, m.me)}</div>
-  <div class="rkn"><b>${esc(m.nickname)}</b><div class="muted">${sub}</div></div><div class="val">${fmt(val)}<small>XP</small></div></div>`;
+  <div class="rkn"><div class="rknm"><b>${esc(m.nickname)}</b>${bTagOf(m.me ? { me: true } : { n: m.nickname, lv: m.lv })}</div><div class="muted">${sub}</div></div><div class="val">${fmt(val)}<small>XP</small></div></div>`;
 function rkMeBar(board, label) {
   const m = board.find(x => x.me);
   const body = m ? `<span>내 순위 <b>${m.rank}위</b> <small>/ ${board.length}명</small></span><b>${fmt(m.weekly_xp)} XP</b>`

@@ -126,8 +126,8 @@ function build(c, d, A) {
       sub = `${d.nick}의 ${cname}` + (sq ? ` · ${d.date_s}` : '');
       stats = [['레벨', `Lv.${d.lv}`, C2.sky], ['연속', `${d.streak}주`, C2.rose2], ['오늘 운동', `${d.items.length}종목`, C2.mint]];
     } else {
-      segs = [['업적 ', C2.white], ['달성!', C2.ink]]; sub = who;
-      stats = [['모은 업적', `${d.ach_n}/${d.ach_total}`, C2.sky], ['연속', `${d.streak}주`, C2.rose2], ['레벨', `Lv.${d.lv}`, C2.mint]];
+      segs = [['배지 ', C2.white], ['획득!', C2.ink]]; sub = who;
+      stats = [['모은 배지', `${d.ach_n}/${d.ach_total}`, C2.sky], ['연속', `${d.streak}주`, C2.rose2], ['레벨', `Lv.${d.lv}`, C2.mint]];
     }
     const o = [...hdr]; head(o, L, W - 2 * M, segs, sub);
     strip(o, L, ...L.strip, stats);
@@ -527,7 +527,7 @@ function cardData(st) {
   if (st.kind === 'workout') return { ...base, kind: 'workout', lv: S.level, dur_min: r && r.dur || 0, shift: st.shift || 0 };
   if (st.kind === 'levelup') return { ...base, kind: 'levelup', lv: r.lvUp.to, lv_from: r.lvUp.from };
   const L = achieveList(), a = L[st.ach];
-  return { ...base, kind: 'badge', lv: S.level, ach_n: L.filter(x => x.done).length, ach_total: L.length, badge: { name: a.name, cond: a.cond, reward: a.item, icon: a.icon } };
+  return { ...base, kind: 'badge', lv: S.level, ach_n: L.filter(x => x.done).length, ach_total: L.length, badge: { name: a.name, cond: a.cond, reward: a.item || `${BT[a.tier][1]} 배지`, icon: a.icon } };
 }
 const todayPhoto = r => (r && r.photo) || (r && r.date === TODAY && (S.records.filter(x => x.date === TODAY && x.photo).pop() || {}).photo) || null;
 let FONTS_OK = null;

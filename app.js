@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.93';
+const VER = 'v1.94';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -903,7 +903,7 @@ function vFriends() {
   return `${subHead('랭킹 · 친구')}<div class="sec"><div class="seg"><button class="${S.fTab==='week'?'on':''}" data-act="ftab" data-v="week">이번 주</button><button class="${S.fTab==='level'?'on':''}" data-act="ftab" data-v="level">레벨</button></div>
   ${rkModeHTML()}
   <div class="card">${list.map((f, i) => `<div class="rank ${f.me?'me':''}"><div class="no">${i+1}</div><div class="av">${S.placeholder ? `<img src="${placeholderSrc(f.lv)}" alt="">` : charAvatar(f.t, f.lv, 40, f.me)}</div>
-  <div><b>${esc(f.n)}</b> ${rkPaidMark(f)}<div class="muted">${esc(CH[f.t].name)} · ${stageName(f.t, f.lv)}</div></div>
+  <div><b>${esc(f.n)}</b> ${rkPaidMark(f)}<div class="muted">${esc(CH[f.t].name)} · Lv.${f.lv}</div></div>
   <div class="val">${rkValHTML(f)}</div></div>`).join('')}</div>
   <button class="btn ghost" data-act="invite">친구 초대</button>
   <div class="muted" style="margin-top:8px">순위에는 입점 헬스장에서 '입장하기'로 들어가서 운동한 기록만 반영돼요</div></div>`;
@@ -913,7 +913,7 @@ function vMe() {
   const t = S.type;
   return `${subHead('내 캐릭터')}<div class="sec">
   <div class="card" style="text-align:center">${charHTML(t, S.level, 170, true, exprNow(), false, 212, { rig: true, wear: true })}<div style="margin-top:14px"><span class="name">${esc(CH[t].name)}</span> <span class="pill lvpill">Lv.${S.level}</span> <span class="pill tier${tierOf(S.level)}">${TIER_NAME[tierOf(S.level)]}</span></div>
-  <div class="muted" style="margin-top:4px">칭호 «${stageName(t, S.level)}» · 운동 레벨 Lv.${S.exLv} · 포인트 ${S.points.toLocaleString()}P</div>
+  ${typeof bTagOf === 'function' ? `<div class="metag">${bTagOf({ me: true }, 'meTag')}</div>` : ''}<div class="muted" style="margin-top:4px">운동 레벨 Lv.${S.exLv} · 포인트 ${S.points.toLocaleString()}P</div>
   ${myItemsHTML(t)}
   <div class="slots">${ITEMS.filter(i => i.kind === 'effect' && S.equipped[i.id]).map(i => `<div class="slot on">${i.name}</div>`).join('')}${S.gym && S.gym.item ? `<button class="slot gyslot ${S.gym.itemOn ? 'on' : ''}" data-act="gyItem" id="gySlot">${GYM_ITEM}${S.gym.itemOn ? '' : ' · 달기'}</button>` : ''}</div>
   <button class="btn" data-act="sub" data-v="shop" id="shopBtn">🛍️ 아이템 상점</button>
@@ -1537,8 +1537,8 @@ function play(ev, { onDone } = {}) {
     old.style.opacity = 0; lvNum.textContent = `Lv.${ev.to}`;
     if (P.clip) { $('evoClipImg').src = P.clip.last; nw.style.opacity = 0; }   // v1.34 디자인 클립: 끝 프레임(링·빛 포함) 그대로 둔다
     else { nw.className = 'evo-new' + (evolved ? '' : ' glow'); nw.style.opacity = 1; ringStyle(nc); ring.classList.add('show'); }
-    $('evoTitle').textContent = ev.to === 99 ? `${name}${CH[t].josa} 최고 레벨에 도달했다!` : evolved ? `${name}${CH[t].josa} «${stageName(t, ev.to)}»${ro(stageName(t, ev.to))} 진화했다!` : '레벨 업!';
-    $('evoSub').textContent = ev.to === 99 ? '최고 레벨 달성 · 골드 아우라' : `칭호 «${stageName(t, ev.to)}» · ${TIER_NAME[tr]}`;
+    $('evoTitle').textContent = ev.to === 99 ? `${name}${CH[t].josa} 최고 레벨에 도달했다!` : evolved ? `${name}${CH[t].josa} 진화했다!` : '레벨 업!';
+    $('evoSub').textContent = ev.to === 99 ? '최고 레벨 달성 · 골드 아우라' : TIER_NAME[tr];
     el.classList.remove('p1', 'p2'); el.classList.add('p3');
     P.phase = 'result';
     if (ev.big) $('evoOk').classList.add('show'); else at(900, close);
@@ -1550,7 +1550,7 @@ function play(ev, { onDone } = {}) {
     at(80, () => { nw.classList.add('grow'); burst('#9FDBFF'); sfxShort(); });
     $('evoTitle').textContent = '레벨 업!';
     rollTo(ev.from, ev.to, 700);
-    at(800, () => { $('evoSub').textContent = `칭호 «${stageName(t, ev.to)}»`; });
+    at(800, () => { $('evoSub').textContent = `Lv.${ev.to}`; });
     at(1900, close);
     return;
   }

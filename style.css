@@ -1193,3 +1193,28 @@ body.deep .csavebar{margin-bottom:calc(-24px - env(safe-area-inset-bottom));padd
 .pfnote{text-align:center;margin:8px 0 14px}
 .pfstat{justify-content:center;gap:44px;margin:4px 0 12px;text-align:center}
 .pfstat span{align-items:center}
+
+/* ===== v1.93 첫 화면 캐릭터 카드(형 11-17): 착용 아이템 칩 삭제 · 게임식 경험치 · «내 캐릭터 보기» 버튼 ===== */
+.xpb{margin-top:10px}
+.xlvs{display:flex;align-items:center;gap:5px;white-space:nowrap}
+.xlv{display:inline-flex;align-items:center;gap:2px;height:22px;padding:0 8px;border-radius:7px;background:var(--g1);color:var(--ink);font-size:12px;font-weight:800;font-variant-numeric:tabular-nums}
+.xlv.xnext{background:#FFE8F1;color:var(--rose)}
+.xlv.xgold{background:#FFF4DC;color:#A86B00;box-shadow:inset 0 0 0 1px #F2D49A}
+.xlv.xmax{background:var(--ink);color:var(--gold)}
+.xlv svg,.xevo svg{width:13px;height:13px;flex:none;fill:currentColor}
+.xarr{font-size:12px;color:var(--g5);font-weight:700}
+.xbar{position:relative;height:12px;margin:8px 0 6px;border-radius:7px;background:var(--g2);overflow:hidden}
+.xbar i{position:relative;display:block;height:100%;border-radius:7px;background:linear-gradient(90deg,#FF5C9A,var(--rose));transition:width .6s;overflow:hidden}
+.xbar i::before{content:"";position:absolute;left:0;right:0;top:1px;height:4px;margin:0 3px;border-radius:3px;background:rgba(255,255,255,.35)}
+.xbar i::after{content:"";position:absolute;top:0;bottom:0;left:-40%;width:40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);animation:xshine 3.2s ease-in-out infinite}
+.xbar::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 calc(10% - 2px),#fff calc(10% - 2px) 10%);pointer-events:none}
+.xpb.xpmax .xbar i{background:linear-gradient(90deg,#F2C46D,var(--gold))}
+@keyframes xshine{0%,55%{left:-40%}100%{left:110%}}
+@media (prefers-reduced-motion:reduce){.xbar i::after{animation:none;display:none}}
+.xleft{font-size:13px;color:var(--g5);white-space:nowrap;font-variant-numeric:tabular-nums}
+.xleft b{color:var(--ink);font-weight:800}
+.xevo{display:flex;align-items:center;gap:4px;margin-top:4px;font-size:12px;font-weight:700;color:#A86B00;white-space:nowrap}
+.mebtn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:44px;margin-top:10px;padding:0 10px;border:1.5px solid #FFC7DC;border-radius:12px;background:#FFF5F9;color:var(--rose);font-family:inherit;font-size:14px;font-weight:700;white-space:nowrap;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.mebtn:active{background:#FFE3EE}
+.mebtn svg{width:17px;height:17px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.mebtn i{font-style:normal;font-weight:700;margin-left:2px}

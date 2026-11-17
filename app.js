@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.92';
+const VER = 'v1.93';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -458,13 +458,23 @@ function vOnbPerm() {
 }
 
 /* ===== C0 운동기록 탭 메인 ===== */
+/* v1.93 첫 화면 경험치(형 11-17): 착용 아이템 글자 칩은 빼고(그림으로 보임), «Lv.19 → Lv.20» 배지 · 10칸 굵은 막대 · «461 XP 남음» · 진화 아이콘 한 줄 */
+const EVO_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/></svg>';
+function xpBlock(lv, toNext) {
+  const max = lv >= 99, pct = max ? 100 : Math.max(0, Math.min(100, Math.round(S.xp / need(lv) * 100)));
+  const evoLv = lv >= 90 ? 99 : (Math.floor(lv / 10) + 1) * 10, evoNext = !max && lv < 90 && lv + 1 === evoLv;
+  const to = max ? '<span class="xlv xmax">MAX</span>' : `<span class="xlv xnext${evoNext ? ' xgold' : ''}">${evoNext ? EVO_SVG : ''}Lv.${lv + 1}</span>`;
+  const evo = max ? '' : lv >= 90 ? `<div class="xevo">${EVO_SVG}<span>최고 레벨 Lv.99</span></div>` : `<div class="xevo">${EVO_SVG}<span>${evoNext ? '다음 레벨에 진화' : `Lv.${evoLv} 진화`}</span></div>`;
+  return `<div class="xpb${max ? ' xpmax' : ''}" id="xpBox"><div class="xlvs"><span class="xlv">Lv.${lv}</span>${max ? '' : '<b class="xarr" aria-hidden="true">→</b>'}${to}</div>
+    <div class="xbar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="다음 레벨까지 경험치"><i style="width:${pct}%"></i></div>
+    <div class="xleft" id="xpLeft">${max ? '최고 레벨 달성' : `<b>${toNext.toLocaleString()} XP</b> 남음`}</div>${evo}</div>`;
+}
+
 function vWorkout() {
   if (!S.chosen) return vChoose();
   const t = S.type, lv = S.level, tr = tierOf(lv);
   const toNext = lv >= 99 ? 0 : Math.max(0, need(lv) - S.xp);
-  const nextEvo = lv >= 99 ? '만렙 달성!' : lv >= 90 ? 'Lv.99가 최고 레벨이에요' : `Lv.${(Math.floor(lv/10)+1)*10}에 진화해요`;
   const pend = S.pending ? `<div class="notice"><span>⏳ 못 본 레벨업 장면이 있어요</span><button class="btn sm" data-act="playPending">보기</button></div>` : '';
-  const eqNames = gearPills() + ITEMS.filter(i => i.kind !== 'look' && S.equipped[i.id]).map(i => `<span class="pill">${i.name}</span>`).join('') + gymPill();   // v1.68: 알약을 누르면 내 캐릭터 «내 아이템» 칸으로 · v1.70: 4개부터는 한 줄로
   const seg = `<div class="seg wseg"><button class="${S.wseg==='mine'?'on':''}" data-act="wseg" data-v="mine">내 운동</button><button class="${S.wseg==='feed'?'on':''}" data-act="wseg" data-v="feed">오운완 피드</button></div>`;
   if (S.wseg === 'feed' && typeof vFeed === 'function') return seg + vFeed();   // v1.76 feed.js · v1.88: feed.js가 뒤에 읽히므로 그 전 첫 그리기는 «내 운동»으로 두고 feed.js 끝에서 다시 그린다
   const wd = weekDays(), wk = weekCount();
@@ -486,10 +496,8 @@ function vWorkout() {
   return `${seg}<div class="sec" style="padding-top:8px">${pend}
   <div class="card" id="stageCard"><div class="stage"><div class="cwrap stagewrap ${ex}" data-act="pose" id="stageWrap">${charHTML(t, lv, 128, true, ex, false, 160, { rig: true, wear: true })}${sigClipHTML(t, lv)}</div>
     <div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span class="name">${esc(CH[t].name)}</span><span class="pill lvpill">Lv.${lv}</span><span class="pill tier${tr}">${TIER_NAME[tr]}</span>${moodPill(moodToday(), true)}${exprPill(ex, true)}</div>
-    <div class="bar"><i style="width:${lv>=99?100:Math.max(0, Math.round(S.xp/need(lv)*100))}%"></i></div>
-    <div class="muted">${lv>=99?'최고 레벨':`Lv.${lv+1}까지 ${toNext.toLocaleString()} XP`} · ${nextEvo}</div>
-    <div class="eqs">${eqNames || '<button class="pill none eqpill" data-act="myItems">장착 아이템 없음<i>›</i></button>'}</div>
-    <button class="linkbtn" data-act="sub" data-v="me" id="goMe">내 캐릭터 자세히 ›</button></div></div>
+    ${xpBlock(lv, toNext)}
+    <button class="mebtn" data-act="sub" data-v="me" id="goMe"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg><span>내 캐릭터 보기</span><i>›</i></button></div></div>
     <div class="scoach" id="coachBox"><div class="say" id="coachSay"><span>${esc(coachLine())}</span></div><div class="scrow"><div class="cquota" id="coachQuota">${coachQuota()}</div><button class="coachbtn" data-act="coach" id="coachBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg><span class="ctxt">${esc(askTitle())}</span></button></div></div></div>
   <button class="btn" data-act="start" id="goRecord" style="margin-top:0">${S.session ? '운동 이어서 하기' : '오늘 운동 기록하기'}</button>
   <div class="muted" style="text-align:center;margin:6px 0 12px">${S.session ? `${esc(S.session.place.name)}에서 운동 중 · <span data-clock="sess">${clock(Date.now() - S.session.startedAt)}</span>` : gymQuiet() ? '운동을 시작할 때 눌러 주세요' : `센터에 입장하면 바로 시작돼요 · ${CB_TXT}`}</div>

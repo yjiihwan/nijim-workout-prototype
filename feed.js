@@ -7,7 +7,7 @@
 
 const FEED_EMPTY = /[?&]feed=empty\b/.test(location.search);   // 빈 화면 확인용: 주소 끝 ?feed=empty → 예시 게시물 없이
 const FEED_USERS = {
-  u1: ['운동하는곰', 'koa', 27, 'sillim'], u2: ['새벽러너', 'saetbyeol', 41, 'sillim'], u3: ['벤치왕', 'ttukbi', 33, 'sillim'], u4: ['헬린이9일차', 'bamtol', 4, 'sillim'],
+  u2: ['새벽러너', 'saetbyeol', 41, 'sillim'], u3: ['벤치왕', 'ttukbi', 33, 'sillim'], u4: ['헬린이9일차', 'bamtol', 4, 'sillim'],
   u5: ['근손실방지위원장', 'imu', 58, 'bongcheon'], u6: ['오늘도출근', 'capy', 22, 'sillim'], u7: ['스쿼트요정', 'ppiyak', 22, 'sillim'], u8: ['삼대오백목표', 'shadow', 63, 'sillim'],
   u9: ['요가하는밤', 'dot', 24, 'snu'], u10: ['런닝맨', 'youngcha', 52, 'bongcheon'], u11: ['닉네임이아주아주길어서두줄이될수도있는회원', 'rilla', 19, 'sillim'], u12: ['데드장인', 'imu', 88, 'sadang'],
   u13: ['필라테스러', 'mungchi', 12, 'snu'], u14: ['아침형인간', 'dot', 74, 'nakseong'],
@@ -16,7 +16,7 @@ const FW = (ex, ...sets) => ({ ex, sets: sets.map(([w, r]) => ({ w, r, done: tru
 const FC = (ex, min, km) => ({ ex, min, km });
 /* [게시물 id, 회원, 사진 번호, 며칠 전, 몇 시간 전, 운동 시간(분), 얻은 경험치, 받은 응원, 운동 목록] */
 const FEED_POSTS = FEED_EMPTY ? [] : [
-  ['p1', 'u1', 1, 0, 1, 62, 240, 14, [FW('bench', [60, 10], [65, 8], [65, 8], [60, 10]), FW('lat_pulldown', [50, 12], [50, 12], [55, 10]), FC('treadmill', 15, 2.1)]],
+  ['m1', 'me', 1, 0, 1, 62, 240, 14, [FW('bench', [60, 10], [65, 8], [65, 8], [60, 10]), FW('lat_pulldown', [50, 12], [50, 12], [55, 10]), FC('treadmill', 15, 2.1)]],
   ['p2', 'u7', 6, 0, 3, 48, 195, 23, [FW('squat', [40, 12], [45, 10], [45, 10], [50, 8]), FW('leg_press', [90, 12], [100, 12], [100, 10]), FW('hip_thrust', [50, 12], [50, 12])]],
   ['p3', 'u11', 12, 0, 5, 95, 310, 6, [FW('bench', [50, 10], [50, 10], [52.5, 8]), FW('lat_pulldown', [40, 12], [40, 12], [45, 10]), FW('leg_press', [80, 12], [80, 12]), FW('chest_press', [35, 12], [35, 12]), FC('treadmill', 25, 3.2)]],
   ['p4', 'u5', 5, 0, 8, 75, 280, 31, [FW('squat', [100, 8], [110, 6], [110, 6], [100, 8]), FW('leg_press', [180, 10], [180, 10], [200, 8])]],
@@ -30,10 +30,10 @@ const FEED_POSTS = FEED_EMPTY ? [] : [
   ['p12', 'u12', 13, 3, 7, 80, 300, 37, [FW('squat', [160, 5], [170, 3], [170, 3]), FW('leg_press', [220, 8], [220, 8])]],
   ['p13', 'u13', 7, 4, 3, 50, 140, 8, [FW('air_squat', [0, 15], [0, 15]), FW('pushup', [0, 8], [0, 8], [0, 6])]],
   ['p14', 'u14', 14, 4, 10, 65, 250, 13, [FW('bench', [70, 8], [70, 8], [72.5, 6]), FC('treadmill', 20, 3)]],
-  /* 같은 사람의 지난 사진 — 다른 사람 피드 격자 4칸(운동하는곰)·2칸(벤치왕)·7칸(삼대오백목표) */
-  ['p15', 'u1', 15, 3, 1, 58, 215, 10, [FW('lat_pulldown', [50, 12], [50, 12], [50, 10]), FW('leg_press', [110, 12], [110, 12])]],
-  ['p16', 'u1', 16, 6, 2, 50, 190, 7, [FW('bench', [57.5, 10], [60, 8], [60, 8])]],
-  ['p17', 'u1', 17, 9, 3, 35, 120, 12, [FC('treadmill', 35, 4.6)]],
+  /* 같은 사람의 지난 사진 — 내 피드 격자 4칸(m1~m4)·다른 회원 격자 2칸(벤치왕)·7칸(삼대오백목표) */
+  ['m2', 'me', 15, 3, 1, 58, 215, 10, [FW('lat_pulldown', [50, 12], [50, 12], [50, 10]), FW('leg_press', [110, 12], [110, 12])]],
+  ['m3', 'me', 16, 6, 2, 50, 190, 7, [FW('bench', [57.5, 10], [60, 8], [60, 8])]],
+  ['m4', 'me', 17, 9, 3, 35, 120, 12, [FC('treadmill', 35, 4.6)]],
   ['p18', 'u3', 18, 5, 4, 60, 230, 15, [FW('bench', [80, 8], [82.5, 6], [82.5, 6]), FW('lat_pulldown', [60, 10], [60, 10])]],
   ['p19', 'u8', 19, 3, 2, 90, 340, 33, [FW('squat', [140, 5], [145, 5], [145, 4])]],
   ['p20', 'u8', 20, 5, 2, 85, 320, 29, [FW('bench', [100, 5], [100, 5], [102.5, 4])]],
@@ -52,6 +52,7 @@ function ensureFeed() {
   if (S.feedPub !== true && S.feedPub !== false) S.feedPub = null;
   if (!plainObj(S.fdCheer)) S.fdCheer = {};
   if (!Array.isArray(S.fdNav)) S.fdNav = [];
+  if (!plainObj(S.fdDemo)) S.fdDemo = {};
 }
 const fdMyCenters = () => { try { const l = rkHomeList().map(h => h.center_id); return l.length ? l : ['sillim']; } catch { return ['sillim']; } };
 const fdCenterName = id => { const c = typeof rkCenter === 'function' && rkCenter(id); return c ? c.name : ''; };
@@ -66,13 +67,18 @@ const fdDur = r => r.dur || Math.max(5, (r.items || []).reduce((a, it) => a + (i
 const fdWhen = ts => { const m = Math.floor((Date.now() - ts) / 60000), d0 = new Date(); d0.setHours(0, 0, 0, 0); const days = Math.ceil((d0 - ts) / 86400000);
   return ts >= +d0 ? (m < 1 ? '방금' : m < 60 ? `${m}분 전` : `${Math.floor(m / 60)}시간 전`) : days <= 1 ? '어제' : days < 7 ? `${days}일 전` : `${new Date(ts).getMonth() + 1}월 ${new Date(ts).getDate()}일`; };
 const fdRecTs = r => r.id > 1e12 ? r.id : +new Date(r.date + 'T12:00:00');
+/* v1.91(형 11-17): «나» 정보는 여기 한 곳에서만 — 내 피드 탭·둘러보기 내 게시물·게시물 상세가 모두 이 값을 쓴다(닉네임은 랭킹과 같은 규칙 S.nick || '나') */
 const fdMe = () => ({ id: 'me', nick: S.nick || '나', t: S.type, lv: S.level, center: fdMyCenters()[0], me: true });
 const fdUser = id => { if (id === 'me') return fdMe(); const u = FEED_USERS[id]; return u ? { id, nick: u[0], t: u[1], lv: u[2], center: u[3] } : null; };
+/* 시험판: 내 예시 셀카(FEED_POSTS 의 'me' 줄)의 공개 전환·삭제는 S.fdDemo[id] 에 적어 둔다 — 운동 기록(S.records)은 건드리지 않는다 */
+const fdDemoOf = id => S.fdDemo[id] || {};
 function fdPosts() {
   const now = Date.now();
-  const ex = FEED_POSTS.map(([id, uid, img, ago, h, dur, xp, cheers, items]) => {
+  const myC = fdMyCenters()[0];
+  const ex = FEED_POSTS.filter(([id, uid]) => uid !== 'me' || !fdDemoOf(id).del).map(([id, uid, img, ago, h, dur, xp, cheers, items]) => {
     const d = new Date(now - ago * 86400000 - h * 3600000); if (ago === 0 && d.getDate() !== new Date(now).getDate()) d.setTime(now - 60000 * 20);   // 자정 직후에도 «오늘» 게시물은 오늘로
-    return { id, uid, img: `assets/feed/f${String(img).padStart(2, '0')}.jpg?v=${VER}`, ts: +d, dur, xp, items, parts: fdParts(items), base: cheers, pub: true, center: FEED_USERS[uid][3], place: fdCenterName(FEED_USERS[uid][3]) };
+    const me = uid === 'me', center = me ? myC : FEED_USERS[uid][3];
+    return { id, uid, img: `assets/feed/f${String(img).padStart(2, '0')}.jpg?v=${VER}`, ts: +d, dur, xp, items, parts: fdParts(items), base: cheers, pub: me ? fdDemoOf(id).pub !== false : true, mine: me, demo: me, center, place: fdCenterName(center) };
   });
   const mine = fdMyRecs().map(r => ({ id: 'r' + r.id, uid: 'me', rec: r, img: r.photo, ts: fdRecTs(r), dur: fdDur(r), xp: r.xp, items: r.items || [], parts: fdParts(r.items), base: fdMyCheers(r), pub: r.pub === true, mine: true,
     center: r.placeKind === 'center' && typeof rkCenterIdOf === 'function' ? rkCenterIdOf(r.place) : null, place: r.place }));
@@ -113,7 +119,8 @@ function fdProfile(u, posts, mineView) {
   const grid = posts.length ? `<div class="fdgrid" id="fdGrid">${posts.map(p => `<button class="fdcell" data-act="fdPost" data-id="${p.id}" aria-label="${fdWhen(p.ts)} 게시물 보기"><img src="${p.img}" alt="" loading="lazy">${mineView && !p.pub ? `<span class="fdpriv">${fdLock()}</span>` : ''}</button>`).join('')}</div>`
     : mineView ? fdEmpty('아직 찍은 오운완 셀카가 없어요', '운동 끝나고 오운완 셀카를 찍으면<br>여기에 차곡차곡 쌓여요')
     : `<div class="card fdempty" id="fdEmpty"><b>아직 공개한 오운완이 없어요</b><p>${u.me ? '«피드에 공개»를 켠 사진만 다른 회원에게 보여요' : '새 게시물이 올라오면 여기에 보여요'}</p></div>`;
-  return `<div class="card fdprof" id="fdProf"><div class="fdpchar">${charFit(u.t, u.lv, 84)}</div><div class="fdpinfo"><b class="fdpnick">${esc(u.nick)}</b><small>Lv.${u.lv}${u.center && !u.me ? ` · ${esc(fdCenterName(u.center))}` : ` · ${esc(CH[u.t].name)}`}</small>
+  const cn = u.center && fdCenterName(u.center);
+  return `<div class="card fdprof" id="fdProf"><div class="fdpchar">${charFit(u.t, u.lv, 84)}</div><div class="fdpinfo"><b class="fdpnick">${esc(u.nick)}</b><small>Lv.${u.lv} · ${esc(cn || CH[u.t].name)}</small>
     <div class="fdstat"><span><b id="fdStatN">${fmt(posts.length)}</b>오운완</span><span><b id="fdStatC">${fmt(cheers)}</b>받은 응원</span></div></div></div>${grid}`;
 }
 function fdMine() {
@@ -203,9 +210,12 @@ document.addEventListener('click', e => {
   }
   if (a === 'fdShotPub') { const t = fdTarget(); if (!t) return; fdSetPub(t, t.pub !== true); S.feedPub = t.pub === true; save(); render(); return; }
   if (a === 'fdAsk') { const t = fdTarget(); S.feedPub = v === '1'; fdSetPub(t, S.feedPub); shClose(); save(); render(); return toast(S.feedPub ? '다음에도 피드에 올리는 걸로 맞춰 둘게요' : '다음에도 나만 보는 걸로 맞춰 둘게요'); }
+  const demo = id && FEED_POSTS.some(r => r[0] === id && r[1] === 'me');
+  if (demo && a === 'fdPub') { const y = window.scrollY, on = fdDemoOf(id).pub === false; S.fdDemo[id] = { pub: on }; save(); render(); window.scrollTo(0, y); return toast(on ? '피드에 공개했어요' : '나만 보는 사진으로 바꿨어요'); }
+  if (demo && a === 'fdDelOk') { S.fdDemo[id] = { del: 1 }; shClose(); S.fdNav.pop(); const top = fdTop(); S.sub = top ? (top.k === 'post' ? 'fpost' : 'fuser') : null; if (!top) { S.wseg = 'feed'; S.feedTab = 'mine'; } save(); render(); window.scrollTo(0, 0); return toast('게시물을 지웠어요'); }
   const rec = id && S.records.find(r => 'r' + r.id === id);
   if (a === 'fdPub') { if (!rec) return; const y = window.scrollY; fdSetPub(rec, rec.pub !== true); save(); render(); window.scrollTo(0, y); return toast(rec.pub ? '피드에 공개했어요' : '나만 보는 사진으로 바꿨어요'); }
-  if (a === 'fdDel') return rec && sheet(`<div class="h2">이 게시물을 지울까요?</div><div class="muted" style="line-height:1.6;word-break:keep-all">사진이 지워지고 피드에서도 사라져요.<br>지운 사진은 되돌릴 수 없어요.<br>운동 기록과 경험치는 그대로 남아요.</div><div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="shClose">취소</button><button class="btn danger" data-act="fdDelOk" data-id="${id}" id="fdDelOk">지우기</button></div>`);
+  if (a === 'fdDel') return (rec || demo) && sheet(`<div class="h2">이 게시물을 지울까요?</div><div class="muted" style="line-height:1.6;word-break:keep-all">사진이 지워지고 피드에서도 사라져요.<br>지운 사진은 되돌릴 수 없어요.<br>운동 기록과 경험치는 그대로 남아요.</div><div class="grid2" style="margin-top:14px"><button class="btn ghost" data-act="shClose">취소</button><button class="btn danger" data-act="fdDelOk" data-id="${id}" id="fdDelOk">지우기</button></div>`);
   if (a === 'fdDelOk') { if (!rec) return shClose(); rec.photo = null; rec.pub = false; rec.pubAt = null; shClose(); S.fdNav.pop(); const top = fdTop(); S.sub = top ? (top.k === 'post' ? 'fpost' : 'fuser') : null; if (!top) { S.wseg = 'feed'; S.feedTab = 'mine'; } save(); render(); window.scrollTo(0, 0); return toast('게시물을 지웠어요'); }
 });
 

@@ -219,9 +219,12 @@ const fdFab = (() => {
   $('app').appendChild(b); return b;
 })();
 const fdFabAnchor = () => S.tab !== 'workout' || !S.chosen ? null : !S.sub && S.wseg === 'feed' ? document.querySelector('#view .wseg') : S.sub === 'fuser' ? document.querySelector('#view .subhead') : null;
+/* v1.90: 사진이 좌우 꽉 차면서 버튼이 프로필 줄·응원하기 위에 자주 겹쳐 — 내리는 동안은 숨기고, 조금이라도 올리면 띄운다 */
+let fdLastY = window.scrollY, fdUp = false;
 function fdFabSync() {
+  const y = window.scrollY; if (Math.abs(y - fdLastY) > 6) { fdUp = y < fdLastY; fdLastY = y; }
   const a = fdFabAnchor(), safe = (parseFloat(getComputedStyle(fdFab).top) || 10) - 10;   // 상태바 안전 여백 — 그 밑으로 들어가면 가려진 것으로 본다
-  const on = !!a && a.getBoundingClientRect().bottom <= safe;
+  const on = !!a && fdUp && a.getBoundingClientRect().bottom <= safe;
   if (on !== fdFab.classList.contains('on')) { fdFab.classList.toggle('on', on); fdFab.tabIndex = on ? 0 : -1; }
 }
 { let q = 0; const later = () => { if (!q) q = requestAnimationFrame(() => { q = 0; fdFabSync(); }); };

@@ -1169,3 +1169,15 @@ body.deep .csavebar{margin-bottom:calc(-24px - env(safe-area-inset-bottom));padd
 .fdfab.on:active{transform:scale(.93)}
 .fdfab svg{width:22px;height:22px;margin-left:-2px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 @media (prefers-reduced-motion:reduce){.fdfab,.fdfab.on{transition:none;transform:none}}
+
+/* ===== v1.90 오운완 피드 사진 좌우 꽉(형 11-17) — 게시물 카드 상자를 없애고 사진은 화면(내용 칸) 좌우 끝까지, 글자·칩·응원은 안쪽 16px. 게시물 사이는 8px 회색 띠.
+   목록·상세 사진 모두 4:5(그보다 긴 사진은 위쪽 30% 기준으로 잘라 얼굴 보존). 내 피드·다른 회원 피드 격자도 좌우 끝까지 ===== */
+#fdList .fdcard,.fdpost .fdcard.detail{margin:0 -16px 8px;border-radius:0;padding:12px 0 16px}
+.fdcard .fdhead{padding:0 16px 0 10px;margin-bottom:10px}
+.fdcard .fdwho{padding-left:6px}
+.fdcard .fdphoto,.fdcard .fdphoto.big{border-radius:0;aspect-ratio:4/5}
+.fdcard .fdsum,.fdcard .fdcheer{padding:0 16px}
+.fdcard .fdsum{margin-top:12px}
+.fdpost .fdcard.detail{margin-bottom:12px}
+.fdgrid{margin:0 -16px 12px;border-radius:0;gap:2px}
+.fdfab{background:rgba(255,255,255,.84);border-color:rgba(255,255,255,.95);box-shadow:0 0 0 .5px rgba(22,22,28,.22),0 4px 14px rgba(22,22,28,.26),inset 0 1px 0 rgba(255,255,255,.7)}

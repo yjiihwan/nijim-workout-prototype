@@ -355,7 +355,7 @@ function vProfile() {
   return `${subHead(p.me ? '내 프로필 미리보기' : '프로필', back, backLabel)}<div class="sec">
   <div class="card" style="text-align:center" id="profCard">${charHTML(p.t, p.lv, 150, true, null, false, 150, { wear: !!p.me })}
     <div style="margin-top:12px;display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap"><span class="name">${esc(p.n)}</span>${p.paid ? `<span class="pill paidpill" id="paidBadge">💰 ${PAID_TIER[p.paid]}</span>` : ''}${!p.friend ? '<span class="pill tier1">친구 아님</span>' : ''}</div>
-    <div style="margin-top:6px;display:flex;gap:6px;justify-content:center"><span class="pill lvpill">Lv.${p.lv}</span><span class="pill tier${tierOf(p.lv)}">${TIER_NAME[tierOf(p.lv)]}</span></div>
+    <div style="margin-top:6px;display:flex;gap:6px;justify-content:center"><span class="pill lvpill">Lv.${p.lv}</span></div>
     <div class="muted" style="margin-top:6px">${esc(CH[p.t].name)}</div></div>
   <div class="card" id="profRatio"><div class="xrow" style="padding-top:0"><span>운동으로 쌓은 경험치</span><b style="font-size:20px;color:var(--ink)">${p.ratio}%</b></div>
     <div class="ratiobar"><i style="width:${p.ratio}%"></i><s style="width:${100 - p.ratio}%"></s></div>

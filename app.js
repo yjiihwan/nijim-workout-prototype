@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v1.96';
+const VER = 'v1.97';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -495,7 +495,7 @@ function vWorkout() {
   const ex = exprNow();
   return `${seg}<div class="sec" style="padding-top:8px">${pend}
   <div class="card" id="stageCard"><div class="stage"><div class="cwrap stagewrap ${ex}" data-act="pose" id="stageWrap">${charHTML(t, lv, 128, true, ex, false, 160, { rig: true, wear: true })}${sigClipHTML(t, lv)}</div>
-    <div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span class="name">${esc(CH[t].name)}</span><span class="pill lvpill">Lv.${lv}</span><span class="pill tier${tr}">${TIER_NAME[tr]}</span>${moodPill(moodToday(), true)}${exprPill(ex, true)}</div>
+    <div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span class="name">${esc(CH[t].name)}</span><span class="pill lvpill">Lv.${lv}</span>${moodPill(moodToday(), true)}${exprPill(ex, true)}</div>
     ${xpBlock(lv, toNext)}
     <button class="mebtn" data-act="sub" data-v="me" id="goMe"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg><span>내 캐릭터 보기</span><i>›</i></button></div></div>
     <div class="scoach" id="coachBox"><div class="say" id="coachSay"><span>${esc(coachLine())}</span></div><div class="scrow"><div class="cquota" id="coachQuota">${coachQuota()}</div><button class="coachbtn" data-act="coach" id="coachBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg><span class="ctxt">${esc(askTitle())}</span></button></div></div></div>
@@ -890,7 +890,7 @@ const rkModeHTML = () => `<div class="seg rkmode" id="rkMode"><button class="${r
   <div class="muted rkmhint" id="rkModeHint">${RK_MODE_HINT[rkPure() ? 'pure' : 'all']}</div>`;
 const rkValHTML = f => { const p = rkPure(), paidIn = !p && f.paid;
   if (S.fTab === 'week') return `${f.week.toLocaleString()}<small>${paidIn && f.paidWeek > 0 ? `XP · 운동만 ${f.pureWeek.toLocaleString()}` : 'XP'}</small>`;
-  return `Lv.${p ? (f.pure ?? f.lv) : f.lv}<small>${paidIn && f.pure != null && f.pure !== f.lv ? `운동만 Lv.${f.pure}` : TIER_NAME[tierOf(f.lv)]}</small>`; };
+  return `Lv.${p ? (f.pure ?? f.lv) : f.lv}${paidIn && f.pure != null && f.pure !== f.lv ? `<small>운동만 Lv.${f.pure}</small>` : ''}`; };
 const rkPaidMark = f => f.paid && !rkPure() ? '<span title="유료 사용">💰</span>' : '';
 function rankList() {
   const me = { n:'나', t:S.type, lv:S.level, week:leagueWeek(), paid:gearPaid(), pure:S.exLv, me:true };
@@ -912,7 +912,7 @@ function vFriends() {
 function vMe() {
   const t = S.type;
   return `${subHead('내 캐릭터')}<div class="sec">
-  <div class="card" style="text-align:center"><div class="mechar${typeof miFx === 'function' && miFx() && !miFx().hl ? ' hop' : ''}" id="meChar">${charHTML(t, S.level, 170, true, exprNow(), false, 212, { rig: true, wear: true })}</div><div style="margin-top:14px"><span class="name">${esc(CH[t].name)}</span> <span class="pill lvpill">Lv.${S.level}</span> <span class="pill tier${tierOf(S.level)}">${TIER_NAME[tierOf(S.level)]}</span></div>
+  <div class="card" style="text-align:center"><div class="mechar${typeof miFx === 'function' && miFx() && !miFx().hl ? ' hop' : ''}" id="meChar">${charHTML(t, S.level, 170, true, exprNow(), false, 212, { rig: true, wear: true })}</div><div style="margin-top:14px"><span class="name">${esc(CH[t].name)}</span> <span class="pill lvpill">Lv.${S.level}</span></div>
   ${typeof bTagOf === 'function' ? `<div class="metag">${bTagOf({ me: true }, 'meTag')}</div>` : ''}<div class="muted" style="margin-top:4px">운동 레벨 Lv.${S.exLv} · 포인트 ${S.points.toLocaleString()}P</div>
   ${myItemsHTML(t)}
   <div class="slots">${ITEMS.filter(i => i.kind === 'effect' && S.equipped[i.id]).map(i => `<div class="slot on">${i.name}</div>`).join('')}${S.gym && S.gym.item ? `<button class="slot gyslot ${S.gym.itemOn ? 'on' : ''}" data-act="gyItem" id="gySlot">${GYM_ITEM}${S.gym.itemOn ? '' : ' · 달기'}</button>` : ''}</div>

@@ -126,36 +126,35 @@ function pfPerson(key) {
   const [n, t, lv, center] = FEED_USERS[uid];
   return { n, t, lv, center, uid, ratio: 100, paid: 0, streak: 1 + lv % 9, ach: Math.min(achieveList().length - 1, 2 + Math.floor(lv / 5)), friend: false };
 }
-function pfWeek(p) {
-  const prev = S.fTab; S.fTab = 'week';
-  try { return rankList().find(x => (p.me ? x.me : x.n === p.n)) || null; } finally { S.fTab = prev; }
+/* v1.95(형 11-17 «인스타 프로필처럼»): 맨 위 한 줄(작은 원형 캐릭터 + 오운완·받은 응원·연속) → 이름·Lv·대표배지 → 캐릭터·센터 → 버튼 하나 → 셀카 격자(좌우 끝까지).
+   리그 XP·경험치 비율·배지판은 이 화면에서 뺐다(랭킹·첫 화면·내 캐릭터에 있음). ⛔큰 캐릭터·리그/경험치/배지 카드 되살리기 금지.
+   view: 'mine' = 내가 보는 나 · 'other' = 남이 보는 화면(내 피드를 남 눈으로 볼 때 포함) — 💰 금액대·나만 보는 사진은 'mine'에서만 */
+function pfAv(p, box = 80) {
+  if (S.placeholder) return `<span class="pfav" style="width:${box}px;height:${box}px">${charAvatar(p.t, p.lv, box - 12)}</span>`;
+  const c = cutOf(p.lv), [w, h] = CHARS[p.t].dims[c], me = !!p.me, tall = me && wearTall();
+  const k = Math.min(box * (tall ? 0.94 : 1.18) / h, box * (tall ? 0.8 : 0.86) / w), dw = Math.round(w * k), dh = Math.round(h * k);   // 얼굴·상반신이 원을 채우게 키우고 다리 쪽은 원 밖으로
+  const img = `<img src="assets/c/${p.t}/lv${c}.png?v=${VER}" style="width:${dw}px;height:${dh}px" alt="">`;
+  return `<span class="pfav" style="width:${box}px;height:${box}px"><span class="cimg" style="width:${dw}px;height:${dh}px;margin-top:${Math.round(box * (tall ? 0.13 : 0.08))}px">${img}${me ? wearUnder(p.t, p.lv, false, k) + wearLayer(p.t, p.lv, false, k) : ''}</span></span>`;
 }
-/* view: 'mine' = 내가 보는 나 · 'other' = 남이 보는 화면(내 피드를 남 눈으로 볼 때 포함) — 💰 금액대·💰 안내·나만 보는 사진은 'mine'에서만 */
 function pfBody(p, view) {
   const own = !!p.me && view === 'mine';
   const posts = p.uid ? fdPosts().filter(x => x.uid === p.uid && (own || x.pub)) : [];
-  const cheers = posts.reduce((a, x) => a + fdCheerN(x), 0), priv = posts.filter(x => !x.pub).length;
-  const cn = p.center && fdCenterName(p.center), w = pfWeek(p), pureLv = p.me ? S.exLv : (p.pure ?? p.lv);
+  const cheers = posts.reduce((a, x) => a + fdCheerN(x), 0);
+  const cn = p.center && fdCenterName(p.center);
   const paid = !p.paid ? '' : own ? `<span class="pill paidpill" id="paidBadge">💰 ${PAID_TIER[p.paid]}</span>` : '<span class="pill paidpill" id="paidBadge">💰</span>';
-  const head = `<div class="card pfcard" id="profCard">${charHTML(p.t, p.lv, 132, true, null, false, 132, { wear: !!p.me })}
-    <div class="pfname"><span class="name">${esc(p.n)}</span>${bTagOf(p, 'profTag')}${paid}${!p.me && !p.friend ? '<span class="pill tier1">친구 아님</span>' : ''}</div>
-    <div class="pfpills"><span class="pill lvpill">Lv.${p.lv}</span><span class="pill tier${tierOf(p.lv)}">${TIER_NAME[tierOf(p.lv)]}</span></div>
-    <div class="muted pfsub">${esc(CH[p.t].name)}${cn ? ` · ${esc(cn)}` : ''}</div></div>`;
-  const week = w ? `<div id="profWeek" class="profwk"><b>이번 주 친구 리그 ${fmt(w.week)} XP</b><span>입장하고 한 운동 ${fmt(w.entered)} · 그 밖의 운동 ${fmt(w.self)}${own && !rkPure() && w.paidWeek > 0 ? ` · 포인트로 받은 ${fmt(w.paidWeek)}` : ''}</span></div>` : '';
-  const xp = `<div class="card" id="profRatio">${week}<div class="xrow"${week ? '' : ' style="padding-top:0"'}><span>운동으로 쌓은 경험치</span><b style="font-size:20px;color:var(--ink)">${p.ratio}%</b></div>
-    <div class="ratiobar"><i style="width:${p.ratio}%"></i><s style="width:${100 - p.ratio}%"></s></div>
-    <div class="rleg"><span><i class="lgx"></i>운동 ${p.ratio}%</span><span><i class="lgi"></i>아이템 ${100 - p.ratio}%</span></div>
-    ${own ? `<div class="muted pfpaid">${p.paid ? `💰 = 충전한 포인트를 상점에서 쓴 적 있어요(${PAID_TIER[p.paid]})` : '💰 표시 없음 = 충전한 포인트를 상점에서 쓴 적 없어요'} · 금액·결제 내역은 공개 안 해요</div>` : ''}</div>`;
-  const tiles = `<div class="card" id="profTiles"><div class="tiles" style="margin-top:0"><div class="tile"><small>운동 레벨</small><b>Lv.${pureLv}</b></div><div class="tile"><small>연속</small><b>${p.streak}주</b></div><div class="tile"><small>배지</small><b id="profBdN">${bdOf(p).length}/${BD_DEF.length}</b></div></div></div>${bdStrip(p)}`;
-  const acts = p.me || !p.known ? '' : p.friend
-    ? `<button class="btn" data-act="cheer" data-v="${esc(p.n)}" id="cheerBtn" ${S.fr.cheered[p.n] === TODAY ? 'disabled' : ''}>${S.fr.cheered[p.n] === TODAY ? '오늘 응원했어요 👏' : '응원 👏'}</button><div class="muted pfnote">친구 · 하루 1번 응원할 수 있어요</div>`
-    : `${S.fr.sent.includes(p.n) ? '<button class="btn" disabled>요청 보냄 · 수락 기다리는 중</button>' : S.fr.recv.includes(p.n) ? `<button class="btn" data-act="frAccept" data-v="${esc(p.n)}">친구 요청 수락</button>` : `<button class="btn" data-act="frRequest" data-v="${esc(p.n)}" id="frReqBtn">친구 요청 보내기</button>`}<div class="muted pfnote">친구가 되면 이번 주 리그에서 같이 겨뤄요</div>`;
-  const stat = `<div class="pfstat fdstat" id="pfStat"><span><b id="fdStatN">${fmt(posts.length)}</b>오운완</span><span><b id="fdStatC">${fmt(cheers)}</b>받은 응원</span></div>`;
-  const grid = posts.length ? `<div class="fdgrid" id="fdGrid">${posts.map(x => `<button class="fdcell" data-act="fdPost" data-id="${x.id}" aria-label="${fdWhen(x.ts)} 게시물 보기"><img src="${x.img}" alt="" loading="lazy">${own && !x.pub ? `<span class="fdpriv">${fdLock()}</span>` : ''}</button>`).join('')}</div>`
-    : own ? fdEmpty('아직 찍은 오운완 셀카가 없어요', '운동 끝나고 오운완 셀카를 찍으면<br>여기에 차곡차곡 쌓여요')
-    : `<div class="card fdempty" id="fdEmpty"><b>아직 공개한 오운완이 없어요</b><p>${p.me ? '«피드에 공개»를 켠 사진만 다른 회원에게 보여요' : '새 게시물이 올라오면 여기에 보여요'}</p></div>`;
-  const foot = own ? `${posts.length ? `<div class="muted fdnote">${priv ? `${fdLock()} 자물쇠 표시는 나만 보는 사진이에요 · ` : ''}사진을 누르면 공개 여부를 바꾸거나 지울 수 있어요</div>` : ''}<div class="muted fdnote">표정·자세한 기록·💰 금액대는 나만 봐요</div><button class="linkbtn quiet fdasother" data-act="fdAsOther" id="fdAsOther">다른 회원에게 보이는 내 프로필 보기 ›</button>` : '';
-  return `<div class="pf" id="pf" data-view="${own ? 'mine' : 'other'}">${head}${xp}${tiles}${acts}${stat}${grid}${foot}</div>`;
+  const top = `<div class="pftop" id="profCard">${pfAv(p)}<div class="pfnums" id="pfStat"><span><b id="fdStatN">${fmt(posts.length)}</b>오운완</span><span><b id="fdStatC">${fmt(cheers)}</b>받은 응원</span><span><b id="pfStreak">${fmt(p.streak)}주</b>연속</span></div></div>
+    <div class="pfbio"><div class="pfname"><span class="name">${esc(p.n)}</span><span class="pill lvpill">Lv.${p.lv}</span>${bTagOf(p, 'profTag')}${paid}</div>
+    <div class="pfsub">${esc(CH[p.t].name)}${cn ? ` · ${esc(cn)}` : ''}</div></div>`;
+  const acts = own ? '<button class="pfbtn" data-act="fdAsOther" id="fdAsOther">다른 회원에게 보이는 내 프로필 보기</button>'
+    : p.me || !p.known ? ''
+    : p.friend ? `<button class="pfbtn" data-act="cheer" data-v="${esc(p.n)}" id="cheerBtn" ${S.fr.cheered[p.n] === TODAY ? 'disabled' : ''}>${S.fr.cheered[p.n] === TODAY ? '오늘 응원했어요 👏' : '친구 응원 👏'}</button>`
+    : S.fr.sent.includes(p.n) ? '<button class="pfbtn" disabled>친구 요청 보냄</button>'
+    : S.fr.recv.includes(p.n) ? `<button class="pfbtn pri" data-act="frAccept" data-v="${esc(p.n)}">친구 요청 수락</button>`
+    : `<button class="pfbtn pri" data-act="frRequest" data-v="${esc(p.n)}" id="frReqBtn">친구 요청</button>`;
+  const tab = '<div class="pfgtab" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path d="M9.2 3.5v17M14.8 3.5v17M3.5 9.2h17M3.5 14.8h17"/></svg></div>';
+  const grid = posts.length ? `<div class="fdgrid pfgrid" id="fdGrid">${posts.map(x => `<button class="fdcell" data-act="fdPost" data-id="${x.id}" aria-label="${fdWhen(x.ts)} 게시물 보기"><img src="${x.img}" alt="" loading="lazy">${own && !x.pub ? `<span class="fdpriv">${fdLock()}</span>` : ''}</button>`).join('')}</div>`
+    : `<div class="pfempty" id="fdEmpty"><b>${own ? '아직 찍은 오운완 셀카가 없어요' : '아직 공개한 오운완이 없어요'}</b><p>${own ? '운동 끝나고 오운완 셀카를 찍으면 여기에 쌓여요' : p.me ? '«피드에 공개»를 켠 사진만 다른 회원에게 보여요' : '새 게시물이 올라오면 여기에 보여요'}</p></div>`;
+  return `<div class="pf ig" id="pf" data-view="${own ? 'mine' : 'other'}">${top}${acts ? `<div class="pfacts">${acts}</div>` : ''}${tab}${grid}</div>`;
 }
 /* 내 캐릭터 «내 프로필»·랭킹에서 누른 프로필 — 내용은 pfBody, 뒤로가기만 들어온 곳에 맞춘다 */
 SUB.profile = () => {
@@ -188,7 +187,7 @@ function vFeedPost() {
       ${fdSum(p)}${fdCheerRow(p)}</div>
     <div class="card" id="fdExList"><div class="h3">이날 한 운동</div>${rows}</div>
     ${manage ? `<div class="card" id="fdManage"><div class="row"><div><span><b>피드에 공개</b></span><div class="muted" id="fdPubDesc">${p.pub ? '다른 회원이 보고 응원할 수 있어요' : '지금은 나만 볼 수 있어요'}</div></div><button class="sw ${p.pub ? 'on' : ''}" data-act="fdPub" data-id="${p.id}" id="fdPubSw" role="switch" aria-checked="${p.pub}" aria-label="피드에 공개"></button></div></div>
-    <button class="btn ghost delrec" data-act="fdDel" data-id="${p.id}" id="fdDel">게시물 삭제</button>` : ''}</div>`;
+    <button class="btn ghost delrec" data-act="fdDel" data-id="${p.id}" id="fdDel">게시물 삭제</button><div class="muted fdnote" id="fdManageNote">공개를 끄면 나만 봐요 · 표정·자세한 기록·💰 금액대는 다른 회원에게 안 보여요</div>` : ''}</div>`;
 }
 function vFeedUser() {
   ensureFeed(); const top = fdTop(), u = top && fdUser(top.id);

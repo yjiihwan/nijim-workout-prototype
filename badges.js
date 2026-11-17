@@ -153,7 +153,7 @@ function achieveCard() {
   ${demoCard('배지', 'bdHonor', S.bdHonor || 'some', [['none', '명예 없음'], ['some', '명예 1개(10월)'], ['all', '명예 전부']])}
   <div class="card demo" style="margin-top:-4px"><div class="h3">🧪 시연 도구 · 3대 합계</div><div class="chips white">${[['', '내 기록대로'], ['520', '520kg'], ['760', '760kg']].map(([k, l]) => `<button class="chip ${String(S.bdLift || '') === k ? 'on' : ''}" data-act="bdLift" data-v="${k}">${l}</button>`).join('')}</div>
   <div class="chips white" style="margin-top:6px">${[['normal', '기록 지금대로'], ['empty', '기록 0'], ['many', '20주치']].map(([k, l]) => `<button class="chip ${(S.dataDemo || 'normal') === k ? 'on' : ''}" data-act="dataDemo" data-v="${k}">${l}</button>`).join('')}</div></div>
-  <button class="card replink tap" data-act="prof" data-v="me" id="goMyProfile"><div><b>내 프로필 미리보기</b><small>레벨·이번 주 리그 XP·운동 레벨·연속 주·배지 · 오운완 피드 «내 피드»와 같은 화면이에요</small></div><span class="muted">›</span></button>`;
+  <button class="card replink tap" data-act="prof" data-v="me" id="goMyProfile"><div><b>내 프로필 미리보기</b><small>레벨·대표 배지·오운완 셀카 · 오운완 피드 «내 피드»와 같은 화면이에요</small></div><span class="muted">›</span></button>`;
 }
 function achSheet(i) {
   const a = achieveList()[i]; if (!a) return;

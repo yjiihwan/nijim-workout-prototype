@@ -151,7 +151,48 @@ function eatMount() {
   const c = stageCanvas(); if (c.parentNode !== host) host.appendChild(c);
   const dpr = Math.min(2, window.devicePixelRatio || 1), W = host.clientWidth || 340;
   if (c.width !== Math.round(W * dpr) || c.height !== Math.round(STAGE_H * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(STAGE_H * dpr); c.style.width = W + 'px'; c.style.height = STAGE_H + 'px'; EAT.pillar = null; }
+  eatWearMount(host, W);
   if (!EAT.cur) drawIdle();
+}
+/* ===== v2.12 아이템을 입었을 때(A안) — 먹는 무대도 «입은 채 한 덩어리»로 =====
+   먹는 그림(팔 들기·쥐기)은 아이템 없이 그린 장면이라 그대로 틀면 아이템이 통째로 벗겨진다. 그래서 입고 있으면(charanim.js poseMode(…,'eat') = 'aplan')
+   캐릭터는 첫 화면과 같은 착용 그림(DOM)으로 세워 두고, 음식이 입 앞으로 올라와 한 입씩 줄어든다 → 삼키면 몸 전체가 부푼다(아이템도 같이).
+   빛기둥·오라·바닥 링은 뒤 canvas, 음식·반짝이·숫자는 앞 canvas(.eatcv2). 위치 자료가 생기면(B안, 'track') 원래 먹는 그림 + 아이템 얹기로 넘어간다 */
+const eatDressed = () => typeof poseMode === 'function' && !S.placeholder && poseMode(S.type, EAT.cur ? EAT.cur.from : S.level, 'eat') === 'aplan';
+function eatWearMount(host, W) {
+  if (EAT.wear) { if (typeof aplanStop === 'function') aplanStop(EAT.wear.el); EAT.wear = null; }
+  host.querySelectorAll('.eatwear,.eatcv2').forEach(e => e.remove());
+  if (!eatDressed()) return;
+  const t = S.type, lv = EAT.cur ? EAT.cur.from : S.level, cut = cutOf(lv), [w, h] = CHARS[t].dims[cut], k = scaleOf(t, lv, BOX_H, false, W / 1.3);
+  const left = W / 2 - w * k / 2, top = BASE_Y - h * k, ex = typeof exprNow === 'function' ? exprNow() : null, e = CHARS[t].expr.sleepy && CHARS[t].expr.sleepy[cut];
+  const el = document.createElement('div'); el.className = 'cwrap eatwear';
+  el.innerHTML = `<span class="cimg rig" style="position:absolute;left:${left.toFixed(1)}px;top:${top.toFixed(1)}px;width:${w * k}px;height:${h * k}px">${rigLayers(t, cut, k) || `<img src="assets/c/${t}/lv${cut}.png?v=${VER}" style="width:${w * k}px;height:${h * k}px" alt="">`}${wearUnder(t, lv, true, k)}${faceLayer(t, lv, ex)}${blinkLayer(t, lv, ex)}${wearLayer(t, lv, true, k)}</span>`;
+  const cv2 = document.createElement('canvas'); cv2.className = 'eatcv2';
+  host.appendChild(el); host.appendChild(cv2);
+  /* 입 자리 = 표정 패치 아래쪽 가운데, 음식 크기 기준 = 얼굴 패치 폭 */
+  EAT.wear = { el, cv2, ci: el.firstChild, w: w * k, mx: left + (e ? e[0] + e[2] / 2 : w / 2) * k, my: top + (e ? e[1] + e[3] * 0.8 : h * 0.3) * k, fw: (e ? e[2] : w * 0.4) * k };
+  aplanStart(el, { auto: !EAT.cur });   // 쉬는 동안은 첫 화면과 같은 숨쉬기·폴짝·깜빡임, 먹는 동안은 숨쉬기만 두고 아래 eatWearFrame 이 움직인다
+}
+function eatWearFrame(F, G) {
+  const Wr = EAT.wear, { t, R } = F, c2 = Wr.cv2, g = c2.getContext('2d');
+  if (c2.width !== EAT.cv.width || c2.height !== EAT.cv.height) { c2.width = EAT.cv.width; c2.height = EAT.cv.height; c2.style.width = EAT.cv.style.width; c2.style.height = EAT.cv.style.height; }
+  g.setTransform(G.dpr, 0, 0, G.dpr, 0, 0); g.clearRect(0, 0, G.Wc, STAGE_H);
+  const eating = !F.idle && t >= ET.swapIn && t < ET.swapOut, te = t - ET.eat0, biting = eating && te >= 0 && t < ET.eat1, ph = biting ? te % ET.BITE : 999;
+  let sx = 1, sy = 1, dx = 0;
+  if (biting && ph < 200) { const q = Math.sin(Math.PI * ph / 200); sx = 1 + .03 * q; sy = 1 - .05 * q; }   // 한 입마다 꾹 눌림(몸·아이템 한 덩어리)
+  else if (!F.idle && !eating) { const k = pumpK(t, R.k); sx = 1 + k * .55; sy = 1 + k * .3; dx = shakeAt(t, R.shake * Wr.w); }   // 삼킨 뒤 부풂·떨림
+  Wr.ci.style.transform = sx !== 1 || sy !== 1 || dx ? `translateX(${dx.toFixed(2)}px) scale(${sx.toFixed(4)},${sy.toFixed(4)})` : '';
+  Wr.el.classList.toggle('ablink', biting && ph < 120);
+  if (eating && F.food && F.food.img) {
+    const fid = F.food.fid, p = FOOD_PTS[fid], ft = G.d.food[fid] || {}, m = !!ft.m, bites = !biting ? (t >= ET.eat1 ? 3 : 0) : Math.min(2, Math.floor(te / ET.BITE)) + (ph >= 200 ? 1 : 0);
+    const ic = bittenIcon(fid, F.food.img, p.kind === '먹는 거' ? Math.min(bites, 2) : 0, m), bx = m ? 256 - p.b[0] : p.b[0];
+    const pop = t < ET.raise1 + 160 ? eob(c01(t / (ET.raise1 + 160))) : 1, fade = t >= ET.poof0 ? 1 - c01((t - ET.poof0) / (ET.poof1 - ET.poof0 - 60)) : 1;
+    /* 음식은 얼굴 옆(가슴 앞)에 떠 있다가 한 입마다 입으로 쏙 갔다 온다 — 손으로 쥔 척하지 않는 «받아먹기»(쥐는 손 그림은 아이템 없는 원래 장면에만 있다) */
+    const q = biting && ph < 200 ? Math.sin(Math.PI * ph / 200) : 0, s = Math.max(44, Wr.fw) / 256 * (.6 + .4 * pop) * (.85 + .15 * fade) * (1 - .12 * q);
+    const rx = Wr.fw * .62 * (m ? -1 : 1), ry = Wr.fw * .42, fx = Wr.mx + rx * (1 - q) + (256 / 2 - bx) * s * (1 - q), fy = Wr.my + ry * (1 - q) + (1 - pop) * 26 + (256 * .45 - p.b[1]) * s * (1 - q);
+    if (fade > 0) { g.save(); g.globalAlpha = fade * c01(t / 120); g.translate(fx, fy); g.rotate((ft.a || 0) * Math.PI / 180 * .45 * q); g.scale(s, s); g.drawImage(ic, -bx, -p.b[1], 256, 256); g.restore(); }
+  }
+  return g;
 }
 async function drawIdle() {
   const t = S.type, lv = S.level, cut = cutOf(lv);
@@ -166,7 +207,7 @@ function geom(C) {
   return { dpr, Wc, disp, cx, px, py, d };
 }
 function frame(F) {
-  const { C, t, R } = F, c = EAT.cv, g = c.getContext('2d'), G = geom(C), { dpr, Wc, disp, cx, px, py, d } = G;
+  const { C, t, R } = F, c = EAT.cv, G = geom(C); let g = c.getContext('2d'); const { dpr, Wc, disp, cx, px, py, d } = G;
   const w13 = d.sz[0] * disp, h13 = d.sz[1] * disp, S_ = d.S * disp, col = R.col;
   g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, Wc, STAGE_H);
   if (R.pillar && t >= 2900 && t < 4200) {   // 빛기둥(전설): 가운데 흰 심 + 등급색 바깥
@@ -185,6 +226,9 @@ function frame(F) {
     const rr = w13 * (.30 + .55 * u); g.strokeStyle = hexA(col, 1 - u); g.lineWidth = Math.max(1.5, S_ * .09 * (1 - u) + 1);
     g.beginPath(); g.ellipse(cx, BASE_Y - 1, rr, rr * .24, 0, 0, 7); g.stroke();
   }
+  const dressed = !!(EAT.wear && EAT.wear.el.isConnected);
+  if (dressed) g = eatWearFrame(F, G);   // 입고 있으면: 캐릭터는 착용 그림(DOM), 음식·반짝이·숫자는 앞 canvas 에
+  else {
   /* 캐릭터: 레이어 캔버스(웹 px)에 합성 → 표시 배율로 */
   const wk = C.work, wg = wk.getContext('2d'); wg.setTransform(1, 0, 0, 1, 0, 0); wg.clearRect(0, 0, d.W, d.H);
   const eating = !F.idle && t >= ET.swapIn && t < ET.swapOut;
@@ -214,8 +258,9 @@ function frame(F) {
   }
   g.imageSmoothingQuality = 'high'; g.drawImage(wk, px, py, d.W * disp, d.H * disp);
   if (foodDraw) foodDraw(); if (armDraw) armDraw();
+  }
   if (F.food && t >= ET.poof0 && t < ET.poof1 + 120) {   // 음식 사라짐 반짝(흰 3개)
-    const u = (t - ET.poof0) / 320, ft = d.food[F.food.fid], bx = px + ft.b[0] * disp, by = py + ft.b[1] * disp;
+    const u = (t - ET.poof0) / 320, ft = d.food[F.food.fid], bx = dressed ? EAT.wear.mx : px + ft.b[0] * disp, by = dressed ? EAT.wear.my : py + ft.b[1] * disp;
     for (let i = 0; i < 3; i++) { const an = i * 2.1 + .5, rr = S_ * (.2 + .5 * u); star(g, bx + rr * Math.cos(an), by + rr * Math.sin(an), S_ * .16 * (1 - u * .6), '#FFFFFF'); }
   }
   (F.sparks || []).forEach(([an, rad, sz, dl]) => {   // 반짝이(등급색)
@@ -272,7 +317,7 @@ async function eatNext() {
   EAT.cur = { id, f, R, from, fromXP, res, ev, label, sparks, t0: 0, skip: false, toLv: res ? res.level : from, toXP: res ? res.xp : fromXP };
   render();
   try {
-    if ((await eat2Data(S.type))[cut].food[f.fid]) { EAT.cur.C = await eatCell2(S.type, cut, f.fid); EAT.cur.food = { fid: f.fid }; }
+    if (!eatDressed() && (await eat2Data(S.type))[cut].food[f.fid]) { EAT.cur.C = await eatCell2(S.type, cut, f.fid); EAT.cur.food = { fid: f.fid }; }
     else { const [C, img] = await Promise.all([eatCell(S.type, cut), foodImg(f.fid)]); EAT.cur.C = C; EAT.cur.food = { fid: f.fid, img }; }
   } catch (e) { console.error(e); EAT.cur = null; return eatFinish(ev); }
   tone(520, 0, .08, 'triangle', .06); tone(660, .8, .08, 'triangle', .05); tone(780, 1.6, .08, 'triangle', .05);

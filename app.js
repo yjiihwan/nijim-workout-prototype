@@ -2,7 +2,7 @@
 /* v1.12 — v1.11(C안 1/4 고객 앱 기록 흐름 전부) + 결정 33: 아이템 경험치는 한도 없음(운동 경험치만 하루 600·주 1,800).
    경험치·레벨·표정·랭킹 계산은 engine.js 한 곳(CFG·sessionXP·capGain·applyXP·judgeIntensity·exprFor·forecastWeek). 이 파일은 화면만 */
 const KEY = 'nijim_workout_proto_v111';
-const VER = 'v2.11';
+const VER = 'v2.12';
 /* 확정 12종(결정 22~25) — design v13 정본 · 레벨 띠 11컷 · 표정 5종. 12종 모두 처음부터 선택 가능(결정 25) */
 const CH = {
   mungchi:   { name: '뭉치', josa: '가', intro: '느긋하고 솔직한 땀방울 슬라임' },
@@ -236,7 +236,7 @@ function charHTML(t, lv, boxH, withRing = true, expr = null, same = false, boxW 
   const c = charImg(t, lv, boxH, same, boxW), gold = withRing && lv >= 99 && !S.placeholder ? c.w * 1.1 * 0.12 : 0;   // 골드 링 아래 반쪽만큼 자리를 비워 아래 글자와 안 겹치게
   const r1 = n => Math.round(n * 10) / 10;
   const inner = (opts.rig && !S.placeholder && rigLayers(t, c.cut, c.s)) || `<img src="${c.src}" style="width:${c.w}px;height:${c.h}px" alt="">`;   // opts.rig: 4단계 부품 레이어(팔 ±5°)
-  return `<div class="cbox" style="height:${boxH}px${gold ? `;margin-bottom:${Math.round(gold)}px` : ''}">${withRing ? ringHTML(c, lv, boxH) : ''}<span class="cimg${opts.rig ? ' rig' : ''}" style="width:${c.w}px;height:${c.h}px;left:${r1(c.dx)}px;bottom:${r1(c.db)}px">${inner}${opts.wear ? wearUnder(t, lv, !!opts.rig, c.s) : ''}${faceLayer(t, lv, expr)}${opts.wear ? wearLayer(t, lv, !!opts.rig, c.s) : ''}</span></div>`;
+  return `<div class="cbox" style="height:${boxH}px${gold ? `;margin-bottom:${Math.round(gold)}px` : ''}">${withRing ? ringHTML(c, lv, boxH) : ''}<span class="cimg${opts.rig ? ' rig' : ''}" style="width:${c.w}px;height:${c.h}px;left:${r1(c.dx)}px;bottom:${r1(c.db)}px">${inner}${opts.wear ? wearUnder(t, lv, !!opts.rig, c.s) : ''}${faceLayer(t, lv, expr)}${opts.blink ? blinkLayer(t, lv, expr) : ''}${opts.wear ? wearLayer(t, lv, !!opts.rig, c.s) : ''}</span></div>`;
 }
 /* 작은 칸(홈 축소 카드·코치·랭킹): 같은 배율 규칙으로 Lv.99 가 box 높이에 맞게 → 레벨이 낮으면 작게 보인다 */
 function charFit(t, lv, box, expr = null) {
@@ -492,9 +492,9 @@ function vWorkout() {
     stats: '<svg viewBox="0 0 24 24"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>',
     set: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>',
   };
-  const ex = exprNow();
+  const ex = exprNow(), sp = stagePose(t, lv);   // v2.12: 아이템을 입었으면 포즈 클립 대신 A안 움직임(charanim.js poseMode)
   return `${seg}<div class="sec" style="padding-top:8px">${pend}
-  <div class="card hcard" id="stageCard"><div class="stage"><div class="cwrap stagewrap ${ex}" data-act="pose" id="stageWrap">${charHTML(t, lv, 128, true, ex, false, 160, { rig: true, wear: true })}${sigClipHTML(t, lv)}</div>
+  <div class="card hcard" id="stageCard"><div class="stage"><div class="cwrap stagewrap ${ex} ${sp.cls}" data-act="pose" id="stageWrap">${charHTML(t, lv, 128, true, ex, false, 160, { rig: true, wear: true, blink: sp.blink })}${sp.clip}</div>
     <div class="hinfo"><span class="name">${esc(CH[t].name)}</span>${xpBlock(lv, toNext)}</div></div>
     <div class="scoach" id="coachBox"><div class="say" id="coachSay"><span>${esc(coachLine())}</span></div></div>
     <div class="hacts"><button class="hact" data-act="sub" data-v="me" id="goMe"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg><span class="ctxt">내 캐릭터 보기</span></button><button class="hact" data-act="coach" id="coachBtn" aria-label="${esc(askTitle())}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg><span class="ctxt">${chNm().length <= 4 ? esc(askTitle()) : '물어보기'}</span></button></div>
@@ -1604,7 +1604,7 @@ document.addEventListener('click', e => {
   if (b.dataset.tab) return go(b.dataset.tab);
   const a = b.dataset.act, id = b.dataset.id, v = b.dataset.v, dd = +b.dataset.d || 0;
   const s = S.session, it = curItem();
-  if (a === 'pose') { sigPlayHome(); return; }
+  if (a === 'pose') { posePlayHome(); return; }
   if (a === 'shClose') return $('missAsk') ? missAnswer(false) : shClose();   // v1.82: 묻는 창을 그냥 닫으면 «안 쓰기»
   if (a === 'missUse') return missAnswer(true);
   if (a === 'missNo') return missAnswer(false);
